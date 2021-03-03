@@ -4,15 +4,23 @@ import os.path
 import argparse
 import subprocess
 
-# increase the width of help text
-parser=argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=40))
+__version__ = '0.1'
+
+# init
+parser=argparse.ArgumentParser(
+    prog='stream_cpu.py', 
+    description='STREAM-CPU', 
+    usage='%(prog)s -m skylake-avx512 -t 24 -a spread')
+
+# version string
+parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
 # parse cmd options
-parser.add_argument('-m', '--march' ,   type=str, default='skylake-avx512', help='targeting architecture')
-parser.add_argument('-s', '--size'  ,   type=int, default=40000000        , help='size of matrix')
-parser.add_argument('-n', '--ntimes',   type=int, default=100             , help='run each kernel n times')
-parser.add_argument('-t', '--threads',  type=int, default=1               , help='number of OMP threads')
-parser.add_argument('-a', '--affinity', type=str, default='spread'        , help='thread affinity')
+parser.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help='size of matrix (must be at least 4xLLC)')
+parser.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help='run each kernel n times')
+parser.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help='targeting architecture')
+parser.add_argument('-t', '--threads' , type=int, required=True   , metavar='',                             help='number of OMP threads')
+parser.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help='thread affinity')
 
 args = parser.parse_args()
 
@@ -29,7 +37,7 @@ def download():
 # build with gcc 
 # -ffreestanding: generates temporal asm instruction instead of libc's memcpy
 def build(): 
-    subprocess.call([
+    subprocess.run([
         'gcc',
             '-O3', 
             '-fopenmp', 

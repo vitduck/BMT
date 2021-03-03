@@ -6,20 +6,30 @@ import argparse
 import textwrap
 import subprocess
 
-# fix the width of help text
-parser=argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=40))
+__version__ = '0.1'
+
+# init
+parser=argparse.ArgumentParser(
+    prog='stream_cuda.py', 
+    description='STREAM-CUDA', 
+    usage='%(prog)s -a sm_70')
+
+# version string
+parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
 # parse cmd options
-parser.add_argument('-a', '--arch'  , type=str, default='sm_70'    , help='targeting architecture')
-parser.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , help='memory mode')
-parser.add_argument('-n', '--ntimes', type=int, default=100        , help='run each kernel n times')
-parser.add_argument('-d', '--device', type=int, default=0          , help='device index')
-parser.add_argument('-s', '--size'  , type=int, action='store'     , help='size of matrix')
-parser.add_argument('-f', '--float' ,           action='store_true', help='use floats') 
-parser.add_argument('-t', '--triad' ,           action='store_true', help='only run triad')
-parser.add_argument('-c', '--csv'   ,           action='store_true', help='Output as csv table')
+parser.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help='targeting architecture')
+parser.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help='memory mode')
+parser.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help='run each kernel n times')
+parser.add_argument('-d', '--device', type=int, default=0          , metavar='', help='device index')
+parser.add_argument('-s', '--size'  , type=int                     , metavar='', help='size of matrix (must be multiplier of 1024)')
+parser.add_argument('-f', '--float' , action='store_true'                      , help='use floats') 
+parser.add_argument('-t', '--triad' , action='store_true'                      , help='only run triad')
+parser.add_argument('-c', '--csv'   , action='store_true'                      , help='Output as csv table')
 
 args = parser.parse_args()
+
+print(args)
 
 def main(): 
     download()
@@ -56,7 +66,7 @@ def benchmark():
     ] 
 
     if args.size: 
-        cmd.append('--arraysize', args.size)
+        cmd.append('--arraysize', str(args.size))
 
     if args.float:
         cmd.append('--float')
