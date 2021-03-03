@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import os.path 
 import argparse
 import subprocess
@@ -10,17 +11,27 @@ __version__ = '0.1'
 parser=argparse.ArgumentParser(
     prog='stream_cpu.py', 
     description='STREAM-CPU', 
-    usage='%(prog)s -m skylake-avx512 -t 24 -a spread')
+    usage='%(prog)s -m skylake-avx512 -t 24 -a spread', 
+    formatter_class=argparse.RawDescriptionHelpFormatter)
 
 # version string
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
-# parse cmd options
-parser.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help='size of matrix (must be at least 4xLLC)')
-parser.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help='run each kernel n times')
-parser.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help='targeting architecture')
-parser.add_argument('-t', '--threads' , type=int, required=True   , metavar='',                             help='number of OMP threads')
-parser.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help='thread affinity')
+# options for stream setup
+stream = parser.add_argument_group(
+    title='STREAM parameters',
+    description='\n'.join([
+        '-s, --size                  size of matrix (must be at least 4 x LLC)', 
+        '-n, --ntimes                run each kernel n times',
+        '-m, --march     (required)  argeting architecture', 
+        '-t, --threads   (required)  number of OMP threads',
+        '-a, --affinity  (required)  thread affinity: close|spread']))
+
+stream.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-t', '--threads' , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
@@ -37,6 +48,13 @@ def download():
 # build with gcc 
 # -ffreestanding: generates temporal asm instruction instead of libc's memcpy
 def build(): 
+    gcc_ver = subprocess.run(['gcc', '--version'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    match   = re.match('gcc \(GCC\) (\d)\.\d\.\d', gcc_ver)
+
+    # check minium gcc version
+    if int(match.group(1)) < 7: 
+        raise Exception("GCC >=7 is required to build CPU-STREAM\n")
+
     subprocess.run([
         'gcc',
             '-O3', 

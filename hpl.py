@@ -14,41 +14,37 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
 # options for problem setup
-prob = parser.add_argument_group(
-    title='Matrix setup',
+hpl = parser.add_argument_group(
+    title='HPL parameters',
     description='\n'.join([
-        '-s, --size       List of problem size    (80% of total memory)', 
-        '-b, --blocksize  List of block size      (multiply of 64)' ]))
-
-# options for MPI communication 
-comm = parser.add_argument_group(
-    title='MPI setup (PxQ)',
-    description='\n'.join([
-        '-p, --pgrid  List of P grid              (default: 1)', 
-        '-q, --qgrid  List of Q grid              (default: 1)',
-        '--pmap       MPI processes mapping       (default: 0, i.e row-major)',
-        '--broadcast  MPI broadcasting algorithms (default: 0, i.e ring-topology)']))
-
-# options for algorithmic features
-algo = parser.add_argument_group(
-    title='Algorithmic features (default is sufficient)',
-    description='\n'.join([
-        '--pfact  List of PFACT variants ', 
-        '--rfact  List of RFACT variants', 
-        '--nbmin  List of NBMIN',
-        '--ndiv   List of NDIV']))
-
+        '-s, --size         (required)    list of problem size', 
+        '-b, --blocksize    (required)    list of block size',
+        '-p, --pgrid                      list of P grid', 
+        '-q, --qgrid                      list of Q grid',
+        '-g, --gpu                        list of devices', 
+        '-t, --threads                    number of omp threads',  
+        '--pmap                           MPI processes mapping',
+        '--broadcast                      MPI broadcasting algorithms',
+        '--pfact                          list of PFACT variants ', 
+        '--rfact                          list of RFACT variants', 
+        '--nbmin                          list of NBMIN',
+        '--ndiv                           list of NDIV',
+        '--ai                             use hpl-ai']))
+    
 # cmd options with default values
-prob.add_argument('-s', '--size'     , type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
-prob.add_argument('-b', '--blocksize', type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
-comm.add_argument('-p', '--pgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-comm.add_argument('-q', '--qgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-comm.add_argument(      '--pmap'     , type=int,            default=0      , metavar='', help=argparse.SUPPRESS)
-comm.add_argument(      '--bcast'    , type=int, nargs='*', default=[0]    , metavar='', help=argparse.SUPPRESS)
-algo.add_argument(      '--pfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
-algo.add_argument(      '--rfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
-algo.add_argument(      '--nbmin'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-algo.add_argument(      '--ndiv'     , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-s', '--size'     , type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-b', '--blocksize', type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-p', '--pgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-q', '--qgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-g', '--gpus'     , type=int, nargs='*', default=[0]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-t', '--threads'  , type=int,            default=4      , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--pmap'     , type=int,            default=0      , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--bcast'    , type=int, nargs='*', default=[0]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--pfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--rfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--nbmin'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--ndiv'     , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--ai'       , action='store_true', default=False  ,             help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
@@ -113,3 +109,44 @@ with open('HPL.dat', 'w') as input:
 
     # memory alignment 
     input.write(f'{"8":<20} memory alignment in double (> 0)\n')
+
+with open('run.sh', 'w') as script:
+    mpiprocs = args.pgrid[0] * args.qgrid[0]; 
+    ngpus    = len(args.gpus); 
+
+    # check for correct number of mpiprocs and gpus 
+    if mpiprocs != ngpus:
+        raise Exception("Error: HPL requires CPU/GPU = 1")
+
+    # export cuda devices 
+    script.write(f'export CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in args.gpus)}\n\n')
+
+    cmd = ['mpirun']
+
+    # mpi options
+    cmd.append(f'{"":>4}--np {mpiprocs}')
+
+    # singularity options
+    cmd.append(f'{"":>4}singularity')
+    cmd.append(f'{"":>8}run')
+    cmd.append(f'{"":>8}--nv')
+    cmd.append(f'{"":>8}-B $PWD:/input')
+    cmd.append(f'{"":>8}./hpc-benchmarks_20.10-hpl.sif')
+    
+    # hpl options
+    cmd.append(f'{"":>8}hpl.sh')
+    cmd.append(f'{"":>12}--cpu-cores-per-rank {args.threads}')
+    cmd.append(f'{"":>12}--cpu-affinity {":".join(["0"]*(int(mpiprocs/2)) + ["1"]*(int(mpiprocs/2)))}')
+    cmd.append(f'{"":>12}--gpu-affinity {":".join(str(gpu) for gpu in args.gpus)}')
+    cmd.append(f'{"":>12}--dat /input/HPL.dat')
+
+    if args.ai:
+        cmd.append(f'{"":>12}--xhpl-ai')
+
+    # max line length
+    length = len(max(cmd, key = len)) 
+
+    # join string and print to file
+    cmd = '\\\n'.join(f'{line:<{length}} ' for line in cmd)
+
+    script.write(f'{cmd}')

@@ -12,24 +12,36 @@ __version__ = '0.1'
 parser=argparse.ArgumentParser(
     prog='stream_cuda.py', 
     description='STREAM-CUDA', 
-    usage='%(prog)s -a sm_70')
+    usage='%(prog)s -a sm_70', 
+    formatter_class=argparse.RawDescriptionHelpFormatter)
 
 # version string
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
+# options for stream setup
+stream = parser.add_argument_group(
+    title='STREAM parameters',
+    description='\n'.join([
+        '-a, --arch   (required)  targeting architecture',
+        '-m, --mem                memory mode',
+        '-n, --ntimes             run each kernel n times', 
+        '-d, --device             device index',
+        '-s, --size               size of matrix (must be multiplier of 1024)', 
+        '-f, --float              use floats', 
+        '-t, --triad              only run triad kernel', 
+        '-c, --csv                output as csv table']))
+       
 # parse cmd options
-parser.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help='targeting architecture')
-parser.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help='memory mode')
-parser.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help='run each kernel n times')
-parser.add_argument('-d', '--device', type=int, default=0          , metavar='', help='device index')
-parser.add_argument('-s', '--size'  , type=int                     , metavar='', help='size of matrix (must be multiplier of 1024)')
-parser.add_argument('-f', '--float' , action='store_true'                      , help='use floats') 
-parser.add_argument('-t', '--triad' , action='store_true'                      , help='only run triad')
-parser.add_argument('-c', '--csv'   , action='store_true'                      , help='Output as csv table')
+stream.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help=argparse.SUPPRESS) 
+stream.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help=argparse.SUPPRESS) 
+stream.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help=argparse.SUPPRESS) 
+stream.add_argument('-d', '--device', type=int, default=0          , metavar='', help=argparse.SUPPRESS) 
+stream.add_argument('-s', '--size'  , type=int                     , metavar='', help=argparse.SUPPRESS) 
+stream.add_argument('-f', '--float' , action='store_true'                      , help=argparse.SUPPRESS) 
+stream.add_argument('-t', '--triad' , action='store_true'                      , help=argparse.SUPPRESS) 
+stream.add_argument('-c', '--csv'   , action='store_true'                      , help=argparse.SUPPRESS) 
 
 args = parser.parse_args()
-
-print(args)
 
 def main(): 
     download()
