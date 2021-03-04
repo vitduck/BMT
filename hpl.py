@@ -17,34 +17,36 @@ parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + _
 hpl = parser.add_argument_group(
     title='HPL parameters',
     description='\n'.join([
-        '-s, --size         (required)    list of problem size', 
-        '-b, --blocksize    (required)    list of block size',
-        '-p, --pgrid                      list of P grid', 
-        '-q, --qgrid                      list of Q grid',
-        '-g, --gpu                        list of devices', 
-        '-t, --threads                    number of omp threads',  
-        '--pmap                           MPI processes mapping',
-        '--broadcast                      MPI broadcasting algorithms',
-        '--pfact                          list of PFACT variants ', 
-        '--rfact                          list of RFACT variants', 
-        '--nbmin                          list of NBMIN',
-        '--ndiv                           list of NDIV',
-        '--ai                             use hpl-ai']))
+        '-s, --size                 list of problem size', 
+        '-b, --blocksize            list of block size',
+        '-p, --pgrid                list of P grid', 
+        '-q, --qgrid                list of Q grid',
+        '    --device               list of GPU devices', 
+        '    --device_per_socket    number of device per socket', 
+        '    --thread               number of omp threads',  
+        '    --pmap                 MPI processes mapping',
+        '    --broadcast            MPI broadcasting algorithms',
+        '    --pfact                list of PFACT variants ', 
+        '    --rfact                list of RFACT variants', 
+        '    --nbmin                list of NBMIN',
+        '    --ndiv                 list of NDIV',
+        '    --ai                   use hpl-ai']))
     
 # cmd options with default values
-hpl.add_argument('-s', '--size'     , type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument('-b', '--blocksize', type=int, nargs='*', required=True  , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument('-p', '--pgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument('-q', '--qgrid'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument('-g', '--gpus'     , type=int, nargs='*', default=[0]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument('-t', '--threads'  , type=int,            default=4      , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--pmap'     , type=int,            default=0      , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--bcast'    , type=int, nargs='*', default=[0]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--pfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--rfact'    , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--nbmin'    , type=int, nargs='*', default=[1]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--ndiv'     , type=int, nargs='*', default=[2]    , metavar='', help=argparse.SUPPRESS)
-hpl.add_argument(      '--ai'       , action='store_true', default=False  ,             help=argparse.SUPPRESS)
+hpl.add_argument('-s', '--size'             , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-b', '--blocksize'        , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--device'           , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,1], metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--thread'           , type=int,            default=8    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--pmap'             , type=int,            default=0    , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--pfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--nbmin'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
+hpl.add_argument(      '--ai'               , action='store_true', default=False,             help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
@@ -112,16 +114,16 @@ with open('HPL.dat', 'w') as input:
 
 with open('run.sh', 'w') as script:
     mpiprocs = args.pgrid[0] * args.qgrid[0]; 
-    ngpus    = len(args.gpus); 
+    ngpus    = len(args.device); 
 
     # check for correct number of mpiprocs and gpus 
     if mpiprocs != ngpus:
         raise Exception("Error: HPL requires CPU/GPU = 1")
 
     # export cuda devices 
-    script.write(f'export CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in args.gpus)}\n\n')
+    script.write(f'export CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in args.device)}\n\n')
 
-    cmd = ['mpirun']
+    cmd    = ['mpirun']
 
     # mpi options
     cmd.append(f'{"":>4}--np {mpiprocs}')
@@ -135,11 +137,27 @@ with open('run.sh', 'w') as script:
     
     # hpl options
     cmd.append(f'{"":>8}hpl.sh')
-    cmd.append(f'{"":>12}--cpu-cores-per-rank {args.threads}')
-    cmd.append(f'{"":>12}--cpu-affinity {":".join(["0"]*(int(mpiprocs/2)) + ["1"]*(int(mpiprocs/2)))}')
-    cmd.append(f'{"":>12}--gpu-affinity {":".join(str(gpu) for gpu in args.gpus)}')
+    cmd.append(f'{"":>12}--cpu-cores-per-rank {args.thread}')
+    
+    # cpu affinity
+    socket       = [0,1]
+    cpu_affinity = []
+    for affinity_set in zip(args.device, args.device_per_socket, socket):
+        # for cas_v100_2: two GPUs in socket #1
+        if affinity_set[1] == 0: 
+            continue 
+
+        cpu_affinity = cpu_affinity + ([affinity_set[0]]*affinity_set[1])
+
+    cmd.append(f'{"":>12}--cpu-affinity {":".join(str(cpu) for cpu in cpu_affinity)}')
+    
+    # gpu affinity 
+    cmd.append(f'{"":>12}--gpu-affinity {":".join(str(gpu) for gpu in args.device)}' )
+
+    # input file
     cmd.append(f'{"":>12}--dat /input/HPL.dat')
 
+    # switch to hpl-ai
     if args.ai:
         cmd.append(f'{"":>12}--xhpl-ai')
 

@@ -22,14 +22,14 @@ parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + _
 stream = parser.add_argument_group(
     title='STREAM parameters',
     description='\n'.join([
-        '-a, --arch   (required)  targeting architecture',
-        '-m, --mem                memory mode',
-        '-n, --ntimes             run each kernel n times', 
-        '-d, --device             device index',
-        '-s, --size               size of matrix (must be multiplier of 1024)', 
-        '-f, --float              use floats', 
-        '-t, --triad              only run triad kernel', 
-        '-c, --csv                output as csv table']))
+        '-a, --arch      targeting architecture',
+        '-m, --mem       memory mode',
+        '-n, --ntimes    run each kernel n times', 
+        '-d, --device    device index',
+        '-s, --size      size of matrix (must be multiplier of 1024)', 
+        '-f, --float     use floats', 
+        '-t, --triad     only run triad kernel', 
+        '-c, --csv       output as csv table']))
        
 # parse cmd options
 stream.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help=argparse.SUPPRESS) 

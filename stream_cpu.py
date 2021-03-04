@@ -21,16 +21,16 @@ parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + _
 stream = parser.add_argument_group(
     title='STREAM parameters',
     description='\n'.join([
-        '-s, --size                  size of matrix (must be at least 4 x LLC)', 
-        '-n, --ntimes                run each kernel n times',
-        '-m, --march     (required)  argeting architecture', 
-        '-t, --threads   (required)  number of OMP threads',
-        '-a, --affinity  (required)  thread affinity: close|spread']))
+        '-s, --size        size of matrix (must be at least 4 x LLC)', 
+        '-n, --ntimes      run each kernel n times',
+        '-m, --march       argeting architecture', 
+        '-t, --thread      number of OMP threads',
+        '-a, --affinity    thread affinity: close|spread']))
 
 stream.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help=argparse.SUPPRESS)
-stream.add_argument('-t', '--threads' , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-t', '--thread ' , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help=argparse.SUPPRESS)
 
 args = parser.parse_args()
@@ -70,7 +70,7 @@ def build():
 def benchmark(): 
     os.environ['OMP_DISPLAY_ENV'] = 'true'
     os.environ['OMP_PLACES'     ] = 'threads' # hw thread, no HT
-    os.environ['OMP_NUM_THREADS'] = str(args.threads)
+    os.environ['OMP_NUM_THREADS'] = str(args.thread)
     os.environ['OMP_PROC_BIND'  ] = str(args.affinity)
 
     cmd = ['./stream_cpu.x']
