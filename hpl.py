@@ -6,7 +6,7 @@ __version__ = '0.1'
 
 parser = argparse.ArgumentParser(
     prog='hpl.py',
-    description='HPL input generator', 
+    description='HPL Benchmark', 
     usage='%(prog)s -s 40000 60000 -b 512 1024 -p 1 2 -q 4 2',
     formatter_class=argparse.RawDescriptionHelpFormatter)
 

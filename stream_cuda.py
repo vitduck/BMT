@@ -11,7 +11,7 @@ __version__ = '0.1'
 # init
 parser=argparse.ArgumentParser(
     prog='stream_cuda.py', 
-    description='STREAM-CUDA', 
+    description='STREAM-CUDA Benchmark', 
     usage='%(prog)s -a sm_70', 
     formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -78,16 +78,13 @@ def benchmark():
     ] 
 
     if args.size: 
-        cmd.append('--arraysize', str(args.size))
-
+        cmd += ['--arraysize', str(args.size)]
     if args.float:
-        cmd.append('--float')
-    
+        cmd += ['--float']
     if args.triad:
-        cmd.append('--triad-only')
-
+        cmd += ['--triad-only']
     if args.csv:
-        cmd.append('--csv')
+        cmd += ['--csv']
 
     subprocess.call(cmd)
 

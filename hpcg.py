@@ -6,7 +6,7 @@ __version__ = '0.1'
 
 parser = argparse.ArgumentParser(
     prog='hpcg.py',
-    description='HPCG input generator', 
+    description='HPCG Benchmark', 
     usage='%(prog)s -g 256 256 256 -t 60',
     formatter_class=argparse.RawDescriptionHelpFormatter)
 

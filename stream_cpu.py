@@ -10,7 +10,7 @@ __version__ = '0.1'
 # init
 parser=argparse.ArgumentParser(
     prog='stream_cpu.py', 
-    description='STREAM-CPU', 
+    description='STREAM-CPU Benchmark', 
     usage='%(prog)s -m skylake-avx512 -t 24 -a spread', 
     formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -30,7 +30,7 @@ stream = parser.add_argument_group(
 stream.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help=argparse.SUPPRESS)
-stream.add_argument('-t', '--thread ' , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
+stream.add_argument('-t', '--thread'  , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
 stream.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help=argparse.SUPPRESS)
 
 args = parser.parse_args()
