@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import os
 import argparse
+
+from datetime import datetime
 
 __version__ = '0.1'
 
@@ -33,6 +36,17 @@ hpcg.add_argument(      '--thread'           , type=int           , default=8   
 
 args = parser.parse_args()
 
+# output directory
+if not os.path.exists('output'):
+    os.mkdir('output')
+
+os.chdir('output')
+
+# create time-stamp
+current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
+os.mkdir(current)
+os.chdir(current)
+
 with open('HPCG.dat', 'w') as input:
     # output 
     input.write(f'HPCG input\n')
@@ -59,7 +73,7 @@ with open('run.sh', 'w') as script:
     cmd.append(f'{"":>8}run')
     cmd.append(f'{"":>8}--nv')
     cmd.append(f'{"":>8}-B $PWD:/input')
-    cmd.append(f'{"":>8}./hpc-benchmarks_20.10-hpcg.sif')
+    cmd.append(f'{"":>8}../../hpc-benchmarks_20.10-hpcg.sif')
     
     # hpl options
     cmd.append(f'{"":>8}hpcg.sh')

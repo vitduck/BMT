@@ -6,6 +6,8 @@ import argparse
 import textwrap
 import subprocess
 
+from datetime import datetime
+
 __version__ = '0.1'
 
 # init
@@ -43,6 +45,8 @@ stream.add_argument('-c', '--csv'   , action='store_true'                      ,
 
 args = parser.parse_args()
 
+root = os.getcwd()
+
 def main(): 
     download()
     build()
@@ -50,14 +54,23 @@ def main():
 
 # download CUDStream src
 def download(): 
+    if not os.path.exists('build'):
+        os.mkdir('build')
+
+    os.chdir('build')
+
     source = ['main.cpp', 'Stream.h','CUDAStream.cu', 'CUDAStream.h']
 
     for file in source: 
         if not os.path.exists(file):
             subprocess.call(['wget', 'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/' + file])
 
+    os.chdir(root)
+
 # build with nvcc
 def build(): 
+    os.chdir('build')
+
     subprocess.call([ 
         'nvcc',
             '-std=c++11', 
@@ -70,9 +83,21 @@ def build():
             '-o', 'stream_cuda.x'
     ])
 
+    os.chdir(root)
+
 def benchmark(): 
+     # output directory
+    if not os.path.exists('output'):
+        os.mkdir('output')
+    os.chdir('output')
+
+    # create time-stamp
+    current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
+    os.mkdir(current)
+    os.chdir(current)
+
     cmd = [
-        './stream_cuda.x', 
+        '../../build/stream_cuda.x', 
             '--numtimes', str(args.ntimes), 
             '--device',   str(args.device)
     ] 
@@ -86,7 +111,10 @@ def benchmark():
     if args.csv:
         cmd += ['--csv']
 
-    subprocess.call(cmd)
+    with open('stream_cuda.out', 'w') as output:
+        subprocess.call(cmd, stdout=output)
+
+    os.chdir(root)
 
 if __name__ == '__main__':
     main()

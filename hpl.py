@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import os
 import argparse
+
+from datetime import datetime
 
 __version__ = '0.1'
 
@@ -49,6 +52,17 @@ hpl.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]  
 hpl.add_argument(      '--ai'               , action='store_true', default=False,             help=argparse.SUPPRESS)
 
 args = parser.parse_args()
+
+# output directory
+if not os.path.exists('output'):
+    os.mkdir('output')
+
+os.chdir('output')
+
+# create time-stamp
+current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
+os.mkdir(current)
+os.chdir(current)
 
 with open('HPL.dat', 'w') as input:
     # output 
@@ -133,7 +147,7 @@ with open('run.sh', 'w') as script:
     cmd.append(f'{"":>8}run')
     cmd.append(f'{"":>8}--nv')
     cmd.append(f'{"":>8}-B $PWD:/input')
-    cmd.append(f'{"":>8}./hpc-benchmarks_20.10-hpl.sif')
+    cmd.append(f'{"":>8}../../hpc-benchmarks_20.10-hpl.sif')
     
     # hpl options
     cmd.append(f'{"":>8}hpl.sh')

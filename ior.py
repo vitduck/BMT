@@ -5,6 +5,7 @@ import argparse
 import subprocess 
 
 from shutil import copy
+from datetime import datetime
 
 __version__ = '0.1'
 
@@ -38,15 +39,27 @@ ior.add_argument('-C', action='store_true'                , help=argparse.SUPPRE
 
 args = parser.parse_args()
 
+root = os.getcwd()
+
 def main():
     download()
     build()
     benchmark()
 
 def download():
-    subprocess.call(['wget', 'https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz'])
+    if not os.path.exists('build'):
+        os.mkdir('build')
+
+    os.chdir('build')
+    
+    if not os.path.exists('ior-3.3.0.tar.gz'):
+        subprocess.call(['wget', 'https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz'])
+
+    os.chdir(root)
  
 def build():
+    os.chdir('build')
+
     subprocess.call(['tar', 'xf', 'ior-3.3.0.tar.gz'])
 
     os.chdir('ior-3.3.0')
@@ -62,15 +75,29 @@ def build():
 
     copy('ior-3.3.0/src/ior','.')
 
+    os.chdir(root)
+
 def benchmark(): 
-    cmd = ['mpirun', '-n', str(args.n), './ior', '-b', str(args.b), '-t', str(args.t), '-s', str(args.s)]
+    # output directory
+    if not os.path.exists('output'):
+        os.mkdir('output')
+
+    os.chdir('output')
+
+    # create time-stamp
+    current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
+    os.mkdir(current)
+    os.chdir(current)
+
+    cmd = ['mpirun', '--n', str(args.n), '../../build/ior', '-b', str(args.b), '-t', str(args.t), '-s', str(args.s)]
 
     if args.F: 
         cmd += ['-F']
     if args.C: 
         cmd += ['-C']
 
-    subprocess.call(cmd)
+    with open('ior.out', 'w') as output:
+        subprocess.call(cmd, stdout=output)
 
 if __name__ == "__main__":
     main()

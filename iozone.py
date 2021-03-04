@@ -5,6 +5,7 @@ import argparse
 import subprocess 
 
 from shutil import copy
+from datetime import datetime
 
 __version__ = '0.1'
 
@@ -63,6 +64,8 @@ iozone.add_argument('--dir', type=str, default='./', metavar='', help=argparse.S
 
 args = parser.parse_args()
 
+root = os.getcwd()
+
 def main():
     if args.a or args.i:
         os.chdir(args.dir)
@@ -72,9 +75,19 @@ def main():
         benchmark()
 
 def download():
-    subprocess.call(['wget', 'http://www.iozone.org/src/current/iozone3_491.tgz'])
+    if not os.path.exists('build'):
+        os.mkdir('build')
+
+    os.chdir('build')
+
+    if not os.path.exists('iozone3_491.tgz'):
+        subprocess.call(['wget', 'http://www.iozone.org/src/current/iozone3_491.tgz'])
+
+    os.chdir(root)
 
 def build():
+    os.chdir('build')
+
     subprocess.call(['tar', 'xf', 'iozone3_491.tgz'])
 
     os.chdir('iozone3_491/src/current')
@@ -85,8 +98,21 @@ def build():
 
     copy('iozone3_491/src/current/iozone','.')
 
+    os.chdir(root)
+
 def benchmark(): 
-    cmd = ['./iozone', '-R', '-b', args.b]
+    # output directory
+    if not os.path.exists('output'):
+        os.mkdir('output')
+
+    os.chdir('output')
+
+    # create time-stamp
+    current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
+    os.mkdir(current)
+    os.chdir(current)
+
+    cmd = ['../../build/iozone', '-R', '-b', args.b]
 
     if args.a: 
         cmd += ['-a']
@@ -105,7 +131,10 @@ def benchmark():
     if args.r: 
        cmd += ['-r', str(args.r)]
 
-    subprocess.call(cmd)
+    with open('iozone.out', 'w') as output:
+        subprocess.call(cmd, stdout=output)
+
+    os.chdir(root)
 
 if __name__ == "__main__":
     main()
