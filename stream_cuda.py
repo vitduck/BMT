@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 
 import os.path 
-
 import argparse
-import textwrap
 import subprocess
 
-from datetime import datetime
+from shutil    import move
+from modulecmd import env
+from utils     import download, timestamp
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 # init
 parser=argparse.ArgumentParser(
-    prog='stream_cuda.py', 
-    description='STREAM-CUDA Benchmark', 
-    usage='%(prog)s -a sm_70', 
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    prog            ='stream_cuda.py', 
+    usage           = '%(prog)s -a sm_70', 
+    description     = 'STREAM-CUDA Benchmark', 
+    formatter_class = argparse.RawDescriptionHelpFormatter)
 
 # version string
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
@@ -34,87 +34,78 @@ stream = parser.add_argument_group(
         '-c, --csv       output as csv table']))
        
 # parse cmd options
-stream.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help=argparse.SUPPRESS) 
-stream.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help=argparse.SUPPRESS) 
-stream.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help=argparse.SUPPRESS) 
-stream.add_argument('-d', '--device', type=int, default=0          , metavar='', help=argparse.SUPPRESS) 
-stream.add_argument('-s', '--size'  , type=int                     , metavar='', help=argparse.SUPPRESS) 
-stream.add_argument('-f', '--float' , action='store_true'                      , help=argparse.SUPPRESS) 
-stream.add_argument('-t', '--triad' , action='store_true'                      , help=argparse.SUPPRESS) 
-stream.add_argument('-c', '--csv'   , action='store_true'                      , help=argparse.SUPPRESS) 
+stream.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help=argparse.SUPPRESS)
+stream.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help=argparse.SUPPRESS)
+stream.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help=argparse.SUPPRESS)
+stream.add_argument('-d', '--device', type=int, default=0          , metavar='', help=argparse.SUPPRESS)
+stream.add_argument('-s', '--size'  , type=int                     , metavar='', help=argparse.SUPPRESS)
+stream.add_argument('-f', '--float' , action='store_true'                      , help=argparse.SUPPRESS)
+stream.add_argument('-t', '--triad' , action='store_true'                      , help=argparse.SUPPRESS)
+stream.add_argument('-c', '--csv'   , action='store_true'                      , help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
-root = os.getcwd()
-
 def main(): 
-    download()
-    build()
+    # load modules
+    env('stream_cuda')
+
+    if not os.path.exists('bin/stream_gpu.x'):
+        os.makedirs('bin'  , exist_ok=True)
+        os.makedirs('build', exist_ok=True)
+
+        download([
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/Stream.h',
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/main.cpp',
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.h',
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.cu'])
+
+        build() 
+    
     benchmark()
 
-# download CUDStream src
-def download(): 
-    if not os.path.exists('build'):
-        os.mkdir('build')
-
-    os.chdir('build')
-
-    source = ['main.cpp', 'Stream.h','CUDAStream.cu', 'CUDAStream.h']
-
-    for file in source: 
-        if not os.path.exists(file):
-            subprocess.call(['wget', 'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/' + file])
-
-    os.chdir(root)
-
-# build with nvcc
 def build(): 
-    os.chdir('build')
+    print('=> Building STREAM_CUDA')
 
-    subprocess.call([ 
-        'nvcc',
+    with open('nvcc.log', 'w') as log:
+        subprocess.call([ 
+            'nvcc',
             '-std=c++11', 
             '-O3',
             '-DCUDA',
             '-arch='+ args.arch,
             '-D'    + args.mem, 
-            'main.cpp', 
-            'CUDAStream.cu', 
-            '-o', 'stream_cuda.x'
-    ])
-
-    os.chdir(root)
-
+            'build/main.cpp', 
+            'build/CUDAStream.cu', 
+            '-o', 'bin/stream_cuda.x'])
+    
 def benchmark(): 
-     # output directory
-    if not os.path.exists('output'):
-        os.mkdir('output')
-    os.chdir('output')
+    # time stamp
+    outdir = timestamp()
+    output = os.path.join(outdir, 'stream_cuda.out')
 
-    # create time-stamp
-    current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
-    os.mkdir(current)
-    os.chdir(current)
+    os.makedirs(outdir)
+
+    print(f'=> Output: {output}')
 
     cmd = [
-        '../../build/stream_cuda.x', 
+        'bin/stream_cuda.x', 
             '--numtimes', str(args.ntimes), 
-            '--device',   str(args.device)
-    ] 
+            '--device',   str(args.device)]
 
     if args.size: 
-        cmd += ['--arraysize', str(args.size)]
+        cmd.extend(['--arraysize', str(args.size)])
+
     if args.float:
-        cmd += ['--float']
+        cmd.extend(['--float'])
+
     if args.triad:
-        cmd += ['--triad-only']
+        cmd.extend(['--triad-only'])
+
     if args.csv:
-        cmd += ['--csv']
+        cmd.extend(['--csv'])
 
-    with open('stream_cuda.out', 'w') as output:
+    with open(output, 'w') as output:
         subprocess.call(cmd, stdout=output)
-
-    os.chdir(root)
 
 if __name__ == '__main__':
     main()

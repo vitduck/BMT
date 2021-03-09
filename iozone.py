@@ -4,17 +4,18 @@ import os
 import argparse
 import subprocess 
 
-from shutil import copy
-from datetime import datetime
+from shutil    import move
+from modulecmd import env
+from utils     import download, timestamp
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 # init
 parser=argparse.ArgumentParser(
-    prog='iozone.py', 
-    description='IOZONE Benchmark', 
-    usage='%(prog)s -a', 
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    prog            = 'iozone.py', 
+    usage           = '%(prog)s -a', 
+    description     = 'IOZONE Benchmark', 
+    formatter_class = argparse.RawDescriptionHelpFormatter)
 
 # version string
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
@@ -45,93 +46,94 @@ iozone = parser.add_argument_group(
         '-s       size of file to test (KB)',
         '-r       record size to test (KB)',
         '-o       synchronous write to disk',
-        '-b       excel output file', 
-        '--dir    local test directory']))
+        '-b       excel output file']))
 
 # check for exclusivity betwen '-a' and '-i'
 group = parser.add_mutually_exclusive_group() 
-group.add_argument( '-a'   , action='store_true',  help=argparse.SUPPRESS)
-group.add_argument( '-i'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-n'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-g'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-y'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-q'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-s'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-r'   , type=int, metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-o'   , action='store_true' , help=argparse.SUPPRESS)
-iozone.add_argument('-b'   , type=str, default='iozone.xls', metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('--dir', type=str, default='./', metavar='', help=argparse.SUPPRESS)
+group.add_argument ('-a', action='store_true',                        help=argparse.SUPPRESS)
+group.add_argument ('-i', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-n', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-g', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-y', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-q', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-s', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-r', type=int,                       metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-b', type=str, default='iozone.xls', metavar='', help=argparse.SUPPRESS)
+iozone.add_argument('-o', action='store_true' ,                       help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
+# top directory
 root = os.getcwd()
 
 def main():
-    if args.a or args.i:
-        os.chdir(args.dir)
+    env('iozone')
 
-        download()
+    if not os.path.exists('bin/iozone'): 
+        os.makedirs('bin'  , exist_ok=True)
+        os.makedirs('build', exist_ok=True)
+
+        download(['http://www.iozone.org/src/current/iozone3_491.tgz'])
+    
         build()
-        benchmark()
 
-def download():
-    if not os.path.exists('build'):
-        os.mkdir('build')
-
-    os.chdir('build')
-
-    if not os.path.exists('iozone3_491.tgz'):
-        subprocess.call(['wget', 'http://www.iozone.org/src/current/iozone3_491.tgz'])
-
-    os.chdir(root)
+    benchmark()
 
 def build():
     os.chdir('build')
-
+    
+    # extract 
+    print('=> Extracting iozone')
     subprocess.call(['tar', 'xf', 'iozone3_491.tgz'])
-
+    
+    # make
     os.chdir('iozone3_491/src/current')
 
-    subprocess.call(['make', 'linux'])
+    with open('make.log', 'w') as log: 
+        print('=> Building iozone')
+        subprocess.call(['make', 'linux'], stderr=log, stdout=log)
 
-    os.chdir('../../../')
-
-    copy('iozone3_491/src/current/iozone','.')
+    move('iozone',   f'{root}/bin')
+    move('make.log', f'{root}'    )
 
     os.chdir(root)
 
 def benchmark(): 
-    # output directory
-    if not os.path.exists('output'):
-        os.mkdir('output')
+    # time stamp
+    outdir = timestamp()
+    output = os.path.join(outdir, 'iozone.out')
 
-    os.chdir('output')
+    os.makedirs(outdir)
 
-    # create time-stamp
-    current = datetime.now().strftime("%Y%m%d_%H:%M:%S")
-    os.mkdir(current)
-    os.chdir(current)
+    print(f'=> Output: {output}')
 
-    cmd = ['../../build/iozone', '-R', '-b', args.b]
+    cmd = ['bin/iozone', '-R', '-b', os.path.join(outdir, args.b)]
 
     if args.a: 
-        cmd += ['-a']
-    if args.i: 
-       cmd += ['-i', str(args.i)]
-    if args.n: 
-       cmd += ['-n', str(args.n)]
-    if args.g: 
-       cmd += ['-g', str(args.g)]
-    if args.y: 
-       cmd += ['-y', str(args.y)] 
-    if args.q: 
-       cmd += ['-q', str(args.q)] 
-    if args.s: 
-       cmd += ['-s', str(args.s)]
-    if args.r: 
-       cmd += ['-r', str(args.r)]
+        cmd.extend(['-a'])
 
-    with open('iozone.out', 'w') as output:
+    if args.i: 
+       cmd.extend(['-i', str(args.i)])
+
+    if args.n: 
+       cmd.extend(['-n', str(args.n)])
+
+    if args.g: 
+       cmd.extend(['-g', str(args.g)])
+
+    if args.y: 
+       cmd.extend(['-y', str(args.y)])
+
+    if args.q: 
+       cmd.extend(['-q', str(args.q)])
+
+    if args.s: 
+       cmd.extend(['-s', str(args.s)])
+
+    if args.r: 
+       cmd.extend(['-r', str(args.r)])
+
+    with open(output, 'w') as output:
         subprocess.call(cmd, stdout=output)
 
     os.chdir(root)
