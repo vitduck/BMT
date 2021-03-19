@@ -1,116 +1,110 @@
 #!/usr/bin/env python 
 
-import os.path
+import os
 import argparse
-import subprocess 
 
-from shutil    import move
-from modulecmd import env
-from utils     import download, timestamp
-
-__version__ = '0.2'
-
-# init
-parser=argparse.ArgumentParser(
-    prog            = 'ior.py', 
-    usage           = '%(prog)s -a', 
-    description     = 'IOR Benchmark', 
-    formatter_class = argparse.RawDescriptionHelpFormatter)
-
-# version string
-parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-
-# options for stream setup
-ior = parser.add_argument_group(
-    title='IOR Parameters',
-    description='\n'.join([
-        '-n       number of process', 
-        '-b       block size', 
-        '-t       transfer size', 
-        '-s       segment count', 
-        '-F       ecah MPI process writes its own file',
-        '-C       cyclic distribution of write-read to mitigate cache effect']))
-
-ior.add_argument('-n', type=int, required=True, metavar='', help=argparse.SUPPRESS)
-ior.add_argument('-b', type=str, required=True, metavar='', help=argparse.SUPPRESS)
-ior.add_argument('-t', type=str, required=True, metavar='', help=argparse.SUPPRESS)
-ior.add_argument('-s', type=int, required=True, metavar='', help=argparse.SUPPRESS)
-ior.add_argument('-F', action='store_true'                , help=argparse.SUPPRESS)
-ior.add_argument('-C', action='store_true'                , help=argparse.SUPPRESS)
-
-args = parser.parse_args()
-
-# top directory
-root = os.getcwd()
+from shutil  import move
+from version import __version__
+from bmt     import benchmark
 
 def main():
-    env('ior')
-
-    if not os.path.exists('bin/ior'):
-        os.makedirs('bin'  , exist_ok=True)
-        os.makedirs('build', exist_ok=True)
-
-        download(['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz'])
-
-        build() 
-
-    benchmark()
-
-def build():
-    os.chdir('build')
-
-    # extract 
-    print('=> Extracting ior')
-    subprocess.call(['tar', 'xf', 'ior-3.3.0.tar.gz'])
-
-    os.chdir('ior-3.3.0')
-
-    # configure
-    with open('configure.log', 'w') as log:
-        print('=> Configuring ior')
-        subprocess.call([ 
-            './configure', 
-                'MPICC=mpicc', 
-                f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include', 
-                f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib'],
-                stderr=log, stdout=log)
+    ior = benchmark(
+        name    = 'ior',
+        exe     = 'ior.x',
+        output  = 'ior.out',
+        module  = ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
+        min_ver = {}, 
+        url     = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz'], 
+        args    = getopt()
+    )
     
-    # make
-    with open('make.log', 'w') as log:
-        print('=> Building ior')
-        subprocess.call(['make', '-j', '4'], stderr=log, stdout=log)
+    # env
+    ior.purge()
+    ior.load()
+    ior.check_version()
     
-    move('src/ior'      , f'{root}/bin')
-    move('configure.log', f'{root}'    )
-    move('make.log'     , f'{root}'    )
+    # download src files 
+    ior.download()
+    
+    # build
+    if not os.path.exists(ior.bin): 
+        ior.mkdir(ior.bin_dir)
+        ior.chdir(ior.build_dir)
+        
+        # extracting 
+        ior.sys_cmd(
+            ['tar', 'xf', 'ior-3.3.0.tar.gz'], 
+            '=> extracting ior-3.3.0.tar.gz'
+        )
 
-    os.chdir(root)
+        ior.chdir('ior-3.3.0')
 
-def benchmark(): 
-    # time stamp
-    outdir = timestamp()
-    output = os.path.join(outdir, 'iozone.out')
+        # configure
+        ior.sys_cmd(
+            [  './configure', 
+               'MPICC=mpicc', 
+              f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include', 
+              f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib'
+            ],
+            '=> configuring ior', 
+            f'{ior.root}/configure.log'
+        )
+    
+        # make 
+        ior.sys_cmd(
+            ['make', '-j', '4'], 
+            '=> building ior', 
+            f'{ior.root}/build.log'
+        )
+        
+        # move to bin
+        move('src/ior', f'{ior.bin}')
 
-    os.makedirs(outdir)
+    # benchmark
+    ior.run_cmd = [     
+            'mpirun', 
+            '-n', str(ior.mpiprocs), 
+            '-H', ','.join(ior.args.host) 
+        ] +\
+        ior.run_cmd + [
+            '-b',     ior.args.b,  
+            '-t',     ior.args.t,  
+            '-s', str(ior.args.s),  
+            '-F', 
+            '-C'
+        ]
 
-    print(f'=> Output: {output}')
+    ior.mkdir(ior.output_dir)
+    ior.run()
 
-    cmd = [
-        'mpirun', 
-            '--n', str(args.n), 
-            'bin/ior', 
-            '-b', str(args.b), 
-            '-t', str(args.t), 
-            '-s', str(args.s)]
+def getopt():
+    parser=argparse.ArgumentParser(
+        prog            = 'ior.py', 
+        usage           = '%(prog)s -b 16m -t 1m -s 16 --host test1:2 test2:2',
+        description     = 'IOR Benchmark', 
+        formatter_class = argparse.RawDescriptionHelpFormatter
+    )
 
-    if args.F: 
-        cmd.extend(['-F'])
+    # version string
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
-    if args.C: 
-        cmd.extend(['-C'])
+    g1 = parser.add_argument_group(
+        title='runtime arguments',
+        description='\n'.join([
+            '-b, --block     block size',
+            '-t, --transfer  transfer size',
+            '-s, --segment   segment count',
+            '    --host      list of hosts on which to invoke processes'
+        ])
+    )
 
-    with open(output, 'w') as output:
-        subprocess.call(cmd, stdout=output)
+    # options for stream setup
+    g1.add_argument('-b',     type=str,            required=True, metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-t',     type=str,            required=True, metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-s',     type=int,            required=True, metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('--host', type=str, nargs='+', required=True, metavar='', help=argparse.SUPPRESS)
+
+    return parser.parse_args()
 
 if __name__ == "__main__":
     main()

@@ -1,142 +1,132 @@
 #!/usr/bin/env python 
 
 import os
+import sys
 import argparse
-import subprocess 
 
-from shutil    import move
-from modulecmd import env
-from utils     import download, timestamp
-
-__version__ = '0.2'
-
-# init
-parser=argparse.ArgumentParser(
-    prog            = 'iozone.py', 
-    usage           = '%(prog)s -a', 
-    description     = 'IOZONE Benchmark', 
-    formatter_class = argparse.RawDescriptionHelpFormatter)
-
-# version string
-parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-
-# options for stream setup
-iozone = parser.add_argument_group(
-    title='IOZONE Parameters',
-    description='\n'.join([
-        '-a       full automatic mode (record: 4KB->16MB, size: 64KB->512MB)',
-        '-i       test mode:',
-        '            0 = write/re-write',
-        '            1 = read/re-read',
-        '            2 = random-read/write',
-        '            3 = read-backwards',
-        '            4 = re-write-records',
-        '            5 = stride-read',
-        '            6 = fwrite/re-fwrite',
-        '            7 = fread/re-fread',
-        '            8 = random-mix',
-        '            9 = pwrite/re-pwrite',
-        '           10 = pread/re-pread',
-        '           11 = pwritev/re-pwritev',
-        '           12 = preadv/re-preadv',
-        '-n       minimum file size in auto mode (KB)', 
-        '-g       maximum file size in auto mode (KB)', 
-        '-y       minimum record size in auto mode (KB)', 
-        '-q       maximum record size in auto mode (KB)', 
-        '-s       size of file to test (KB)',
-        '-r       record size to test (KB)',
-        '-o       synchronous write to disk',
-        '-b       excel output file']))
-
-# check for exclusivity betwen '-a' and '-i'
-group = parser.add_mutually_exclusive_group() 
-group.add_argument ('-a', action='store_true',                        help=argparse.SUPPRESS)
-group.add_argument ('-i', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-n', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-g', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-y', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-q', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-s', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-r', type=int,                       metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-b', type=str, default='iozone.xls', metavar='', help=argparse.SUPPRESS)
-iozone.add_argument('-o', action='store_true' ,                       help=argparse.SUPPRESS)
-
-args = parser.parse_args()
-
-# top directory
-root = os.getcwd()
+from shutil  import move
+from version import __version__
+from bmt     import benchmark
 
 def main():
-    env('iozone')
-
-    if not os.path.exists('bin/iozone'): 
-        os.makedirs('bin'  , exist_ok=True)
-        os.makedirs('build', exist_ok=True)
-
-        download(['http://www.iozone.org/src/current/iozone3_491.tgz'])
+    iozone = benchmark(
+        name    = 'iozone',
+        exe     = 'iozone.x',
+        output  = 'iozone.out',
+        module  = [],
+        min_ver = {}, 
+        url     = ['http://www.iozone.org/src/current/iozone3_491.tgz'], 
+        args    = getopt()
+    )
     
-        build()
+    # download src files
+    iozone.download()
 
-    benchmark()
+    # build
+    if not os.path.exists(iozone.bin):
+        iozone.mkdir(iozone.bin_dir)
+        iozone.chdir(iozone.build_dir)
+        
+        # extract
+        iozone.sys_cmd(
+            ['tar', 'xf', 'iozone3_491.tgz'], 
+            f'=> extracting iozone3_491.tgz'
+        )
 
-def build():
-    os.chdir('build')
+        iozone.chdir('iozone3_491/src/current')
+        
+        # make
+        iozone.sys_cmd(
+            ['make', 'linux'], 
+            f'=> building iozone', 
+            f'{iozone.root}/build.log'
+        )
     
-    # extract 
-    print('=> Extracting iozone')
-    subprocess.call(['tar', 'xf', 'iozone3_491.tgz'])
+        # move to bin
+        move('iozone', f'{iozone.bin}')
+
+    # automatic mode
+    if iozone.args.a: 
+        iozone.run_cmd += [ 
+            '-a',
+            '-n', iozone.args.n, 
+            '-g', iozone.args.g, 
+            '-y', iozone.args.y, 
+            '-b', iozone.args.b, 
+        ]
+    # manual
+    elif iozone.args.i: 
+        for mode in iozone.args.i: 
+            iozone.run_cmd += [ '-i', str(mode)] 
+
+        iozone.run_cmd += [
+            '-s', iozone.args.s, 
+            '-r', iozone.args.r, 
+        ]
+   
+    #  excel file
+    iozone.run_cmd += [ '-b', os.path.join(iozone.output_dir, iozone.args.b) ]
+
+    # benchmark 
+    iozone.mkdir(iozone.output_dir)
+    iozone.run()
     
-    # make
-    os.chdir('iozone3_491/src/current')
+def getopt(): 
+    parser=argparse.ArgumentParser(
+        prog            = 'iozone.py', 
+        usage           = '%(prog)s -a -n 16k -g 64m -y 4k -q 16m ', 
+        description     = 'IOZONE Benchmark', 
+        formatter_class = argparse.RawDescriptionHelpFormatter)
 
-    with open('make.log', 'w') as log: 
-        print('=> Building iozone')
-        subprocess.call(['make', 'linux'], stderr=log, stdout=log)
+    # version string
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
-    move('iozone',   f'{root}/bin')
-    move('make.log', f'{root}'    )
+    # check for exclusivity betwen '-a' and '-i'
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-a', action='store_true'             , help=argparse.SUPPRESS)
+    group.add_argument('-i', type=int, nargs='+', metavar='*', help=argparse.SUPPRESS) 
+    
+    g1 = parser.add_argument_group(
+        title='benchamrk arguments',
+        description='\n'.join([
+            '-a    full automatic mode', 
+            '-i    test mode:',
+            '         0 = write/re-write',
+            '         1 = read/re-read',
+            '         2 = random-read/write',
+            '         3 = read-backwards',
+            '         4 = re-write-records',
+            '         5 = stride-read',
+            '         6 = fwrite/re-fwrite',
+            '         7 = fread/re-fread',
+            '         8 = random-mix',
+            '         9 = pwrite/re-pwrite',
+            '        10 = pread/re-pread',
+            '        11 = pwritev/re-pwritev',
+            '        12 = preadv/re-preadv',
+            '-n    minimum file size in auto mode   (default: 64k)',
+            '-g    maximum file size in auto mode   (default: 512m)',
+            '-y    minimum record size in auto mode (default: 4k)', 
+            '-q    maximum record size in auto mode (default: 16m)',
+            '-s    size of file to test             (default: 4k)',
+            '-r    record size to test              (default: 512k)',
+            '-b    excel output file                (default: io.xls)', 
+        ])
+    )
 
-    os.chdir(root)
+    g1.add_argument('-n', type=str, default='64k'   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-g', type=str, default='512m'  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-y', type=str, default='4k'    , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-q', type=str, default='16m'   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-b', type=str, default='io.xls', metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-s', type=str, default='512k'  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-r', type=str, default='4k'    , metavar='', help=argparse.SUPPRESS)
 
-def benchmark(): 
-    # time stamp
-    outdir = timestamp()
-    output = os.path.join(outdir, 'iozone.out')
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
-    os.makedirs(outdir)
-
-    print(f'=> Output: {output}')
-
-    cmd = ['bin/iozone', '-R', '-b', os.path.join(outdir, args.b)]
-
-    if args.a: 
-        cmd.extend(['-a'])
-
-    if args.i: 
-       cmd.extend(['-i', str(args.i)])
-
-    if args.n: 
-       cmd.extend(['-n', str(args.n)])
-
-    if args.g: 
-       cmd.extend(['-g', str(args.g)])
-
-    if args.y: 
-       cmd.extend(['-y', str(args.y)])
-
-    if args.q: 
-       cmd.extend(['-q', str(args.q)])
-
-    if args.s: 
-       cmd.extend(['-s', str(args.s)])
-
-    if args.r: 
-       cmd.extend(['-r', str(args.r)])
-
-    with open(output, 'w') as output:
-        subprocess.call(cmd, stdout=output)
-
-    os.chdir(root)
+    return parser.parse_args()
 
 if __name__ == "__main__":
     main()

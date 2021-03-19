@@ -1,113 +1,92 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 
 
-import os.path 
+import os 
 import argparse
-import subprocess
 
-from shutil    import move
-from modulecmd import env
-from utils     import download, timestamp, gcc_ver, cuda_ver
+from version import __version__
+from bmt     import benchmark
 
-__version__ = '0.2'
-
-# init
-parser=argparse.ArgumentParser(
-    prog            ='stream_cuda.py', 
-    usage           = '%(prog)s -a sm_70', 
-    description     = 'STREAM-CUDA Benchmark', 
-    formatter_class = argparse.RawDescriptionHelpFormatter)
-
-# version string
-parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-
-# options for stream setup
-stream = parser.add_argument_group(
-    title='STREAM parameters',
-    description='\n'.join([
-        '-a, --arch      targeting architecture',
-        '-m, --mem       memory mode',
-        '-n, --ntimes    run each kernel n times', 
-        '-d, --device    device index',
-        '-s, --size      size of matrix (must be multiplier of 1024)', 
-        '-f, --float     use floats', 
-        '-t, --triad     only run triad kernel', 
-        '-c, --csv       output as csv table']))
-       
-# parse cmd options
-stream.add_argument('-a', '--arch'  , type=str, required=True      , metavar='', help=argparse.SUPPRESS)
-stream.add_argument('-m', '--mem'   , type=str, default='DEFAULT'  , metavar='', help=argparse.SUPPRESS)
-stream.add_argument('-n', '--ntimes', type=int, default=100        , metavar='', help=argparse.SUPPRESS)
-stream.add_argument('-d', '--device', type=int, default=0          , metavar='', help=argparse.SUPPRESS)
-stream.add_argument('-s', '--size'  , type=int                     , metavar='', help=argparse.SUPPRESS)
-stream.add_argument('-f', '--float' , action='store_true'                      , help=argparse.SUPPRESS)
-stream.add_argument('-t', '--triad' , action='store_true'                      , help=argparse.SUPPRESS)
-stream.add_argument('-c', '--csv'   , action='store_true'                      , help=argparse.SUPPRESS)
-
-args = parser.parse_args()
-
-def main(): 
-    # load modules
-    env('stream_cuda')
-
-    cuda_ver('10.1')
-
-    if not os.path.exists('bin/stream_gpu.x'):
-        os.makedirs('bin'  , exist_ok=True)
-        os.makedirs('build', exist_ok=True)
-
-        download([
+def main():
+    stream = benchmark(
+        name    = 'stream-cuda', 
+        module  = ['gcc/8.3.0', 'cuda/10.1'], 
+        exe     = 'stream-cuda.x', 
+        output  = 'stream-cuda.out', 
+        min_ver = {'cuda' : '10.1'}, 
+        url     = [ 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/Stream.h',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/main.cpp',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.h',
-            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.cu'])
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.cu' 
+        ], 
+        args   = getopt() 
+    )
 
-        build() 
+    stream.purge()
+    stream.load()
+    stream.check_version()
+
+    stream.download()
     
-    benchmark()
-
-def build(): 
-    print('=> Building STREAM_CUDA')
-
-    with open('nvcc.log', 'w') as log:
-        subprocess.call([ 
-            'nvcc',
-            '-std=c++11', 
+    # build
+    stream.mkdir(stream.bin_dir)
+    stream.sys_cmd(
+        ['nvcc',
+            '-std=c++11',
             '-O3',
             '-DCUDA',
-            '-arch='+ args.arch,
-            '-D'    + args.mem, 
-            'build/main.cpp', 
-            'build/CUDAStream.cu', 
-            '-o', 'bin/stream_cuda.x'])
+            '-arch='+ stream.args.arch,
+            '-D'    + stream.args.mem,
+            '-o', 
+            f'{stream.bin}',
+            f'{stream.build_dir}/main.cpp',
+            f'{stream.build_dir}/CUDAStream.cu'
+        ], 
+        '=> building STREAM-CUDA', 
+        f'{stream.root}/build.log'
+    )
+
+    # run benchmark 
+    stream.run_cmd += [
+        '-s', str(stream.args.size), 
+        '-n', str(stream.args.ntimes)
+    ]
+
+    stream.mkdir(stream.output_dir)
+    stream.run()
+
+def getopt(): 
+    parser = argparse.ArgumentParser(
+        usage           = '%(prog)s -a sm_70',
+        description     = 'STREAM-CUDA Benchmark', 
+        formatter_class = argparse.RawDescriptionHelpFormatter
+    )
     
-def benchmark(): 
-    # time stamp
-    outdir = timestamp()
-    output = os.path.join(outdir, 'stream_cuda.out')
+    # version string
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
-    os.makedirs(outdir)
+    g1 = parser.add_argument_group(
+        title       = 'build arguments',
+        description = '\n'.join([
+            '-a, --arch     targeting architecture',
+            '-m, --mem      memory mode',
+        ])
+    )
 
-    print(f'=> Output: {output}')
+    g2 = parser.add_argument_group(
+        title       = 'runtime arguments',
+        description = '\n'.join([
+            '-s, --size     size of matrix (default: 2^25)', 
+            '-n, --ntimes   run each kernel n times', 
+        ])
+    )
 
-    cmd = [
-        'bin/stream_cuda.x', 
-            '--numtimes', str(args.ntimes), 
-            '--device',   str(args.device)]
+    g1.add_argument('-a', '--arch'  , type=str, required=True        , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-m', '--mem'   , type=str, default='DEFAULT'    , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument('-s', '--size'  , type=int, default=eval('2**25'), metavar='', help=argparse.SUPPRESS)
+    g2.add_argument('-n', '--ntimes', type=int, default=100          , metavar='', help=argparse.SUPPRESS)
+        
+    return parser.parse_args()
 
-    if args.size: 
-        cmd.extend(['--arraysize', str(args.size)])
-
-    if args.float:
-        cmd.extend(['--float'])
-
-    if args.triad:
-        cmd.extend(['--triad-only'])
-
-    if args.csv:
-        cmd.extend(['--csv'])
-
-    with open(output, 'w') as output:
-        subprocess.call(cmd, stdout=output)
-
-if __name__ == '__main__':
+if __name__ == '__main__': 
     main()
