@@ -6,7 +6,7 @@ import subprocess
 
 from shutil    import move
 from modulecmd import env
-from utils     import download, timestamp
+from utils     import download, timestamp, gcc_ver, cuda_ver
 
 __version__ = '0.2'
 
@@ -48,6 +48,8 @@ args = parser.parse_args()
 def main(): 
     # load modules
     env('stream_cuda')
+
+    cuda_ver('10.1')
 
     if not os.path.exists('bin/stream_gpu.x'):
         os.makedirs('bin'  , exist_ok=True)

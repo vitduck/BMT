@@ -5,7 +5,7 @@ import os.path
 import subprocess
 
 from modulecmd import env
-from utils     import timestamp
+from utils     import timestamp, sig_ver, ompi_ver, nvidia_ver, mellanox_ver
 
 __version__ = '0.2'
 
@@ -63,6 +63,11 @@ outdir = timestamp()
 
 def main(): 
     env('hpl_nvidia') 
+
+    sig_ver('3.4.1')
+    ompi_ver('4.0.0')
+    nvidia_ver('450.36')
+    mellanox_ver('4')
 
     os.makedirs(outdir)
     os.chdir(outdir)
