@@ -11,12 +11,7 @@ def main():
         name    = 'hpl-nvidia', 
         exe     = 'run.sh', 
         output  = 'HPL.out', 
-        module  = [ 
-            'singularity/3.6.4', 
-            'gcc/8.3.0', 
-            'cuda/10.1', 
-            'cudampi/openmpi-test'
-        ], 
+        module  = None,
         min_ver = { 
             'singularity': '3.4.1',  
             'openmpi'    : '4', 
@@ -27,7 +22,6 @@ def main():
         args    = getopt()
     )
 
-    hpl.purge()
     hpl.load()
     hpl.check_version()
 
@@ -45,7 +39,7 @@ def getopt():
         usage           = (
             '%(prog)s -s 40000 -b 256 --host test01 --sif hpc-benchmarks_20.10-hpl.sif'
         ),
-        description     = 'hpl Benchmark',
+        description     = 'hpl benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
 
@@ -54,7 +48,7 @@ def getopt():
 
     # options for problem setup
     g1 = parser.add_argument_group(
-        title       = 'HPL arugments',
+        title       = 'hpl arugments',
         description = '\n'.join([
             '-s, --size                 list of problem size',
             '-b, --blocksize            list of block size',
@@ -69,7 +63,7 @@ def getopt():
         ])
     )
     g2 = parser.add_argument_group(
-        title       = 'NVIDIA arguments',
+        title       = 'ngc arguments',
         description = '\n'.join([
             '    --host                 list of hosts on which to invoke processes',
             '    --device               list of GPU devices',

@@ -2,10 +2,15 @@
 
 import os
 import re
+import sys
+import json
 import subprocess
 
 from datetime  import datetime
 from packaging import version
+
+# disable stact trace
+sys.tracebacklimit = 0
 
 class benchmark:
     prequisite = {
@@ -59,20 +64,38 @@ class benchmark:
     
     # module load 
     def load(self):
-        if self.module:
-            print(f'=> loading module: {", ".join(self.module)}')
+        env    = {} 
+        module = []
 
-            cmd = subprocess.run(['modulecmd', 'python', 'load'] + self.module, stdout=subprocess.PIPE).stdout.decode('utf-8')
+        # read modules from json file
+        if self.module:
+            self.purge() 
+
+            with open(self.module) as config:
+                env = json.load(config)
+
+            module = env[self.name]
+
+            print(f'=> loading module: {", ".join(module)}')
+            cmd = subprocess.run(['modulecmd', 'python', 'load'] + module, stdout=subprocess.PIPE).stdout.decode('utf-8')
             exec(cmd)
     
     # enforce minimal versions of module defined by class attributes of a child class
     def check_version(self):
         for module in self.min_ver: 
-            module_info = subprocess.run(self.prequisite[module]['cmd'].split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
-            module_ver  = re.search(self.prequisite[module]['regex'], module_info).group(1)
+            module_info = ''
 
-            if version.parse(module_ver) < version.parse(self.min_ver[module]):
-                raise Exception(f'{module} >= {self.min_ver[module]} is required by {self.name}\n')
+            try: 
+                module_info = subprocess.run(self.prequisite[module]['cmd'].split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
+            except FileNotFoundError:
+                print(f'{module} >= {self.min_ver[module]} is required by {self.name}\n')
+                sys.exit(1)
+            else:
+                module_ver  = re.search(self.prequisite[module]['regex'], module_info).group(1)
+
+                if version.parse(module_ver) < version.parse(self.min_ver[module]):
+                    print(f'{module} >= {self.min_ver[module]} is required by {self.name}\n')
+                    sys.exit(1) 
 
     # wrapper for mkdir 
     def mkdir(self, directory): 

@@ -11,12 +11,7 @@ def main():
         name    = 'hpcg-nvidia', 
         exe     = 'run.sh', 
         output  = 'HPCG.out', 
-        module  = [ 
-            'singularity/3.6.4', 
-            'gcc/8.3.0', 
-            'cuda/10.1', 
-            'cudampi/openmpi-test'
-        ], 
+        module  = None,
         min_ver = { 
             'singularity': '3.4.1',  
             'openmpi'    : '4', 
@@ -27,7 +22,6 @@ def main():
         args    = getopt()
     )
 
-    hpcg.purge()
     hpcg.load()
     hpcg.check_version()
 
@@ -43,7 +37,7 @@ def main():
 def getopt():
     parser = argparse.ArgumentParser(
         usage           = '%(prog)s -g 256 256 256 -t 60 --host test01:2 test02:2 --sif hpc-benchmarks_20.10-hpcg.sif',
-        description     = 'HPCG Benchmark',
+        description     = 'hpcg benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
 
@@ -52,7 +46,7 @@ def getopt():
 
     # options for problem setup
     g1 = parser.add_argument_group(
-        title       = 'HPCG arugments',
+        title       = 'hpcg arugments',
         description = '\n'.join([
             '-g, --grid                 3-dimensional grid',
             '-t, --time                 targeted run time',
@@ -60,7 +54,7 @@ def getopt():
     )
 
     g2 = parser.add_argument_group(
-        title       = 'NVIDIA arguments',
+        title       = 'ngc arguments',
         description = '\n'.join([
             '    --host                 list of hosts on which to invoke processes',
             '    --device               list of GPU devices',

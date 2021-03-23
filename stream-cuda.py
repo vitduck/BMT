@@ -9,10 +9,10 @@ from bmt     import benchmark
 def main():
     stream = benchmark(
         name    = 'stream-cuda', 
-        module  = ['gcc/8.3.0', 'cuda/10.1'], 
         exe     = 'stream-cuda.x', 
         output  = 'stream-cuda.out', 
-        min_ver = {'cuda' : '10.1'}, 
+        module  = None, 
+        min_ver = {'cuda' : '10.1'},
         url     = [ 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/Stream.h',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/main.cpp',
@@ -22,7 +22,6 @@ def main():
         args   = getopt() 
     )
 
-    stream.purge()
     stream.load()
     stream.check_version()
 
@@ -58,7 +57,7 @@ def main():
 def getopt(): 
     parser = argparse.ArgumentParser(
         usage           = '%(prog)s -a sm_70',
-        description     = 'STREAM-CUDA Benchmark', 
+        description     = 'stream-cuda benchmark', 
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
     

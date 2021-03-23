@@ -12,13 +12,12 @@ def main():
         name    = 'stream-cpu', 
         exe     = 'stream-cpu.x', 
         output  = 'stream-cpu.out', 
-        module  = ['gcc/8.3.0'], 
+        module  = None, 
         min_ver = { 'gcc': '7'}, 
         url     = ['https://www.cs.virginia.edu/stream/FTP/Code/stream.c'], 
         args    = getopt()
     )
 
-    stream.purge()
     stream.load()
     stream.check_version()
     
@@ -54,7 +53,7 @@ def main():
 def getopt(): 
     parser = argparse.ArgumentParser( 
         usage       = '%(prog)s -m skylake-avx512 -t 24 -a spread',
-        description = 'STREAM-CPU Benchmark',
+        description = 'stream-cpu benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
     

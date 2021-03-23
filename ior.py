@@ -12,14 +12,13 @@ def main():
         name    = 'ior',
         exe     = 'ior.x',
         output  = 'ior.out',
-        module  = ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
-        min_ver = {}, 
+        module  = None,
+        min_ver = { 'openmpi' : '3' },
         url     = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz'], 
         args    = getopt()
     )
     
     # env
-    ior.purge()
     ior.load()
     ior.check_version()
     
@@ -28,7 +27,6 @@ def main():
     
     # build
     if not os.path.exists(ior.bin): 
-        ior.mkdir(ior.bin_dir)
         ior.chdir(ior.build_dir)
         
         # extracting 
@@ -58,6 +56,7 @@ def main():
         )
         
         # move to bin
+        ior.mkdir(ior.bin_dir)
         move('src/ior', f'{ior.bin}')
 
     # benchmark
@@ -81,7 +80,7 @@ def getopt():
     parser=argparse.ArgumentParser(
         prog            = 'ior.py', 
         usage           = '%(prog)s -b 16m -t 1m -s 16 --host test1:2 test2:2',
-        description     = 'IOR Benchmark', 
+        description     = 'ior benchmark', 
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
 
@@ -89,7 +88,7 @@ def getopt():
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
     g1 = parser.add_argument_group(
-        title='runtime arguments',
+        title='benchmark arguments',
         description='\n'.join([
             '-b, --block     block size',
             '-t, --transfer  transfer size',

@@ -13,7 +13,7 @@ def main():
         name    = 'iozone',
         exe     = 'iozone.x',
         output  = 'iozone.out',
-        module  = [],
+        module  = None,
         min_ver = {}, 
         url     = ['http://www.iozone.org/src/current/iozone3_491.tgz'], 
         args    = getopt()
@@ -24,7 +24,6 @@ def main():
 
     # build
     if not os.path.exists(iozone.bin):
-        iozone.mkdir(iozone.bin_dir)
         iozone.chdir(iozone.build_dir)
         
         # extract
@@ -43,6 +42,7 @@ def main():
         )
     
         # move to bin
+        iozone.mkdir(iozone.bin_dir)
         move('iozone', f'{iozone.bin}')
 
     # automatic mode
@@ -75,7 +75,7 @@ def getopt():
     parser=argparse.ArgumentParser(
         prog            = 'iozone.py', 
         usage           = '%(prog)s -a -n 16k -g 64m -y 4k -q 16m ', 
-        description     = 'IOZONE Benchmark', 
+        description     = 'iozone benchmark', 
         formatter_class = argparse.RawDescriptionHelpFormatter)
 
     # version string
@@ -87,7 +87,7 @@ def getopt():
     group.add_argument('-i', type=int, nargs='+', metavar='*', help=argparse.SUPPRESS) 
     
     g1 = parser.add_argument_group(
-        title='benchamrk arguments',
+        title='benchmark arguments',
         description='\n'.join([
             '-a    full automatic mode', 
             '-i    test mode:',
