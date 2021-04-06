@@ -4,10 +4,10 @@ import os
 import argparse
 
 from version import __version__
-from nvidia  import hpcg_nvidia
+from nvidia  import Hpcg
 
 def main():
-    hpcg = hpcg_nvidia(
+    hpcg = Hpcg(
         name    = 'hpcg-nvidia', 
         exe     = 'run.sh', 
         output  = 'HPCG.out', 
@@ -22,7 +22,6 @@ def main():
         args    = getopt()
     )
 
-    hpcg.load()
     hpcg.check_version()
 
     hpcg.mkdir(hpcg.output_dir)
@@ -36,7 +35,7 @@ def main():
 
 def getopt():
     parser = argparse.ArgumentParser(
-        usage           = '%(prog)s -g 256 256 256 -t 60 --host test01:2 test02:2 --sif hpc-benchmarks_20.10-hpcg.sif',
+        usage           = '%(prog)s -g 256 256 256 -t 60 --host test01 --thread 8 --sif hpc-benchmarks_20.10-hpcg.sif',
         description     = 'hpcg benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
@@ -69,8 +68,8 @@ def getopt():
     g1.add_argument('-t', '--time'             , type=int           , default=60           , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--host'             , type=str, nargs='+', required=True        , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--device'           , type=int, nargs='*', default=[0]          , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,1]        , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--thread'           , type=int,            default=8            , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--device_per_socket', type=int, nargs='*', required=True        , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--thread'           , type=int,            required=True        , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--sif'              , type=str,            required=True        , metavar='', help=argparse.SUPPRESS)
 
     return parser.parse_args()

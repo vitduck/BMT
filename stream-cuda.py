@@ -4,10 +4,19 @@ import os
 import argparse
 
 from version import __version__
-from bmt     import benchmark
+from bmt     import Bmt
+
+class StreamCuda(Bmt): 
+    def __init__(self, name, exe, output, module, min_ver, url, args): 
+        super().__init__(name, exe, output, module, min_ver, url, args)
+
+        self.run_cmd += [
+            '-s', str(args.size), 
+            '-n', str(args.ntimes)
+        ]
 
 def main():
-    stream = benchmark(
+    stream = StreamCuda(
         name    = 'stream-cuda', 
         exe     = 'stream-cuda.x', 
         output  = 'stream-cuda.out', 
@@ -19,38 +28,34 @@ def main():
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.h',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.cu' 
         ], 
-        args   = getopt() 
+        args    = getopt() 
     )
 
-    stream.load()
     stream.check_version()
 
+    # download url
     stream.download()
     
     # build
     stream.mkdir(stream.bin_dir)
     stream.sys_cmd(
-        ['nvcc',
-            '-std=c++11',
-            '-O3',
-            '-DCUDA',
-            '-arch='+ stream.args.arch,
-            '-D'    + stream.args.mem,
-            '-o', 
-            f'{stream.bin}',
-            f'{stream.build_dir}/main.cpp',
-            f'{stream.build_dir}/CUDAStream.cu'
-        ], 
-        '=> building STREAM-CUDA', 
-        f'{stream.root}/build.log'
+        cmd=[ 
+            'nvcc',
+                '-std=c++11',
+                '-O3',
+                '-DCUDA',
+                '-arch='+ stream.args.arch,
+                '-D'    + stream.args.mem,
+                '-o', 
+                f'{stream.bin}',
+                f'{stream.build_dir}/main.cpp',
+                f'{stream.build_dir}/CUDAStream.cu'
+            ], 
+        msg='=> building STREAM-CUDA', 
+        log=f'{stream.root}/build.log'
     )
-
+    
     # run benchmark 
-    stream.run_cmd += [
-        '-s', str(stream.args.size), 
-        '-n', str(stream.args.ntimes)
-    ]
-
     stream.mkdir(stream.output_dir)
     stream.run()
 

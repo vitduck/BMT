@@ -6,10 +6,38 @@ import argparse
 
 from shutil  import move
 from version import __version__
-from bmt     import benchmark
+from bmt     import Bmt
+
+class Iozone(Bmt): 
+    def __init__(self, name, exe, output, module, min_ver, url, args): 
+        super().__init__(name, exe, output, module, min_ver, url, args)
+
+        # automatic mode
+        if args.a: 
+            self.run_cmd += [ 
+                '-a',
+                '-n', args.n, 
+                '-g', args.g, 
+                '-y', args.y, 
+                '-b', args.b, 
+            ]
+        # manual mode -i
+        elif args.i: 
+            for mode in args.i: 
+                self.run_cmd += ['-i', str(mode)] 
+
+            self.run_cmd += [
+                '-s', args.s, 
+                '-r', args.r, 
+            ]
+
+        #  excel file
+        self.run_cmd += [
+            '-b', os.path.join(self.output_dir, args.b)
+        ]
 
 def main():
-    iozone = benchmark(
+    iozone = Iozone(
         name    = 'iozone',
         exe     = 'iozone.x',
         output  = 'iozone.out',
@@ -19,55 +47,32 @@ def main():
         args    = getopt()
     )
     
-    # download src files
+    # download url
     iozone.download()
 
     # build
     if not os.path.exists(iozone.bin):
-        iozone.chdir(iozone.build_dir)
-        
         # extract
+        iozone.chdir(iozone.build_dir)
         iozone.sys_cmd(
-            ['tar', 'xf', 'iozone3_491.tgz'], 
-            f'=> extracting iozone3_491.tgz'
+            cmd=['tar', 'xf', 'iozone3_491.tgz'], 
+            msg=f'=> extracting iozone3_491.tgz'
         )
 
-        iozone.chdir('iozone3_491/src/current')
-        
         # make
+        iozone.chdir('iozone3_491/src/current')
         iozone.sys_cmd(
-            ['make', 'linux'], 
-            f'=> building iozone', 
-            f'{iozone.root}/build.log'
+            cmd=['make', 'linux'], 
+            msg=f'=> building iozone', 
+            log=f'{iozone.root}/build.log'
         )
     
         # move to bin
         iozone.mkdir(iozone.bin_dir)
         move('iozone', f'{iozone.bin}')
 
-    # automatic mode
-    if iozone.args.a: 
-        iozone.run_cmd += [ 
-            '-a',
-            '-n', iozone.args.n, 
-            '-g', iozone.args.g, 
-            '-y', iozone.args.y, 
-            '-b', iozone.args.b, 
-        ]
-    # manual
-    elif iozone.args.i: 
-        for mode in iozone.args.i: 
-            iozone.run_cmd += [ '-i', str(mode)] 
-
-        iozone.run_cmd += [
-            '-s', iozone.args.s, 
-            '-r', iozone.args.r, 
-        ]
-   
-    #  excel file
-    iozone.run_cmd += [ '-b', os.path.join(iozone.output_dir, iozone.args.b) ]
-
-    # benchmark 
+    
+    # run benchmark 
     iozone.mkdir(iozone.output_dir)
     iozone.run()
     

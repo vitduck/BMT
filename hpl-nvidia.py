@@ -4,10 +4,10 @@ import os
 import argparse
 
 from version import __version__
-from nvidia  import hpl_nvidia
+from nvidia  import Hpl
 
 def main():
-    hpl = hpl_nvidia(
+    hpl = Hpl(
         name    = 'hpl-nvidia', 
         exe     = 'run.sh', 
         output  = 'HPL.out', 
@@ -22,7 +22,6 @@ def main():
         args    = getopt()
     )
 
-    hpl.load()
     hpl.check_version()
 
     hpl.mkdir(hpl.output_dir)
@@ -37,7 +36,7 @@ def main():
 def getopt():
     parser = argparse.ArgumentParser(
         usage           = (
-            '%(prog)s -s 40000 -b 256 --host test01 --sif hpc-benchmarks_20.10-hpl.sif'
+            '%(prog)s -s 40000 -b 256 --host test01 --thread 8 --sif hpc-benchmarks_20.10-hpl.sif'
         ),
         description     = 'hpl benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
@@ -55,11 +54,11 @@ def getopt():
             '-p, --pgrid                list of P grid',
             '-q, --qgrid                list of Q grid',
             '    --pmap                 MPI processes mapping',
-            '    --broadcast            MPI broadcasting algorithms',
             '    --pfact                list of PFACT variants ',
-            '    --rfact                list of RFACT variants',
             '    --nbmin                list of NBMIN',
             '    --ndiv                 list of NDIV',
+            '    --rfact                list of RFACT variants',
+            '    --broadcast            MPI broadcasting algorithms',
         ])
     )
     g2 = parser.add_argument_group(
@@ -77,18 +76,18 @@ def getopt():
     # cmd options with default values
     g1.add_argument('-s', '--size'             , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
     g1.add_argument('-b', '--blocksize'        , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1],   metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1],   metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
     g1.add_argument(      '--pmap'             , type=int,            default=0    , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--pfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--nbmin'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--pfact'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--nbmin'            , type=int, nargs='*', default=[4]  , metavar='', help=argparse.SUPPRESS)
     g1.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--host'             , type=str, nargs='+', required=True, metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--device'           , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,1], metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--thread'           , type=int,            default=8    , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,0], metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--thread'           , type=int,            required=True, metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--ai'               , action='store_true', default=False,             help=argparse.SUPPRESS)
     g2.add_argument(      '--sif'              , type=str,            required=True, metavar='', help=argparse.SUPPRESS)
 

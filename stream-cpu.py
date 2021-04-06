@@ -4,11 +4,10 @@ import os
 import argparse
 
 from version import __version__
-from bmt     import benchmark
-
+from bmt     import Bmt
 
 def main():
-    stream = benchmark(
+    stream = Bmt(
         name    = 'stream-cpu', 
         exe     = 'stream-cpu.x', 
         output  = 'stream-cpu.out', 
@@ -18,35 +17,34 @@ def main():
         args    = getopt()
     )
 
-    stream.load()
     stream.check_version()
     
     # download url
     stream.download()
-
-    # build  
+   
+    # build stream-cpu
     stream.mkdir(stream.bin_dir)
-
     stream.sys_cmd(
-        [
+        cmd=[ 
             'gcc',
-            '-O3',
-            '-fopenmp',
-            '-ffreestanding',
-            '-march='              + stream.args.march   ,
-            '-DSTREAM_ARRAY_SIZE=' + str(stream.args.size),
-            '-DNTIMES='            + str(stream.args.ntimes),
-            '-o', 
-            f'{stream.bin}', 
-            f'{stream.build_dir}/stream.c',
-        ], 
-        '=> building STREAM-CPU', 
-        f'{stream.root}/build.log'
+                '-O3',
+                '-fopenmp',
+                '-ffreestanding',
+                '-march='              + stream.args.march   ,
+                '-DSTREAM_ARRAY_SIZE=' + str(stream.args.size),
+                '-DNTIMES='            + str(stream.args.ntimes),
+                '-o', 
+                f'{stream.bin}', 
+                f'{stream.build_dir}/stream.c' 
+            ], 
+        msg='=> building STREAM-CPU', 
+        log=f'{stream.root}/build.log'
     )
 
     # set up thread affinity
     stream.set_omp('threads', stream.args.thread, stream.args.affinity) 
     
+    # run benchmark
     stream.mkdir(stream.output_dir)
     stream.run()
     

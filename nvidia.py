@@ -2,99 +2,88 @@
 
 import os
 
-from bmt import benchmark
+from bmt import Bmt
 
-class nvidia(benchmark): 
+class Nvidia(Bmt): 
     def __init__(self, name, exe, output, module, min_ver, url, args): 
         super().__init__(name, exe, output, module, min_ver, url, args)
 
-        self.ngpus    = len(args.host)*len(args.device)
-        
+        # total number of gpus 
+        self.socket = [0,1]
+        self.ngpus  = len(args.host)*len(args.device)
+       
+        # nvidia-hpc input & wrapper script 
+        self.input   = ''
+        self.wrapper = ''
 
-        # wrapper script for hpl/hpcg
-        self.input    = ''
-        self.wrapper  = ''
-
+        # benchmark script 
+        self.run_file = os.path.join(self.output_dir, 'run.sh')
         self.run_cmd  = ['sh', './run.sh']
 
-    def get_cpu_affinity(self): 
-        cpu_affinity = []
-        socket       = [0,1]
+    def __cpu_affinity(self):
+        affinity = []
         
         # requies python >=3
-        for affinity_set in zip(self.args.device, self.args.device_per_socket, socket):
+        for affinity_set in zip(self.socket, self.args.device_per_socket):
             # for cas_v100_2: two GPUs in socket #1
             if affinity_set[1] == 0: 
                 continue 
 
-            cpu_affinity = cpu_affinity + ([affinity_set[0]]*affinity_set[1])
-    
-        return cpu_affinity
+            affinity = affinity + ([affinity_set[0]]*affinity_set[1])
 
-    def mpirun_opt(self): 
-        cmd = ['mpirun']
+        return affinity
+
+    def mpirun_cmd(self):
+        cmd      = ['mpirun']
+        sif      = os.path.relpath(self.args.sif, self.output_dir)
+        affinity = self.__cpu_affinity()
         
-        # mpi options
-        # with disabled infiniband verb
+        # mpi options 
         cmd.append(f'{"":>4}--np {self.mpiprocs}')
         cmd.append(f'{"":>4}--host {",".join(self.args.host)}')
+
+        # disabled infiniband verb
         cmd.append(f'{"":>4}--mca btl ^openib')
 
-        return cmd
-
-    def singularity_opt(self):
-        cmd = [f'{"":>4}singularity']
-
-        sif = os.path.relpath(self.args.sif, self.output_dir)
-
         # singularity options
+        cmd.append(f'{"":>4}singularity')
         cmd.append(f'{"":>8}run')
         cmd.append(f'{"":>8}--nv')
         cmd.append(f'{"":>8}{sif}')
 
-        return cmd
-
-    def wrapper_opt(self): 
-        cpu_affinity = self.get_cpu_affinity()
-
-        cmd = [f'{"":>8}{self.wrapper}']
-        
-        # omp threads
-        cmd.append(f'{"":>12}--cpu-cores-per-rank {self.args.thread}')
-        
-        # affinity
-        cmd.append(f'{"":>12}--cpu-affinity {":".join(str(cpu) for cpu in cpu_affinity)}')
-        cmd.append(f'{"":>12}--gpu-affinity {":".join(str(gpu) for gpu in self.args.device)}' )
-
-        # input file
+        # hpc-nvidia wrapper
+        cmd.append(f'{"":>8}{self.wrapper}')
         cmd.append(f'{"":>12}--dat {self.input}')
+        cmd.append(f'{"":>12}--cpu-cores-per-rank {self.args.thread}')
+        cmd.append(f'{"":>12}--cpu-affinity {":".join(str(cpu) for cpu in affinity)}')
+        cmd.append(f'{"":>12}--gpu-affinity {":".join(str(gpu) for gpu in self.args.device)}')
 
         return cmd
-    
+
     def write_env(self, fh): 
-        fh.write(f'export CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in self.args.device)}\n\n')
+        fh.write(f'export CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in self.args.device)}\n')
 
     def write_cmd(self, cmd, fh): 
-        # max length of lines
+        # formatted cmd block
         length = len(max(cmd, key = len)) 
 
         # join cmd with newline print to file
         form_cmd = '\\\n'.join(f'{line:<{length}} ' for line in cmd)
-
+        
         fh.write(f'{form_cmd}')
+    
+    def write_input(self): 
+        pass 
 
     def write_script(self): 
-        run_file  = os.path.join(self.output_dir, 'run.sh')
+        cmd = self.mpirun_cmd()
 
-        cmd = self.mpirun_opt() + self.singularity_opt() + self.wrapper_opt()
-
-        with open(run_file, 'w') as fh:  
-            # write export envar
+        with open(self.run_file, 'w') as fh:  
             self.write_env(fh)
+            fh.write('\n')
             self.write_cmd(cmd, fh)
 
-
-class hpl_nvidia(nvidia): 
+class Hpl(Nvidia): 
     def __init__(self, name, exe, output, module, min_ver, url, args): 
         super().__init__(name, exe, output, module, min_ver, url, args)
 
@@ -103,6 +92,16 @@ class hpl_nvidia(nvidia):
 
         if args.pgrid[0] * args.qgrid[0] != self.ngpus:
             raise Exception("Error: HPL requires CPU/GPU = 1")
+
+    # add ai options 
+    def mpirun_cmd(self): 
+        cmd = super().mpirun_cmd()
+
+        # switch to hpl-ai
+        if self.args.ai:
+            cmd.append(f'{"":>12}--xhpl-ai')
+
+        return cmd 
 
     def write_input(self): 
         input_file = os.path.join(self.output_dir, self.input)
@@ -168,21 +167,18 @@ class hpl_nvidia(nvidia):
             # memory alignment
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
-    def wrapper_opt(self): 
-        cmd = super().wrapper_opt()
-
-        # switch to hpl-ai
-        if self.args.ai:
-            cmd.append(f'{"":>12}--xhpl-ai')
-
-        return cmd 
-
-class hpcg_nvidia(nvidia): 
+class Hpcg(Nvidia): 
     def __init__(self, name, exe, output, module, min_ver, url, args): 
         super().__init__(name, exe, output, module, min_ver, url, args)
 
         self.wrapper = 'hpcg.sh'
         self.input   = 'HPCG.dat'
+
+    # bug in hpcg image where LD_LIBRARY_PATH is not set correctly
+    def write_env(self, fh): 
+        super().write_env(fh)
+
+        fh.write(f'export SINGULARITYENV_LD_LIBRARY_PATH=/usr/local/cuda-11.1/targets/x86_64-linux/lib:$LD_LIBRARY_PATH\n')
 
     def write_input(self):
         input_file = os.path.join(self.output_dir, self.input)
@@ -192,9 +188,3 @@ class hpcg_nvidia(nvidia):
             input.write(f'KISTI\n')
             input.write(f'{" ".join(str(grid) for grid in self.args.grid)}\n')
             input.write(f'{self.args.time}')
-
-    # bug in hpcg image where LD_LIBRARY_PATH is not set correctly
-    def write_env(self, fh): 
-        super().write_env(fh)
-
-        fh.write(f'export SINGULARITYENV_LD_LIBRARY_PATH=/usr/local/cuda-11.1/targets/x86_64-linux/lib:$LD_LIBRARY_PATH\n\n')

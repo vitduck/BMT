@@ -5,10 +5,26 @@ import argparse
 
 from shutil  import move
 from version import __version__
-from bmt     import benchmark
+from bmt     import Bmt
+
+class Ior(Bmt): 
+    def __init__(self, name, exe, output, module, min_ver, url, args): 
+        super().__init__(name, exe, output, module, min_ver, url, args)
+
+        self.run_cmd = [     
+            'mpirun', 
+                '-n', str(self.mpiprocs), 
+                '-H', ','.join(self.args.host), 
+                self.bin, 
+                    '-b', args.b,  
+                    '-t', args.t,  
+                    '-s', str(args.s),  
+                    '-F', 
+                    '-C'
+        ]
 
 def main():
-    ior = benchmark(
+    ior = Ior(
         name    = 'ior',
         exe     = 'ior.x',
         output  = 'ior.out',
@@ -18,61 +34,44 @@ def main():
         args    = getopt()
     )
     
-    # env
-    ior.load()
     ior.check_version()
     
-    # download src files 
+    # download url
     ior.download()
     
-    # build
     if not os.path.exists(ior.bin): 
-        ior.chdir(ior.build_dir)
-        
         # extracting 
+        ior.chdir(ior.build_dir)
         ior.sys_cmd(
-            ['tar', 'xf', 'ior-3.3.0.tar.gz'], 
-            '=> extracting ior-3.3.0.tar.gz'
+            cmd=['tar', 'xf', 'ior-3.3.0.tar.gz'], 
+            msg='=> extracting ior-3.3.0.tar.gz'
         )
-
-        ior.chdir('ior-3.3.0')
-
+        
         # configure
+        ior.chdir('ior-3.3.0')
         ior.sys_cmd(
-            [  './configure', 
-               'MPICC=mpicc', 
-              f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include', 
-              f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib'
-            ],
-            '=> configuring ior', 
-            f'{ior.root}/configure.log'
+            cmd=[  
+                './configure', 
+                    'MPICC=mpicc', 
+                    f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include', 
+                    f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib'
+                ],
+            msg='=> configuring ior', 
+            log=f'{ior.root}/configure.log'
         )
     
         # make 
         ior.sys_cmd(
-            ['make', '-j', '4'], 
-            '=> building ior', 
-            f'{ior.root}/build.log'
+            cmd=['make', '-j', '4'], 
+            msg='=> building ior', 
+            log=f'{ior.root}/build.log'
         )
         
         # move to bin
         ior.mkdir(ior.bin_dir)
         move('src/ior', f'{ior.bin}')
 
-    # benchmark
-    ior.run_cmd = [     
-            'mpirun', 
-            '-n', str(ior.mpiprocs), 
-            '-H', ','.join(ior.args.host) 
-        ] +\
-        ior.run_cmd + [
-            '-b',     ior.args.b,  
-            '-t',     ior.args.t,  
-            '-s', str(ior.args.s),  
-            '-F', 
-            '-C'
-        ]
-
+    # run benchmark
     ior.mkdir(ior.output_dir)
     ior.run()
 

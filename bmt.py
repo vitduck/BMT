@@ -12,7 +12,7 @@ from packaging import version
 # disable stact trace
 sys.tracebacklimit = 0
 
-class benchmark:
+class Bmt:
     prequisite = {
         'gcc'         : { 'cmd' : 'gcc --version'        , 'regex' : '\(GCC\)\s*([\d.]+)'  },
         'cuda'        : { 'cmd' : 'nvcc --version'       , 'regex' : 'release\s*([\d.]+)'  },
@@ -111,12 +111,12 @@ class benchmark:
         os.chdir(directory)
 
     # wrapper for sytem commands
-    def sys_cmd(self, cmd, message='', log_file='', mode='w'):
-        if message: 
-            print(message)
+    def sys_cmd(self, cmd, msg='', log='', mode='w'):
+        if msg: 
+            print(msg)
 
-        if log_file: 
-            with open(log_file, mode) as log_fh: 
+        if log: 
+            with open(log, mode) as log_fh: 
                 subprocess.run(cmd, stderr=log_fh, stdout=log_fh)
         else: 
             subprocess.run(cmd)
