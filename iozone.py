@@ -71,7 +71,6 @@ def main():
         iozone.mkdir(iozone.bin_dir)
         move('iozone', f'{iozone.bin}')
 
-    
     # run benchmark 
     iozone.mkdir(iozone.output_dir)
     iozone.run()

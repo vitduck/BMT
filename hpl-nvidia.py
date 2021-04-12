@@ -10,7 +10,7 @@ def main():
     hpl = Hpl(
         name    = 'hpl-nvidia', 
         exe     = 'run.sh', 
-        output  = 'HPL.out', 
+        output  = 'HPL.log', 
         module  = None,
         min_ver = { 
             'singularity': '3.4.1',  
@@ -25,19 +25,18 @@ def main():
     hpl.check_version()
 
     hpl.mkdir(hpl.output_dir)
-    
-    hpl.write_input()
-    hpl.write_script() 
-    
     hpl.chdir(hpl.output_dir)
 
-    hpl.run() 
+    # automatic mode 
+    if hpl.args.auto: 
+        hpl.parameter_scan()
+        hpl.summary()
+    else:
+        hpl.run() 
 
 def getopt():
     parser = argparse.ArgumentParser(
-        usage           = (
-            '%(prog)s -s 40000 -b 256 --host test01 --thread 8 --sif hpc-benchmarks_20.10-hpl.sif'
-        ),
+        usage           = '%(prog)s -s 40000 -b 256 --host test01 --thread 8 --sif hpc-benchmarks_20.10-hpl.sif', 
         description     = 'hpl benchmark',
         formatter_class = argparse.RawDescriptionHelpFormatter
     )
@@ -49,6 +48,8 @@ def getopt():
     g1 = parser.add_argument_group(
         title       = 'hpl arugments',
         description = '\n'.join([
+            '-a, --auto                 automatic parameter scan mode',
+            '-m, --mem                  device memory',
             '-s, --size                 list of problem size',
             '-b, --blocksize            list of block size',
             '-p, --pgrid                list of P grid',
@@ -72,24 +73,27 @@ def getopt():
             '    --sif                  path of singularity images',
         ])
     )
-    
-    # cmd options with default values
-    g1.add_argument('-s', '--size'             , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-b', '--blocksize'        , type=int, nargs='*', required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--pmap'             , type=int,            default=0    , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--pfact'            , type=int, nargs='*', default=[1]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--nbmin'            , type=int, nargs='*', default=[4]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]  , metavar='', help=argparse.SUPPRESS)
-    g1.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--host'             , type=str, nargs='+', required=True, metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--device'           , type=int, nargs='*', default=[0]  , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,0], metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--thread'           , type=int,            required=True, metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--ai'               , action='store_true', default=False,             help=argparse.SUPPRESS)
-    g2.add_argument(      '--sif'              , type=str,            required=True, metavar='', help=argparse.SUPPRESS)
+
+    ex = parser.add_mutually_exclusive_group()
+
+    ex.add_argument('-a', '--auto'             , action='store_true', default=False             , help=argparse.SUPPRESS)
+    ex.add_argument('-s', '--size'             , type=int, nargs='*', default=40000 , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-m', '--mem'              , type=str           , default='32GB', metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-b', '--blocksize'        , type=int, nargs='*', default=256   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--pmap'             , type=int,            default=0     , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--pfact'            , type=int, nargs='*', default=[1]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--nbmin'            , type=int, nargs='*', default=[4]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]   , metavar='', help=argparse.SUPPRESS)
+    g1.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]   , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--host'             , type=str, nargs='+', required=True , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--device'           , type=int, nargs='*', default=[0]   , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,0] , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--thread'           , type=int,            required=True , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--ai'               , action='store_true', default=False ,             help=argparse.SUPPRESS)
+    g2.add_argument(      '--sif'              , type=str,            required=True , metavar='', help=argparse.SUPPRESS)
 
     return parser.parse_args()
 

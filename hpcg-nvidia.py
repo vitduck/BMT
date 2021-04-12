@@ -25,13 +25,13 @@ def main():
     hpcg.check_version()
 
     hpcg.mkdir(hpcg.output_dir)
-
-    hpcg.write_input()
-    hpcg.write_script() 
-
     hpcg.chdir(hpcg.output_dir)
 
-    hpcg.run()
+    if hpcg.args.auto: 
+        hpcg.parameter_scan()
+        hpcg.summary() 
+    else:
+        hpcg.run()
 
 def getopt():
     parser = argparse.ArgumentParser(
@@ -47,6 +47,7 @@ def getopt():
     g1 = parser.add_argument_group(
         title       = 'hpcg arugments',
         description = '\n'.join([
+            '-a, --auto                 automatic parameter scan mode', 
             '-g, --grid                 3-dimensional grid',
             '-t, --time                 targeted run time',
         ])
@@ -62,13 +63,15 @@ def getopt():
             '    --sif                  path of singularity images',
         ])
     )
+    
+    ex = parser.add_mutually_exclusive_group()
 
-    # cmd options with default values
-    g1.add_argument('-g', '--grid'             , type=int, nargs='*', default=[256,256,256], metavar='', help=argparse.SUPPRESS)
+    ex.add_argument('-a', '--auto'             , action='store_true', default=False                    , help=argparse.SUPPRESS)
+    ex.add_argument('-g', '--grid'             , type=int, nargs='*', default=[256,256,256], metavar='', help=argparse.SUPPRESS)
     g1.add_argument('-t', '--time'             , type=int           , default=60           , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--host'             , type=str, nargs='+', required=True        , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--device'           , type=int, nargs='*', default=[0]          , metavar='', help=argparse.SUPPRESS)
-    g2.add_argument(      '--device_per_socket', type=int, nargs='*', required=True        , metavar='', help=argparse.SUPPRESS)
+    g2.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,0]       , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--thread'           , type=int,            required=True        , metavar='', help=argparse.SUPPRESS)
     g2.add_argument(      '--sif'              , type=str,            required=True        , metavar='', help=argparse.SUPPRESS)
 

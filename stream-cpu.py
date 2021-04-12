@@ -37,7 +37,7 @@ def main():
                 f'{stream.bin}', 
                 f'{stream.build_dir}/stream.c' 
             ], 
-        msg='=> building STREAM-CPU', 
+        msg='=> build STREAM-CPU', 
         log=f'{stream.root}/build.log'
     )
 

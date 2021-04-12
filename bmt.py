@@ -47,7 +47,6 @@ class Bmt:
         self.output_dir = os.path.join(self.root, 'output', datetime.now().strftime("%Y%m%d_%H:%M:%S")) 
 
         self.bin        = os.path.join(self.root, self.bin_dir, self.exe)
-        self.output     = os.path.join(self.root, self.output_dir, self.output)
 
         self.run_cmd    = [f'{self.bin}']
 
@@ -143,7 +142,12 @@ class Bmt:
                 os.remove(log_file) 
 
             for url in url_list:
-                self.sys_cmd(['wget', url, '-P', self.build_dir], f'=> downloading {url}', log_file, 'a')
+                self.sys_cmd(
+                    cmd=['wget', url, '-P', self.build_dir], 
+                    msg=f'=> download {url}', 
+                    log=log_file, 
+                    mode='a'
+                )
 
     # set omp_* environmental variables
     def set_omp(self, places='threads', num_threads=8, proc_bind='spread'):
@@ -152,6 +156,11 @@ class Bmt:
         os.environ['OMP_PROC_BIND'  ] = str(proc_bind)
     
     # run benchmark
-    def run(self): 
-        self.sys_cmd(self.run_cmd, f'=> {os.path.relpath(self.output, self.root)}', self.output) 
+    def run(self):
+        output_file = os.path.join(self.output_dir, self.output)
 
+        self.sys_cmd(
+            cmd=self.run_cmd, 
+            msg=f'result: {os.path.relpath(output_file, self.root)}',
+            log=output_file
+        )
