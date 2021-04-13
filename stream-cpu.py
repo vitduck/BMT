@@ -23,7 +23,8 @@ def main():
     stream.download()
    
     # build stream-cpu
-    stream.mkdir(stream.bin_dir)
+    os.makedirs(stream.bin_dir, exist_ok=True)
+
     stream.sys_cmd(
         cmd=[ 
             'gcc',
@@ -45,41 +46,38 @@ def main():
     stream.set_omp('threads', stream.args.thread, stream.args.affinity) 
     
     # run benchmark
-    stream.mkdir(stream.output_dir)
+    os.makedirs(stream.output_dir, exist_ok=True)
+
     stream.run()
     
 def getopt(): 
     parser = argparse.ArgumentParser( 
-        usage       = '%(prog)s -m skylake-avx512 -t 24 -a spread',
-        description = 'stream-cpu benchmark',
-        formatter_class = argparse.RawDescriptionHelpFormatter
+        usage           = '%(prog)s -m skylake-avx512 -t 24 -a spread',
+        description     = 'stream-cpu benchmark',
+        formatter_class = argparse.RawDescriptionHelpFormatter, 
+        add_help        = False
     )
     
-    # version string
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-
-    g1 = parser.add_argument_group(
-        title       ='build arguments',
+    opt = parser.add_argument_group(
+        title       ='optional arguments',
         description ='\n'.join([
-            '-m, --march    targeting architecture', 
-            '-s, --size     size of matrix', 
-            '-n, --ntimes   run each kernel n times',
-        ])
-    )
-    
-    g2 = parser.add_argument_group(
-        title       ='runtime arguments',
-        description ='\n'.join([
-            '-t, --thread    number of OMP threads',
-            '-a, --affinity  thread affinity: (close|spread)'
+            '-h, --help           show this help message and exit',
+            '-v, --version        show program\'s version number and exit',
+            '-m, --march          targeting architecture', 
+            '-s, --size           size of matrix', 
+            '-n, --ntimes         run each kernel n times',
+            '-t, --thread         number of OMP threads',
+            '-a, --affinity       thread affinit (close|spread)'
         ])
     )
 
-    g1.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help=argparse.SUPPRESS)
-    g1.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help=argparse.SUPPRESS)
-    g1.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help=argparse.SUPPRESS)
-    g2.add_argument('-t', '--thread'  , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
-    g2.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help=argparse.SUPPRESS)
+    opt.add_argument('-h', '--help'    , action='help',                                                      help=argparse.SUPPRESS)
+    opt.add_argument('-v', '--version' , action='version', version='%(prog)s ' + __version__,                help=argparse.SUPPRESS)
+    opt.add_argument('-m', '--march'   , type=str, required=True   , metavar='',                             help=argparse.SUPPRESS)
+    opt.add_argument('-s', '--size'    , type=int, default=40000000, metavar='',                             help=argparse.SUPPRESS)
+    opt.add_argument('-n', '--ntimes'  , type=int, default=100     , metavar='',                             help=argparse.SUPPRESS)
+    opt.add_argument('-t', '--thread'  , type=int, required=True   , metavar='',                             help=argparse.SUPPRESS)
+    opt.add_argument('-a', '--affinity', type=str, required=True   , metavar='', choices=['close','spread'], help=argparse.SUPPRESS)
 
     return parser.parse_args()
 

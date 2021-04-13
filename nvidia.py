@@ -332,11 +332,11 @@ class Hpcg(Nvidia):
         output = os.path.join(self.output_dir, 'perf.dat')
         with open(output, 'w') as output_fh:
             # header
-            header = ['nx', 'ny', 'nz', 'Perf (Gflops)'] 
-            output_fh.write(' '.join(map('{:10}'.format, header))+'\n')
+            header = ['nx', 'ny', 'nz', 'Gflops'] 
+            output_fh.write(' '.join(map('{:7}'.format, header))+'\n')
 
             for perf in sorted_scan:
-                output_fh.write(' '.join(map('{:10}'.format, perf))+'\n')
+                output_fh.write(' '.join(map('{:7}'.format, perf))+'\n')
 
         # write optimized input file 
         self.input     = 'HPCG.in_opt'

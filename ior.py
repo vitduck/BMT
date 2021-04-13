@@ -41,14 +41,16 @@ def main():
     
     if not os.path.exists(ior.bin): 
         # extracting 
-        ior.chdir(ior.build_dir)
+        os.chdir(ior.build_dir)
+
         ior.sys_cmd(
             cmd=['tar', 'xf', 'ior-3.3.0.tar.gz'], 
             msg='=> extracting ior-3.3.0.tar.gz'
         )
         
         # configure
-        ior.chdir('ior-3.3.0')
+        os.chdir('ior-3.3.0')
+
         ior.sys_cmd(
             cmd=[  
                 './configure', 
@@ -68,11 +70,13 @@ def main():
         )
         
         # move to bin
-        ior.mkdir(ior.bin_dir)
+        os.makedirs(ior.bin_dir, exist_ok=True)
+
         move('src/ior', f'{ior.bin}')
 
     # run benchmark
-    ior.mkdir(ior.output_dir)
+    os.makedirs(ior.output_dir, exist_ok=True)
+
     ior.run()
 
 def getopt():
@@ -80,27 +84,31 @@ def getopt():
         prog            = 'ior.py', 
         usage           = '%(prog)s -b 16m -t 1m -s 16 --host test1:2 test2:2',
         description     = 'ior benchmark', 
-        formatter_class = argparse.RawDescriptionHelpFormatter
+        formatter_class = argparse.RawDescriptionHelpFormatter, 
+        add_help        = False
     )
 
     # version string
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
-    g1 = parser.add_argument_group(
+    opt = parser.add_argument_group(
         title='benchmark arguments',
         description='\n'.join([
-            '-b, --block     block size',
-            '-t, --transfer  transfer size',
-            '-s, --segment   segment count',
-            '    --host      list of hosts on which to invoke processes'
+            '-h, --help           show this help message and exit',
+            '-v, --version        show program\'s version number and exit',
+            '-b, --block          block size',
+            '-t, --transfer       transfer size',
+            '-s, --segment        segment count',
+            '    --host           list of hosts on which to invoke processes'
         ])
     )
 
     # options for stream setup
-    g1.add_argument('-b',     type=str,            required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-t',     type=str,            required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('-s',     type=int,            required=True, metavar='', help=argparse.SUPPRESS)
-    g1.add_argument('--host', type=str, nargs='+', required=True, metavar='', help=argparse.SUPPRESS)
+    opt.add_argument('-h', '--help'   , action='help'                                      , help=argparse.SUPPRESS)
+    opt.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__, help=argparse.SUPPRESS)
+    opt.add_argument('-b'             , type=str,            required=True, metavar=''     , help=argparse.SUPPRESS)
+    opt.add_argument('-t'             , type=str,            required=True, metavar=''     , help=argparse.SUPPRESS)
+    opt.add_argument('-s'             , type=int,            required=True, metavar=''     , help=argparse.SUPPRESS)
+    opt.add_argument('--host'         , type=str, nargs='+', required=True, metavar=''     , help=argparse.SUPPRESS)
 
     return parser.parse_args()
 

@@ -96,19 +96,6 @@ class Bmt:
                     print(f'{module} >= {self.min_ver[module]} is required by {self.name}\n')
                     sys.exit(1) 
 
-    # wrapper for mkdir 
-    def mkdir(self, directory): 
-        if not os.path.exists(directory):
-            print(f'=> mkdir {os.path.relpath(directory, self.root)}')
-
-            os.makedirs(directory)
-    
-    # wrapper for cd
-    def chdir(self, directory): 
-        print(f'=> cd {os.path.relpath(directory, self.root)}')
-
-        os.chdir(directory)
-
     # wrapper for sytem commands
     def sys_cmd(self, cmd, msg='', log='', mode='w'):
         if msg: 
@@ -134,7 +121,7 @@ class Bmt:
 
         # re download src files
         if url_list: 
-            self.mkdir(self.build_dir)
+            os.makedirs(self.build_dir, exist_ok=True)
 
             log_file = os.path.join(self.root, 'wget.log')
 
@@ -161,6 +148,6 @@ class Bmt:
 
         self.sys_cmd(
             cmd=self.run_cmd, 
-            msg=f'result: {os.path.relpath(output_file, self.root)}',
+            msg=f'=> {os.path.relpath(output_file, self.root)}',
             log=output_file
         )
