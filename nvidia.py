@@ -145,6 +145,9 @@ class Hpl(Nvidia):
         # mpi grid 
         self.args.pgrid, self.args.qgrid = self.__mpi_grid()
 
+        # disable validationi tests 
+        self.args.threshold = -16.0
+
         # general algorithms
         self.args.pfact = [0, 1, 2] 
         self.args.rfact = [0, 1, 2] 
@@ -213,6 +216,9 @@ class Hpl(Nvidia):
         # mpi grid 
         self.args.pgrid     = [sorted_scan[0][3]]
         self.args.qgrid     = [sorted_scan[0][4]]
+        
+        # enable validationi tests 
+        self.args.threshold = 16.0
 
         self.write_input() 
 
@@ -240,7 +246,7 @@ class Hpl(Nvidia):
             fh.write(f'{" ".join(str(s) for s in self.args.qgrid):<20} Qs\n')
 
             # threshold (default)
-            fh.write(f'{"-16.0":<20} threshold\n')
+            fh.write(f'{self.args.threshold:<20} threshold\n')
 
             # PFACT
             fh.write(f'{len(self.args.pfact):<20} number of panel fact\n')

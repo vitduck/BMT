@@ -56,6 +56,7 @@ def getopt():
             '-p, --pgrid                    list of P grid',
             '-q, --qgrid                    list of Q grid',
             '    --pmap                     MPI processes mapping',
+            '    --threshold                Validation threshold',
             '    --pfact                    list of PFACT variants ',
             '    --nbmin                    list of NBMIN',
             '    --ndiv                     list of NDIV',
@@ -70,26 +71,27 @@ def getopt():
         ])
     )
 
-    opt.add_argument('-h', '--help'             , action='help'                                      , help=argparse.SUPPRESS)
-    opt.add_argument('-v', '--version'          , action='version', version='%(prog)s ' + __version__, help=argparse.SUPPRESS)
-    opt.add_argument('-a', '--auto'             , action='store_true', default=False                 , help=argparse.SUPPRESS)
-    opt.add_argument('-s', '--size'             , type=int, nargs='*', default=40000 , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument('-m', '--mem'              , type=str           , default='32GB', metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument('-b', '--blocksize'        , type=int, nargs='*', default=256   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument('-p', '--pgrid'            , type=int, nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument('-q', '--qgrid'            , type=int, nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--pmap'             , type=int,            default=0     , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--pfact'            , type=int, nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--nbmin'            , type=int, nargs='*', default=[4]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--ndiv'             , type=int, nargs='*', default=[2]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--rfact'            , type=int, nargs='*', default=[2]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--bcast'            , type=int, nargs='*', default=[0]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--host'             , type=str, nargs='+', required=True , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--device'           , type=int, nargs='*', default=[0]   , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--device_per_socket', type=int, nargs='*', default=[1,0] , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--thread'           , type=int,            required=True , metavar=''    , help=argparse.SUPPRESS)
-    opt.add_argument(      '--ai'               , action='store_true', default=False                 , help=argparse.SUPPRESS)
-    opt.add_argument(      '--sif'              , type=str,            required=True , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument('-h', '--help'             , action='help'                                        , help=argparse.SUPPRESS)
+    opt.add_argument('-v', '--version'          , action='version', version='%(prog)s ' + __version__  , help=argparse.SUPPRESS)
+    opt.add_argument('-a', '--auto'             , action='store_true'  , default=False                 , help=argparse.SUPPRESS)
+    opt.add_argument('-s', '--size'             , type=int  , nargs='*', default=40000 , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument('-m', '--mem'              , type=str             , default='32GB', metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument('-b', '--blocksize'        , type=int  , nargs='*', default=256   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument('-p', '--pgrid'            , type=int  , nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument('-q', '--qgrid'            , type=int  , nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--pmap'             , type=int             , default=0     , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--threshold'        , type=float           , default=16.0  , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--pfact'            , type=int  , nargs='*', default=[1]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--nbmin'            , type=int  , nargs='*', default=[4]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--ndiv'             , type=int  , nargs='*', default=[2]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--rfact'            , type=int  , nargs='*', default=[2]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--bcast'            , type=int  , nargs='*', default=[0]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--host'             , type=str  , nargs='+', required=True , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--device'           , type=int  , nargs='*', default=[0]   , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--device_per_socket', type=int  , nargs='*', default=[1,0] , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--thread'           , type=int             , required=True , metavar=''    , help=argparse.SUPPRESS)
+    opt.add_argument(      '--ai'               , action='store_true'  , default=False                 , help=argparse.SUPPRESS)
+    opt.add_argument(      '--sif'              , type=str             , required=True , metavar=''    , help=argparse.SUPPRESS)
 
     return parser.parse_args()
 
