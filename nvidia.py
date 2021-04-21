@@ -44,8 +44,8 @@ class Nvidia(Bmt):
         affinity = self.__cpu_affinity()
         
         # mpi options 
-        cmd.append(f'{"":>4}--np {self.mpiprocs}')
-        cmd.append(f'{"":>4}--host {",".join(self.args.host)}')
+        #  cmd.append(f'{"":>4}--np {self.mpiprocs}')
+        cmd.append(f'{"":>4}--hostfile hostfile')
 
         # disabled infiniband verb
         cmd.append(f'{"":>4}--mca btl ^openib')
@@ -92,6 +92,7 @@ class Nvidia(Bmt):
     def run(self): 
         self.write_input() 
         self.write_script() 
+        self.write_hostfile()
 
         super().run()
 
@@ -149,15 +150,15 @@ class Hpl(Nvidia):
         self.args.threshold = -16.0
 
         # general algorithms
-        self.args.pfact = [0, 1, 2] 
-        self.args.rfact = [0, 1, 2] 
+        #  self.args.pfact = [0, 1, 2] 
+        #  self.args.rfact = [0, 1, 2] 
 
-        self.args.nbmin = [2, 4, 8] 
-        self.args.ndiv  = [2, 3, 4]
+        #  self.args.nbmin = [2, 4, 8] 
+        #  self.args.ndiv  = [2, 3, 4]
         
         # bcast algorithms 
         # 4 leads to buffer overflown
-        self.args.bcast = [0, 1, 2, 3, 5]
+        self.args.bcast = [0, 1, 2, 3]
 
         self.run()
 

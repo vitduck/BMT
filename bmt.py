@@ -32,13 +32,13 @@ class Bmt:
         self.url     = url
         
         # mpi job 
-        self.mpiprocs = 0
-        if hasattr(args, 'host'):
-            for host in self.args.host:
-                try:
-                    self.mpiprocs += int(host.split(':')[1])
-                except: 
-                    self.mpiprocs += 1
+        #  self.mpiprocs = 0
+        #  if hasattr(args, 'host'):
+            #  for host in self.args.host:
+                #  try:
+                    #  self.mpiprocs += int(host.split(':')[1])
+                #  except: 
+                    #  self.mpiprocs += 1
 
         # directory/file
         self.root       = os.getcwd()
@@ -47,6 +47,7 @@ class Bmt:
         self.output_dir = os.path.join(self.root, 'output', datetime.now().strftime("%Y%m%d_%H:%M:%S")) 
 
         self.bin        = os.path.join(self.root, self.bin_dir, self.exe)
+        self.hostfile   = os.path.join(self.output_dir, 'hostfile')
 
         self.run_cmd    = [f'{self.bin}']
 
@@ -125,8 +126,8 @@ class Bmt:
 
             log_file = os.path.join(self.root, 'wget.log')
 
-            if os.path.exists(log_file): 
-                os.remove(log_file) 
+            if os.path.exists(log_file):
+                os.remove(log_file)
 
             for url in url_list:
                 self.sys_cmd(
@@ -135,6 +136,16 @@ class Bmt:
                     log=log_file, 
                     mode='a'
                 )
+
+    # hostfile
+    def write_hostfile(self):
+        with open(self.hostfile, 'w') as fh:
+            for host in self.args.host:
+                try:
+                    hostname, slots = host.split(':')
+                    fh.write(f'{hostname} slots={slots}\n')
+                except: 
+                    fh.write(f'{host} slots=1\n')
 
     # set omp_* environmental variables
     def set_omp(self, places='threads', num_threads=8, proc_bind='spread'):

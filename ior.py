@@ -13,8 +13,7 @@ class Ior(Bmt):
 
         self.run_cmd = [     
             'mpirun', 
-                '-n', str(self.mpiprocs), 
-                '-H', ','.join(self.args.host), 
+                '--hostfile', self.hostfile,
                 self.bin, 
                     '-b', args.b,  
                     '-t', args.t,  
@@ -22,6 +21,11 @@ class Ior(Bmt):
                     '-F', 
                     '-C'
         ]
+
+    def run(self): 
+        self.write_hostfile() 
+
+        super().run()
 
 def main():
     ior = Ior(
@@ -91,7 +95,7 @@ def getopt():
     # version string
 
     opt = parser.add_argument_group(
-        title='benchmark arguments',
+        title='optional arguments',
         description='\n'.join([
             '-h, --help           show this help message and exit',
             '-v, --version        show program\'s version number and exit',
