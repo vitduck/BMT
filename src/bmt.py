@@ -6,36 +6,41 @@ import sys
 import pprint
 import inspect
 import logging
-import subprocess
 import packaging.version
 import datetime
-
+import collections
 import prerequisite
+
+from tabulate import tabulate
+from utils    import init_nodelist, syscmd
 
 class Bmt: 
     version  = '0.5'
     
     # initialize root logger 
     logging.basicConfig( 
-        stream  = sys.stderr, 
-        level   = logging.ERROR, 
-        format  = '%(asctime)s | %(message)s', 
-        datefmt = '%Y%m%d_%H:%M:%S')
+        stream  = sys.stderr,
+        level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
+        format  = '%(message)s')
 
     def __init__(self, name):
         self.name     = name
         self._prefix  = './'
         self._args    = {} 
         
-        # info from slrum 
-        self.host     = self._parse_slurm_nodelist()
-        self.gpu      = [] 
-        self.ntasks   = os.environ['SLURM_NTASKS_PER_NODE']
+        self.nodes    = 0
+        self.ntasks   = 0
+        self.host     = init_nodelist() 
+        self.hostfile = 'hostfile'
         
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
-        self.hostfile = 'hostfile'
-        self.output   = f'{name}.out'
+        self.bin      = ''
+        self.input    = ''
+        self.buildcmd = []
         self.runcmd   = ''
+        self.output   = ''
+        self.header   = [] 
+        self.result   = []
 
     # set up sub-directories 
     @property 
@@ -44,15 +49,11 @@ class Bmt:
 
     @prefix.setter 
     def prefix(self, prefix): 
-        self._prefix  = prefix
-        self.bindir   = os.path.join(prefix, 'bin')
-        self.builddir = os.path.join(prefix, 'build')
-        self.outdir   = os.path.join(prefix, 'output')
-
-        self.bin      = os.path.join(self.bindir, self.name)
-        self.buildcmd = [
-            f'mkdir -p {self.builddir}', 
-            f'mkdir -p {self.bindir}' ]
+        self._prefix  = os.path.abspath(prefix)
+        self.bindir   = os.path.join(self._prefix, 'bin')
+        self.builddir = os.path.join(self._prefix, 'build')
+        self.outdir   = os.path.join(self._prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
+        self.bin      = os.path.join(self.bindir, self.bin)
 
     # override attributes from cmd line argument
     @property 
@@ -62,9 +63,11 @@ class Bmt:
     @args.setter 
     def args(self, args): 
         self._args = args 
+
         for opt in args:   
             if args[opt]: 
-                setattr(self, opt, args[opt]) 
+                setattr(self, opt, 
+                        args[opt]) 
 
     # print object attributeis for debug purpose 
     def debug(self): 
@@ -72,99 +75,52 @@ class Bmt:
     
     # check for minimum software/hardware requirements 
     def check_prerequisite(self, module, min_ver):  
-        host =  re.sub(':\d+', '', self.host[0])
-        
         # insert hostname after ssh 
-        cmd     = prerequisite.cmd[module].replace('ssh', f'ssh {host}')
+        cmd     = prerequisite.cmd[module].replace('ssh', f'ssh {self.host[0]}')
         regex   = prerequisite.regex[module]
-        version = re.search(regex, self.syscmd(cmd)).group(1)
+        version = re.search(regex, syscmd(cmd)).group(1)
                 
         if packaging.version.parse(version) < packaging.version.parse(min_ver):
             logging.error(f'{module} >= {min_ver} is required by {self.name}')
-            sys.exit()
+            sys.exit() 
+
+    # OpenMPI: write hostfile
+    def write_hostfile(self): 
+        with open(self.hostfile, 'w') as fh:
+            for host in self.host[0:self.nodes]:
+                fh.write(f'{host} slots={self.ntasks}\n')
 
     # returns if previously built binary exists 
     def build(self):
         if os.path.exists(self.bin): 
+            logging.info('Skipping build phase')
             return
 
+        logging.info(f'Building {self.name}')
+        os.makedirs(self.builddir, exist_ok=True) 
+        os.makedirs(self.bindir  , exist_ok=True) 
+
         for cmd in self.buildcmd: 
-            self.syscmd(cmd, verbose=1)
+            syscmd(cmd)
 
-    # run benchmark 
-    def run(self):
-        self.output = os.path.join(self.outdir, self.output)
+    def mkoutdir(self):  
+        os.makedirs(self.outdir, exist_ok=True) 
+        os.chdir(self.outdir)
 
-        self.syscmd(self.runcmd, verbose=1, output=self.output)
-    
-    # creat output directory with time stamp 
-    def make_outdir(self): 
-        self.outdir = os.path.join(self.outdir, datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
-
-        self.syscmd(f'mkdir -p {self.outdir}', verbose=1)
-
-    # OpenMPI: write hostfile
-    def write_hostfile(self): 
-        self.hostfile = os.path.join(self.outdir, self.hostfile)
-
-        with open(self.hostfile, 'w') as fh:
-            for host in self.host:
-                fh.write(f'{host} slots={self.ntasks}\n')
-
-    # IO: clear cache on client (root required) 
-    def sync(self):
-        if os.getuid() == 0: 
-            for host in self.host:
-                hostname, slots = host.split(':')
-
-                self.syscmd(f'ssh {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"') 
-        else:
-            logging.debug('Cannot flush cache')
-    
-    # wrapper for system commands 
-    def syscmd(self, cmd, verbose=0, output=None):
-        if verbose: 
-            logger = logging.getLogger() 
-            logger.setLevel(logging.INFO)
-
-            if output: 
-                logger.info(f'{cmd} > {output}') 
-            else: 
-                logger.info(cmd)
-
-        try: 
-            pout = subprocess.check_output(cmd, stderr=subprocess.PIPE, shell=True).decode('utf-8').strip()
-        except subprocess.CalledProcessError as e:
-            logging.error(f'{e.stderr.decode("utf-8").strip()}')
-            sys.exit() 
+    def run(self, redirect=0):
+        # redirect output to file 
+        if redirect: 
+            syscmd(self.runcmd, self.output) 
         else: 
-            if output: 
-                with open(output, "w") as output_fh:
-                    output_fh.write(pout)
-            else: 
-                return pout
+            syscmd(self.runcmd)
 
-    def gpu_selection(self): 
-        return f'CUDA_VISIBLE_DEVICES={",".join(str(gpu) for gpu in self.gpu)}'
+        logging.info(f'Testing {self.name} > {os.path.relpath(self.output, self.rootdir)}')
 
-    def _parse_slurm_nodelist(self): 
-        flat = [] 
-        name, index = re.search('(.+)\[(.*)\]', os.environ['SLURM_NODELIST']).group(1,2)
-
-        for node in index.split(','):
-            if re.search('-', node):
-                node_start, node_end = node.split('-')
-                
-                flat.extend(range(int(node_start), int(node_end)+1))
-            else:
-                flat.append(node)
-
-        return [ name+str(item) for item in flat ]
+        self.parse()
     
-    # due to bug in slurm, CUDA_VISIBLE_DEVICES cannot be obtained directly
-    def _parse_nvidia_smi(self):
-        nvidia_smi = self.syscmd(f'ssh {self.host[0]} "nvidia-smi -L"')
+    def parse(self):  
+        pass
 
-        gpu = re.findall('GPU\s+(\d+)', nvidia_smi)
-
-        return [i for i in gpu]
+    def summary(self): 
+        print()
+        print(tabulate(self.result, self.header, tablefmt='psql', floatfmt=".2f", numalign='decimal', stralign='right'))

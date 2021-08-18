@@ -1,76 +1,65 @@
 #!/usr/bin/env python3 
 
 import os
+import re
 import argparse
 
-from math       import sqrt
-from hpc_nvidia import HpcNvidia
+from math  import sqrt
+from utils import init_gpu, init_gpu_memory, init_gpu_affinity
+from hpcnv import Hpcnv
 
-class Hpl(HpcNvidia): 
+class Hpl(Hpcnv): 
     def __init__(self, 
         size=[], blocksize=[256], pgrid=[], qgrid=[], pmap=0, 
-        threshold=16.0, pfact=[1], nbmin=[4], ndiv=[4], rfact=[1], 
-        bcast=[0], ai=False, 
-        gpu=[], thread=4, sif='hpc-benchmarks_20.10-hpl.sif', prefix='./'):  
+        threshold=16.0, pfact=[1], nbmin=[4], ndiv=[4], rfact=[1], bcast=[0], ai=False, 
+        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_20.10-hpl.sif', prefix='./'):  
 
-        super().__init__(gpu, thread, sif, prefix)
+        super().__init__('hpl-nvidia', nodes, ngpus, omp, sif, prefix)
 
-        self.size       = size
-        self.blocksize  = blocksize 
-        self.pgrid      = pgrid 
-        self.qgrid      = qgrid 
-        self.pmap       = pmap 
-        self.threshold  = threshold 
-        self.pfact      = pfact 
-        self.nbmin      = nbmin 
-        self.ndiv       = ndiv 
-        self.rfact      = rfact 
-        self.bcast      = bcast 
-        self.ai         = ai 
-        self.wrapper    = 'hpl.sh'
-        self.input      = 'HPL.in'
-
-        # cmdline options 
-        self.getopt() 
+        self.wrapper   = 'hpl.sh'
+        self.input     = 'HPL.in'
+        self.output    = 'HPL.out'
         
-        # HPL requires ncpu = ngpu
-        self.ntasks = len(self.gpu)
-        self.ngpus  = len(self.gpu)*len(self.host)
+        self.size      = size
+        self.blocksize = blocksize 
+        self.pgrid     = pgrid 
+        self.qgrid     = qgrid 
+        self.pmap      = pmap 
+        self.threshold = threshold 
+        self.pfact     = pfact 
+        self.nbmin     = nbmin 
+        self.ndiv      = ndiv 
+        self.rfact     = rfact 
+        self.bcast     = bcast 
+        self.ai        = ai 
+        self.header    = ['Node', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Perf(Tflops)', 'Time(s)', 'Status']
+        
+        self.getopt()
 
         # automatically set size
         if not self.size: 
-            self.set_size() 
+            self.init_size() 
 
-        # automatically set prid 
-        if not self.pgrid: 
-            self.set_mpi_grid() 
-
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
-
-    def set_mpi_grid(self): 
+    def init_grid(self): 
         self.pgrid = [] 
         self.qgrid = [] 
+        ngpus_tot  = self.nodes*self.ngpus
 
-        for i in range(1, self.ngpus+1):
-            if self.ngpus%i == 0:
+        for i in range(1, ngpus_tot +1):
+            if ngpus_tot%i == 0:
                 p = i
-                q = int(self.ngpus/i)
+                q = int(ngpus_tot/i)
 
                 if p <= q:
                     self.pgrid.append(p)
                     self.qgrid.append(q)
 
-    def set_size(self):
-        total_mem = self.ngpus * self._parse_memory()
+    def init_size(self):
+        total_mem = self.ngpus * init_gpu_memory(self.host[0])
         self.size = [10000*int(sqrt(0.9*total_mem*1024**2/8)/10000)]
 
     def write_input(self):
-        input_file = os.path.join(self.outdir, 'HPL.in')
-
-        with open(input_file, 'w') as fh:
+        with open(self.input, 'w') as fh:
             fh.write(f'HPL input\n')
             fh.write(f'KISTI\n')
             fh.write(f'{"HPL.out":<20} output file name\n')
@@ -132,16 +121,52 @@ class Hpl(HpcNvidia):
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
     def run(self): 
-        super().run() 
+        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
 
+        # ncpus = ngpus
+        self.ntasks = self.ngpus
+
+        # default grid 
+        if not self.pgrid: 
+            self.init_grid() 
+
+        self.mkoutdir() 
+        self.write_hostfile() 
+        self.write_input() 
+        
+        self.output = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.out'
+        self.runcmd = self.ngc_cmd() 
+        
+        # HPL-AI 
         if self.ai: 
             self.runcmd += '--xhpl-ai'
+        
+        super().run()
 
-        self.syscmd(self.runcmd, verbose=1)
+    def parse(self): 
+        with open('HPL.out', 'r') as output_fh:
+            line = output_fh.readline()
+            while line:
+                if re.search('^W[RC]', line):
+                    config, size, blocksize, p, q, time, gflops = line.split()
+
+                    # passed/failed status
+                    output_fh.readline()
+                    status = output_fh.readline().split()[-1]
+
+                    self.result.append([self.nodes, self.omp, config, size, blocksize, p, q, float(gflops)/1024, time, status])
+                
+                line = output_fh.readline()
+        
+        # back up output files
+        os.rename('HPL.out', self.output)
+
+        # sort result according to gflops
+        #  self.result =  sorted(self.result, key=lambda x : float(x[-2]), reverse=True)
 
     def getopt(self):
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -s 40000 -b 256 --thread 8 --sif hpc-benchmarks_20.10-hpl.sif',
+            usage           = '%(prog)s -s 40000 -b 256 --omp 4 --sif hpc-benchmarks_20.10-hpl.sif',
             description     = 'HPL Benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter,
             add_help        = False )
@@ -164,8 +189,9 @@ class Hpl(HpcNvidia):
                 '    --rfact            list of RFACT variants\n'
                 '    --broadcast        MPI broadcasting algorithms\n'
                 '    --ai               using hpl-ai\n'
-                '    --gpu              GPU indices\n'
-                '    --thread           number of omp threads\n'
+                '    --nodes            number of nodes\n'
+                '    --ngpus            number of gpus per node\n'
+                '    --omp              number of omp threads\n'
                 '    --sif              path of singularity images\n'
                 '    --prefix           output directory\n' ))
 
@@ -185,8 +211,9 @@ class Hpl(HpcNvidia):
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ai'       , action='store_true'              , help=argparse.SUPPRESS)
-        opt.add_argument(      '--gpu'      , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--thread'   , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--nodes'    , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--ngpus'    , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--sif'      , type=str             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--prefix'   , type=str             , metavar='', help=argparse.SUPPRESS)
 

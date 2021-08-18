@@ -1,19 +1,29 @@
 #!/usr/bin/env python 
 
+import re
+import os
+import logging
 import argparse
 
-from stream import Stream
+from utils import syscmd
+from bmt   import Bmt
 
-class StreamCuda(Stream):
-    def __init__(self, prefix='./', arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100): 
+class StreamCuda(Bmt):
+    def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, prefix='./'): 
 
         super().__init__('stream_cuda')
         
-        self.prefix = prefix
+        self.bin    = 'stream_cuda'
+        self.kernel = ['Copy', 'Mul', 'Add', 'Triad', 'Dot']
+
         self.arch   = arch 
         self.mem    = mem 
         self.size   = size 
         self.ntimes = ntimes 
+        self.prefix = prefix
+        self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
+        
+        self.getopt()  
         
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
@@ -29,17 +39,31 @@ class StreamCuda(Stream):
                '-DCUDA '
               f'-arch={self.arch} '
               f'-D{self.mem} '
-              f'-o {self.bin} {self.builddir}/main.cpp {self.builddir}/CUDAStream.cu' )]
+              f'-o {self.bin} {self.builddir}/main.cpp {self.builddir}/CUDAStream.cu')]
         
         super().build() 
 
     def run(self): 
+        self.mkoutdir()
+        
+        self.output = 'stream-cuda.out'
         self.runcmd = ( 
             f'ssh {self.host[0]} '                                     # ssh to remote host 
-            f'"builtin cd {self.rootdir}; '                            # cd to caller dir
+            f'"builtin cd {self.outdir}; '                             # cd to caller dir
             f'{self.bin} -s {str(self.size)} -n {str(self.ntimes)}"')  # stream_cuda cmd 
+        
+        super().run(1) 
 
-        super().run() 
+    def parse(self):
+        bandwidth = [] 
+
+        with open(self.output, 'r') as output_fh: 
+            for line in output_fh:
+                for kernel in self.kernel:
+                    if re.search(f'{kernel}:?', line):
+                        bandwidth.append(float(line.split()[1])/1024)
+    
+        self.result.append(bandwidth)
 
     def getopt(self):
         parser = argparse.ArgumentParser(

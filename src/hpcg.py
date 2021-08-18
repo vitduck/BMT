@@ -1,33 +1,29 @@
 #!/usr/bin/env python3 
 
 import os
+import re
 import argparse
 
-from math       import sqrt
-from hpc_nvidia import HpcNvidia
+from math  import sqrt
+from utils import init_gpu, init_gpu_affinity
+from hpcnv import Hpcnv
 
-class Hpcg(HpcNvidia):
+class Hpcg(Hpcnv): 
     def __init__(self,
         grid=[256, 256, 256], time=60, 
-        gpu=[], thread=4, prefix='./', sif='hpc-benchmarks_20.10-hpcg.sif'): 
+        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_20.10-hpcg.sif', prefix='./'):
 
-        super().__init__(gpu, thread, sif, prefix)
+        super().__init__('hpcg-nvidia', nodes, ngpus, omp, sif, prefix)
+
+        self.wrapper = 'hpcg.sh'
+        self.input   = 'HPCG.in'
+        self.output  = 'HPCG.out'
 
         self.grid    = grid 
         self.time    = time
-        self.wrapper = 'hpcg.sh'
-        self.input   = 'HPCG.in'
-
-        # cmdline options
+        self.header  = ['Node', 'Thread', 'Mpi', 'Domain', 'SpMV', 'SymGS', 'Total(GFlops)', 'Final(Gflops)', 'Time(s)']
+        
         self.getopt() 
-
-        # HPL requires ncpu = ngpu
-        self.ntasks = len(self.gpu)
-       
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
 
     def write_input(self):
         input_file = os.path.join(self.outdir, 'HPCG.in')
@@ -39,12 +35,57 @@ class Hpcg(HpcNvidia):
             input_fh.write(f'{self.time}')
 
     def run(self): 
-        super().run() 
-
         # bug in 20.10 
+        os.environ['CUDA_VISIBLE_DEVICES']           = ",".join([str(i) for i in range(0, self.ngpus)])
         os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.1/targets/x86_64-linux/lib'
+        
+        # ncpus = ngpus
+        self.ntasks = self.ngpus
 
-        self.syscmd(self.runcmd, verbose=1)
+        self.mkoutdir() 
+        self.write_hostfile() 
+        self.write_input() 
+
+        self.output = f'HPCG-n{self.nodes}-g{self.ngpus}-t{self.omp}-{"x".join([str(grid) for grid in self.grid])}.out'
+        self.runcmd = self.ngc_cmd() 
+        
+        super().run(1)
+
+    def parse(self): 
+        with open(self.output, 'r') as output_fh: 
+            for line in output_fh: 
+                regex_time   = re.search('Total Time', line)
+                regex_grid   = re.search('process grid', line) 
+                regex_domain = re.search('local domain', line)  
+                regex_SpMV   = re.search('SpMV\s+=', line)
+                regex_SymGS  = re.search('SymGS\s+=', line)
+                regex_total  = re.search('total\s+=', line)
+                regex_final  = re.search('final\s+=', line)
+                
+                if regex_time: 
+                    time = float(line.split()[2])
+                if regex_grid:
+                    grid = line.split()[0]
+                if regex_domain:
+                    domain = line.split()[0]
+                if regex_SpMV: 
+                    SpMV = float(line.split()[2])
+                if regex_SymGS: 
+                    SymGS = float(line.split()[2])
+                if regex_total: 
+                    total = float(line.split()[2])
+                if regex_final: 
+                    final = float(line.split()[2])
+
+        self.result.append([self.nodes, self.omp, grid, domain, SpMV, SymGS, total, final, time])
+
+    def summary(self): 
+        super().summary() 
+        
+        print('SpMV:  sparse matrix-vector multiplication')
+        print('SymGS: symmetric Gauss-Seidel method')
+        print('Total: total performance')
+        print('Final: total performance including initialization overhead')
 
     def getopt(self): 
         parser = argparse.ArgumentParser(
@@ -61,8 +102,9 @@ class Hpcg(HpcNvidia):
                 '-v, --version        show program\'s version number and exit\n'
                 '-g, --grid           3-dimensional grid\n'
                 '-t, --time           targeted run time\n'
-                '    --gpu            list of GPU indices\n'
-                '    --thread         number of omp threads\n'
+                '    --nodes          number of nodes\n'
+                '    --ngpus          number of gpus per node\n'
+                '    --omp            number of omp threads\n'
                 '    --sif            path of singularity images\n'
                 '    --prefix         bin/build/output dir\n' ))
     
@@ -73,10 +115,10 @@ class Hpcg(HpcNvidia):
 
         opt.add_argument('-g', '--grid'   , type=int, nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-t', '--time'   , type=int           , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--host'   , type=str, nargs='+', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--gpu'    , type=int, nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--thread' , type=int,            metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--sif'    , type=str,            metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix' , type=str,            metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--nodes'  , type=str           , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--ngpus'  , type=int           , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--omp'    , type=int           , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--sif'    , type=str           , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--prefix' , type=str           , metavar='', help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

@@ -3,12 +3,10 @@
 from stream_omp import StreamOmp
 
 stream = StreamOmp(
-    prefix  = '../run/STREAM/OMP' )
+    prefix = '../run/STREAM/OMP')
 
+#  stream.debug()
 stream.build()
-stream.make_outdir()
+stream.mkoutdir() 
 stream.run() 
-
-print('\nBandwidth (MB/s):')
-for kernel in ['Copy', 'Scale', 'Add', 'Triad']: 
-    print(f'{kernel:8s} {stream.parse_output(kernel):.1f}')
+stream.summary()
