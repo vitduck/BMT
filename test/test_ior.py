@@ -2,9 +2,9 @@
 
 from ior import Ior
 
-io = Ior(
-    prefix = '../run/IOR' )
+ior = Ior(
+    prefix = '../run/IOR')
 
-io.build()
-io.make_outdir()
-io.write_hostfile() 
+ior.build()
+ior.run() 
+ior.summary()

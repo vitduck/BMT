@@ -2,7 +2,8 @@
 
 from iozone import Iozone
 
-iozone = Iozone(prefix = '../run/IOZONE') 
+iozone = Iozone(
+    prefix = '../run/IOZONE') 
 
 iozone.build()
 iozone.run() 

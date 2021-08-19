@@ -5,9 +5,8 @@ from gromacs import Gromacs
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
     input  = '../input/GROMACS/stmv.tpr', 
-    nsteps = 10000 ) 
+    nsteps = 4000) 
 
 gmx.build()
-gmx.mkoutdir()
 gmx.run()
 gmx.summary()

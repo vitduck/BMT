@@ -8,7 +8,7 @@ hpl = Hpl(
     size      = [10000, 20000, 40000, 60000],
     blocksize = [64, 128, 256])
 
-for nodes in [1]:
+for nodes in [1, 2]:
     for ngpus in [1, 2]: 
         for omp in [1, 2, 4]: 
             hpl.nodes = nodes

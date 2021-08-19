@@ -21,7 +21,7 @@ class Bmt:
     logging.basicConfig( 
         stream  = sys.stderr,
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
-        format  = '%(message)s')
+        format  = '> %(message)s')
 
     def __init__(self, name):
         self.name     = name
@@ -30,7 +30,7 @@ class Bmt:
         
         self.nodes    = 0
         self.ntasks   = 0
-        self.host     = init_nodelist() 
+        self.host     = init_nodelist()
         self.hostfile = 'hostfile'
         
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
@@ -114,13 +114,19 @@ class Bmt:
         else: 
             syscmd(self.runcmd)
 
-        logging.info(f'Testing {self.name} > {os.path.relpath(self.output, self.rootdir)}')
+        logging.info(f'Testing {self.name} >>> {os.path.relpath(self.output, self.rootdir)}')
 
         self.parse()
     
     def parse(self):  
         pass
 
-    def summary(self): 
+    def summary(self, sort=0, order='>'): 
+        if sort:  
+            if order == '>': 
+                self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)
+            else:
+                self.result =  sorted(self.result, key=lambda x : float(x[-1]))
+
         print()
-        print(tabulate(self.result, self.header, tablefmt='psql', floatfmt=".2f", numalign='decimal', stralign='right'))
+        print(tabulate(self.result, self.header, tablefmt='github', floatfmt=".1f", numalign='decimal', stralign='right'))

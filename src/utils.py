@@ -10,7 +10,7 @@ import collections
 # SLURM_NODELIST
 def init_nodelist(): 
     flat = [] 
-    name, index = re.search('([a-zA-Z]+)\[?([\d\-]+)\]?', os.environ['SLURM_NODELIST']).group(1,2)
+    name, index = re.search('([a-zA-Z]+)\[?([0-9\-,]+)\]?', os.environ['SLURM_NODELIST']).group(1,2)
 
     for node in index.split(','):
         if re.search('-', node):
@@ -46,7 +46,7 @@ def sync(host=[]):
         for hostname in host: 
             syscmd(f'ssh {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"')
     else:
-        logging.warning('Note: Cannot flush cache without root privileges!')
+        logging.warning('Cannot flush cache without root privileges!')
 
 # parse for gpu memory (HPL)
 def init_gpu_memory(host): 

@@ -5,11 +5,11 @@ from gromacs import Gromacs
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
     input  = '../input/GROMACS/stmv.tpr', 
-    nsteps = 5000) 
+    nsteps = 4000) 
 
 gmx.build()
 
-for nodes in [1]: 
+for nodes in [1, 2]: 
     for ngpus in [1, 2]:
         for ntasks in [8, 16, 32, 40]:
             omp = 1 

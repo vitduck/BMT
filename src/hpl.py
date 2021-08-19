@@ -32,7 +32,7 @@ class Hpl(Hpcnv):
         self.rfact     = rfact 
         self.bcast     = bcast 
         self.ai        = ai 
-        self.header    = ['Node', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Perf(Tflops)', 'Time(s)', 'Status']
+        self.header    = ['Node', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)']
         
         self.getopt()
 
@@ -154,15 +154,12 @@ class Hpl(Hpcnv):
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    self.result.append([self.nodes, self.omp, config, size, blocksize, p, q, float(gflops)/1024, time, status])
+                    self.result.append([self.nodes, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1024])
                 
                 line = output_fh.readline()
         
         # back up output files
         os.rename('HPL.out', self.output)
-
-        # sort result according to gflops
-        #  self.result =  sorted(self.result, key=lambda x : float(x[-2]), reverse=True)
 
     def getopt(self):
         parser = argparse.ArgumentParser(

@@ -21,7 +21,7 @@ class Hpcg(Hpcnv):
 
         self.grid    = grid 
         self.time    = time
-        self.header  = ['Node', 'Thread', 'Mpi', 'Domain', 'SpMV', 'SymGS', 'Total(GFlops)', 'Final(Gflops)', 'Time(s)']
+        self.header  = ['Node', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(Gflops)']
         
         self.getopt() 
 
@@ -77,11 +77,12 @@ class Hpcg(Hpcnv):
                 if regex_final: 
                     final = float(line.split()[2])
 
-        self.result.append([self.nodes, self.omp, grid, domain, SpMV, SymGS, total, final, time])
+        self.result.append([self.nodes, self.omp, grid, domain, time, SpMV, SymGS, total, final])
 
     def summary(self): 
         super().summary() 
-        
+
+        print() 
         print('SpMV:  sparse matrix-vector multiplication')
         print('SymGS: symmetric Gauss-Seidel method')
         print('Total: total performance')

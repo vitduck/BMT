@@ -2,6 +2,7 @@
 
 import os
 import re
+import logging
 import argparse
 
 from utils import init_gpu, device_query, syscmd
@@ -22,7 +23,7 @@ class Qe(Bmt):
         self.omp    = omp
         self.sif    = sif 
         self.prefix = prefix 
-        self.header = ['Node', 'Ngpus', 'Ntasks', 'Thread', 'Npool', 'Walltime(s)']
+        self.header = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Npool', 'Time(s)']
 
         self.getopt() 
 

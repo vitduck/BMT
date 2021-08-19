@@ -24,7 +24,7 @@ class Gromacs(Bmt):
         self.omp      = omp
         self.sif      = sif
         self.prefix   = prefix
-        self.header   = ['Node', 'Ngpus', 'Ntasks', 'Thread', 'Perf(ns/day)']
+        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)']
         
         # cmdline options 
         self.getopt() 

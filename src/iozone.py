@@ -4,10 +4,10 @@ import re
 import os
 import logging
 import argparse
-import glob
 
+from glob  import glob 
+from utils import  sync
 from bmt   import Bmt
-from utils import syscmd, sync
 
 class Iozone(Bmt):
     def __init__(self, size='16m', record='64k', thread_per_host=4, prefix='./'): 
@@ -95,8 +95,8 @@ class Iozone(Bmt):
                         self.bandwidth.append(float(result))
 
     def clean(self): 
-        for file in sorted(glob.glob(f'{self.outdir}/*DUMMY*')):
-            syscmd(f'rm {file}')
+        for io_file in sorted(glob(f'{self.outdir}/*DUMMY*')):
+            os.remove(io_file)
         
     def getopt(self): 
         parser = argparse.ArgumentParser(
