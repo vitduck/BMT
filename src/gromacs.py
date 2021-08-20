@@ -5,22 +5,24 @@ import re
 import logging
 import argparse
 
-from utils import init_gpu, init_ntasks, syscmd
+from slurm import slurm_ntasks
+from cpu   import cpu_info
+from gpu   import gpu_id, gpu_info
 from bmt   import Bmt
 
 class Gromacs(Bmt):
     def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=0, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
         super().__init__('gromacs')
 
-        self.bin    = 'gmx_mpi'
-        self.gpu_id = init_gpu(self.host[0])
+        self.bin      = 'gmx_mpi'
+        self.gpu_id   = gpu_id(self.host[0])
 
         self.input    = os.path.abspath(input)
         self.nsteps   = nsteps
         self.tune_pme = tune_pme
         self.nodes    = nodes  or len(self.host)
         self.ngpus    = ngpus  or len(self.gpu_id)
-        self.ntasks   = ntasks or init_ntasks()
+        self.ntasks   = ntasks or slurm_ntasks()
         self.omp      = omp
         self.sif      = sif
         self.prefix   = prefix
@@ -38,6 +40,9 @@ class Gromacs(Bmt):
         self.check_prerequisite('cuda', '10.0')
         self.check_prerequisite('openmpi', '3.0')
         
+        cpu_info(self.host[0])
+        gpu_info(self.host[0])
+
     def build(self): 
         if self.sif: 
             logging.info('Using NGC image')

@@ -3,19 +3,18 @@
 import os 
 import re
 import sys
-import pprint
 import inspect
 import logging
 import packaging.version
 import datetime
-import collections
 import prerequisite
 
 from tabulate import tabulate
-from utils    import init_nodelist, syscmd
+from utils    import syscmd
+from slurm    import slurm_nodelist, slurm_ntasks
 
 class Bmt: 
-    version  = '0.5'
+    version  = '0.6'
     
     # initialize root logger 
     logging.basicConfig( 
@@ -28,9 +27,9 @@ class Bmt:
         self._prefix  = './'
         self._args    = {} 
         
-        self.nodes    = 0
-        self.ntasks   = 0
-        self.host     = init_nodelist()
+        self.nodes    = 1 
+        self.ntasks   = 1
+        self.host     = slurm_nodelist()
         self.hostfile = 'hostfile'
         
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
@@ -108,13 +107,13 @@ class Bmt:
         os.chdir(self.outdir)
 
     def run(self, redirect=0):
-        # redirect output to file 
+        logging.info(f'Running {self.name}: {os.path.relpath(self.output, self.rootdir)}')
+       
+       # redirect output to file 
         if redirect: 
             syscmd(self.runcmd, self.output) 
         else: 
             syscmd(self.runcmd)
-
-        logging.info(f'Testing {self.name} >>> {os.path.relpath(self.output, self.rootdir)}')
 
         self.parse()
     

@@ -5,7 +5,8 @@ import re
 import argparse
 
 from math  import sqrt
-from utils import init_gpu, init_gpu_affinity
+from cpu   import cpu_info
+from gpu   import gpu_info, gpu_id
 from hpcnv import Hpcnv
 
 class Hpcg(Hpcnv): 
@@ -21,9 +22,12 @@ class Hpcg(Hpcnv):
 
         self.grid    = grid 
         self.time    = time
-        self.header  = ['Node', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(Gflops)']
+        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(Gflops)']
         
         self.getopt() 
+
+        cpu_info(self.host[0])
+        gpu_info(self.host[0])
 
     def write_input(self):
         input_file = os.path.join(self.outdir, 'HPCG.in')
@@ -77,7 +81,7 @@ class Hpcg(Hpcnv):
                 if regex_final: 
                     final = float(line.split()[2])
 
-        self.result.append([self.nodes, self.omp, grid, domain, time, SpMV, SymGS, total, final])
+        self.result.append([self.nodes, self.ngpus, self.omp, grid, domain, time, SpMV, SymGS, total, final])
 
     def summary(self): 
         super().summary() 

@@ -2,11 +2,11 @@
 
 import re
 import os
-import logging
 import argparse
 
 from glob  import glob 
-from utils import  sync
+from cpu   import cpu_info
+from utils import sync
 from bmt   import Bmt
 
 class Iozone(Bmt):
@@ -16,11 +16,11 @@ class Iozone(Bmt):
         self.bin             = 'iozone'
 
         self.size            = size
-        self.record          = record 
-        self.thread_per_host = thread_per_host 
+        self.record          = record
+        self.thread_per_host = thread_per_host
         self.prefix          = prefix
 
-        self.bandwidth       = [] 
+        self.bandwidth       = []
         self.header          = ['Size', 'Record', 'Thread', 'Write(MB/s)', 'Read(MB/s)', 'RWrite(OPS)', 'RRead(OPS)']
         
         self.buildcmd += [
@@ -30,9 +30,11 @@ class Iozone(Bmt):
            f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}' ]
 
         self.getopt() 
-        
+
         # default thread 
         self.thread = self.thread_per_host * len(self.host) 
+
+        cpu_info(self.host[0])
 
     def run(self): 
         self.mkoutdir()

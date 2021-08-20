@@ -1,12 +1,11 @@
 #!/usr/bin/env python 
 
 import re
-import os
-import logging
 import argparse
 
-from utils import syscmd
-from bmt   import Bmt
+from cpu import cpu_info
+from gpu import gpu_info
+from bmt import Bmt
 
 class StreamCuda(Bmt):
     def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, prefix='./'): 
@@ -24,6 +23,9 @@ class StreamCuda(Bmt):
         self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
         
         self.getopt()  
+
+        cpu_info(self.host[0])
+        gpu_info(self.host[0])
         
     def build(self): 
         self.check_prerequisite('cuda', '10.1')

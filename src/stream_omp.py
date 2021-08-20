@@ -5,7 +5,7 @@ import re
 import logging
 import argparse
 
-from utils import syscmd
+from cpu import cpu_info
 from bmt   import Bmt
 
 class StreamOmp(Bmt):
@@ -25,6 +25,8 @@ class StreamOmp(Bmt):
         self.header   = ['Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
         
         self.getopt()
+        
+        cpu_info(self.host[0])
         
     def build(self): 
         self.check_prerequisite('gcc', '7')

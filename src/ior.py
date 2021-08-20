@@ -5,11 +5,12 @@ import re
 import argparse
 
 from glob  import glob
+from cpu   import cpu_info
 from utils import sync
 from bmt   import Bmt
 
 class Ior(Bmt):
-    def __init__(self, transfer='1m', block='16m', ltrsize=0, ltrcount=0, segment=16, nodes=0, ntasks=4, prefix='./'): 
+    def __init__(self, transfer='1m', block='16m', ltrsize=0, ltrcount=0, segment=16, nodes=0, ntasks=8, prefix='./'): 
         super().__init__('ior')
 
         self.bin    = 'ior'
@@ -22,7 +23,7 @@ class Ior(Bmt):
         self.nodes    = nodes or len(self.host)
         self.ntasks   = ntasks
         self.prefix   = prefix 
-        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
+        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
 
         self.getopt()
         
@@ -39,6 +40,8 @@ class Ior(Bmt):
                f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib;' 
             'make -j 8;' 
             'make install')]
+
+        cpu_info(self.host[0])
 
     def run(self): 
         self.mkoutdir()
@@ -62,7 +65,7 @@ class Ior(Bmt):
            f'-w '  # write benchmark
            f'-r '  # read benchmark
            f'-k '  # do not remove files
-           f'-z'   # random access to file 
+           f'-z '  # random access to file 
            f'-e '  # fsync upon POSIS upon write close
            f'-F '  # N-to-N 
            f'-C ') # reorderTasks
@@ -86,6 +89,10 @@ class Ior(Bmt):
             line = output_fh.readline() 
 
             while line: 
+                if re.search('aggregate filesize', line): 
+                    size, unit = line.split()[-2:] 
+                    size = f'{size}{unit[0].lower()}'
+
                 if re.search('Summary', line): 
                     output_fh.readline() 
                     write = output_fh.readline().split()
@@ -94,7 +101,7 @@ class Ior(Bmt):
 
                 line = output_fh.readline() 
 
-        self.result.append([self.nodes, self.ntasks, self.transfer, self.block, self.segment, write[3], read[3], write[7], read[7]])
+        self.result.append([self.nodes, self.ntasks, self.transfer, self.block, self.segment, size, write[3], read[3], write[7], read[7]])
 
     def clean(self): 
         for io_file in glob('testFile*'): 

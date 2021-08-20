@@ -5,15 +5,16 @@ import re
 import logging
 import argparse
 
-from utils import init_gpu, device_query, syscmd
-from bmt   import Bmt
+from cpu import cpu_info
+from gpu import gpu_id, gpu_info, device_query
+from bmt import Bmt
 
 class Qe(Bmt):
     def __init__(self, input='Ausurf.in', npool=1, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'): 
         super().__init__('qe')
 
         self.bin    = 'pw.x'
-        self.gpu_id = init_gpu(self.host[0])
+        self.gpu_id = gpu_id(self.host[0])
         
         self.input  = os.path.abspath(input)
         self.npool  = npool
@@ -30,7 +31,8 @@ class Qe(Bmt):
         if self.sif: 
             self.sif = os.path.abspath(self.sif)
 
-        #  self.check_prerequisite('hpc_sdk', '21.5')
+        cpu_info(self.host[0])
+        gpu_info(self.host[0])
 
     def build(self): 
         if self.sif: 
@@ -40,6 +42,8 @@ class Qe(Bmt):
         runtime, cuda_cc = device_query(self.host[0])
 
         # HPC_SDK
+        self.check_prerequisite('hpc_sdk', '21.5')
+        
         self.buildcmd += [
            f'wget https://gitlab.com/QEF/q-e/-/archive/develop/q-e-develop.tar.gz -O {self.builddir}/q-e-develop.tar.gz', 
            f'cd {self.builddir}; tar xf q-e-develop.tar.gz',
@@ -87,17 +91,20 @@ class Qe(Bmt):
                 f'singularity run --nv {os.path.abspath(self.sif)} '
                 f'pw.x -input {self.input} -npool {self.npool}' )
         else: 
+            self.check_prerequisite('hpc_sdk', '21.5')
             self.runcmd += f'{self.bin} -input {self.input} -npool {self.npool}'
         
         super().run(1) 
 
     def parse(self): 
         with open(self.output, 'r') as fh:
-            regex = re.compile('PWSCF\s+\:.*CPU\s*(.+?)m\s*(.+?)s')
+            regex = re.compile('PWSCF\s+\:.*CPU\s*(?:(.+?)m)?\s*(.+?)s')
             for line in fh:
                 result = regex.search(line)
                 if result:
                     minute, second = result.groups()
+                    if not minute: 
+                        minute = 0.0
                     exit
 
         self.result.append([self.nodes, self.ngpus, self.ntasks, self.omp, self.npool, 60*float(minute)+float(second)])

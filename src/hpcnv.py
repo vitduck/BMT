@@ -3,8 +3,8 @@
 import os
 import re
 
-from utils import init_gpu, init_gpu_affinity
-from bmt   import Bmt
+from gpu import gpu_id, gpu_affinity
+from bmt import Bmt
 
 class Hpcnv(Bmt):
     def __init__(self, name, nodes, ngpus, omp, sif, prefix):
@@ -12,15 +12,15 @@ class Hpcnv(Bmt):
         super().__init__(name)
         
         self.wrapper = ''
-        self.gpu_id  = init_gpu(self.host[0])
+        self.gpu_id  = gpu_id(self.host[0])
         
-        self.nodes   = nodes or len(self.host)
-        self.ngpus   = ngpus or len(self.gpu_id)
-        self.ntasks  = ngpus or len(self.gpu_id)
-        self.omp     = omp
-        self.sif     = sif
-        self.prefix  = prefix
-        self.sif     = os.path.abspath(self.sif)
+        self.nodes  = nodes or len(self.host)
+        self.ngpus  = ngpus or len(self.gpu_id)
+        self.ntasks = ngpus or len(self.gpu_id)
+        self.omp    = omp
+        self.sif    = sif
+        self.prefix = prefix
+        self.sif    = os.path.abspath(self.sif)
 
         self.check_prerequisite('openmpi', '4')
         self.check_prerequisite('connectx', '4')
@@ -38,5 +38,5 @@ class Hpcnv(Bmt):
                f'{self.wrapper} '
                    f'--dat {self.input} '
                    f'--cpu-cores-per-rank {self.omp} '  
-                   f'--cpu-affinity {":".join(init_gpu_affinity(self.host[0])[0:self.ngpus])} '
+                   f'--cpu-affinity {":".join(gpu_affinity(self.host[0])[0:self.ngpus])} '
                    f'--gpu-affinity {":".join([str(i) for i in range(0, self.ngpus)])} ')

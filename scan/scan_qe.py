@@ -8,9 +8,9 @@ qe = Qe(
 
 qe.build()
 
-for nodes in [1, 2]: 
-    for ngpus in [1, 2]: 
-        for ntasks in [1, 2, 4]:
+for nodes in [1]: 
+    for ngpus in [1, 2, 4]: 
+        for ntasks in [1, 2, 4, 8]:
             if ntasks < ngpus: 
                 continue
             for omp in [1, 2, 4]: 
@@ -20,4 +20,5 @@ for nodes in [1, 2]:
 
                 qe.run()
 
-qe.summary()
+#  qe.summary()
+qe.summary(sort=1, order='<')
