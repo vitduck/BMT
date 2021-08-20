@@ -1,0 +1,4 @@
+# Please put NGC singularity iamges here
+https://ngc.nvidia.com/catalog/containers/hpc:quantum_espresso
+https://ngc.nvidia.com/catalog/containers/hpc:gromacs
+https://ngc.nvidia.com/catalog/containers/nvidia:hpc-benchmarks
