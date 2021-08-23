@@ -10,7 +10,7 @@ import datetime
 import prerequisite
 
 from tabulate import tabulate
-from utils    import syscmd
+from utils    import syscmd, list
 from slurm    import slurm_nodelist, slurm_ntasks
 
 class Bmt: 
@@ -107,7 +107,7 @@ class Bmt:
         os.chdir(self.outdir)
 
     def run(self, redirect=0):
-        logging.info(f'Running {self.name}: {os.path.relpath(self.output, self.rootdir)}')
+        print(f'> Output: {os.path.relpath(self.output, self.rootdir)}')
        
        # redirect output to file 
         if redirect: 
@@ -121,6 +121,8 @@ class Bmt:
         pass
 
     def summary(self, sort=0, order='>'): 
+        list() 
+
         if sort:  
             if order == '>': 
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)
@@ -128,4 +130,4 @@ class Bmt:
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
         print()
-        print(tabulate(self.result, self.header, tablefmt='github', floatfmt=".1f", numalign='decimal', stralign='right'))
+        print(tabulate(self.result, self.header, tablefmt='presto', floatfmt=".1f", numalign='decimal', stralign='right'))

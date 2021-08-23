@@ -192,7 +192,7 @@ class Hpl(Hpcnv):
         if self.ai: 
             print() 
             print('Perf:     half-precision performance')
-            print('Perf_IRS: mixed-precision performance (Iteractive Residual Solver')
+            print('Perf_IRS: mixed-precision performance (Iteractive Residual Solver)')
 
     def getopt(self):
         parser = argparse.ArgumentParser(

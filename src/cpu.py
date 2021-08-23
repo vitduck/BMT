@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 
 
 import re
+import logging
 
 from utils import syscmd
 
@@ -24,14 +25,15 @@ def cpu_info(host):
 
         cpu['NUMA'] = numa
     
-    print('> CPU')
-    print(f'{"Model:":<9}{cpu["Model"]}')
-    print(f'{"CPUs:":<9}{cpu["CPUs"]}')
-    print(f'{"Threads:":<9}{cpu["Threads"]}')
+    print()
+    logging.info('CPU')
+    logging.info(f'{"Model:":<9}{cpu["Model"]}')
+    logging.info(f'{"CPUs:":<9}{cpu["CPUs"]}')
+    logging.info(f'{"Threads:":<9}{cpu["Threads"]}')
 
     for i in range(0, len(cpu['NUMA'])): 
         numa = f'NUMA {++i}:'
-        print(f'{numa:9}{cpu["NUMA"][i]}')
+        logging.info(f'{numa:9}{cpu["NUMA"][i]}')
 
-    print(f'{"AVXs:":9}{cpu["AVXs"]}')
+    logging.info(f'{"AVXs:":9}{cpu["AVXs"]}')
     print()

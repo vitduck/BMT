@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 
 
 import os
+import logging
 import re
 
 from utils import syscmd
@@ -13,11 +14,11 @@ def gpu_id(host):
     return [i for i in gpu]
 
 def gpu_info(host):
-    print('> GPU')
+    logging.info('GPU')
     nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
     
     for gpu in nvidia_smi.splitlines():
-        print(' '.join(gpu.split()[0:4]))
+        logging.info(' '.join(gpu.split()[0:4]))
     
     print()
 
