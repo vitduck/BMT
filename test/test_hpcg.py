@@ -6,6 +6,7 @@ hpcg = Hpcg(
     prefix = '../run/HPCG',
     sif    = '../images/hpc-benchmarks_20.10-hpcg.sif')
 
+#hpcg.debug()
 hpcg.run() 
 hpcg.summary()
-#  hpl.summary(sort=1, order='>')
+#hpl.summary(sort=1, order='>')

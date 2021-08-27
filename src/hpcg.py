@@ -5,6 +5,7 @@ import re
 import argparse
 
 from math  import sqrt
+from env   import module_list
 from cpu   import cpu_info
 from gpu   import gpu_info, gpu_id
 from hpcnv import Hpcnv
@@ -28,6 +29,7 @@ class Hpcg(Hpcnv):
 
         cpu_info(self.host[0])
         gpu_info(self.host[0])
+        module_list()
 
     def write_input(self):
         input_file = os.path.join(self.outdir, 'HPCG.in')
@@ -83,8 +85,8 @@ class Hpcg(Hpcnv):
 
         self.result.append([self.nodes, self.ngpus, self.omp, grid, domain, time, SpMV, SymGS, total, final])
 
-    def summary(self): 
-        super().summary() 
+    def summary(self, sort=0, order='>'): 
+        super().summary(sort, order)
 
         print() 
         print('SpMV:  sparse matrix-vector multiplication')
@@ -120,7 +122,7 @@ class Hpcg(Hpcnv):
 
         opt.add_argument('-g', '--grid'   , type=int, nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-t', '--time'   , type=int           , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--nodes'  , type=str           , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--nodes'  , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'  , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'    , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--sif'    , type=str           , metavar='', help=argparse.SUPPRESS)

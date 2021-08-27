@@ -5,12 +5,13 @@ import re
 import sys
 import inspect
 import logging
+import pprint
 import packaging.version
 import datetime
 import prerequisite
 
 from tabulate import tabulate
-from utils    import syscmd, list
+from utils    import syscmd
 from slurm    import slurm_nodelist, slurm_ntasks
 
 class Bmt: 
@@ -20,7 +21,7 @@ class Bmt:
     logging.basicConfig( 
         stream  = sys.stderr,
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
-        format  = '> %(message)s')
+        format  = '# %(message)s')
 
     def __init__(self, name):
         self.name     = name
@@ -28,7 +29,7 @@ class Bmt:
         self._args    = {} 
         
         self.nodes    = 1 
-        self.ntasks   = 1
+        self.ntasks   = slurm_ntasks() 
         self.host     = slurm_nodelist()
         self.hostfile = 'hostfile'
         
@@ -107,7 +108,7 @@ class Bmt:
         os.chdir(self.outdir)
 
     def run(self, redirect=0):
-        print(f'> Output: {os.path.relpath(self.output, self.rootdir)}')
+        print(f'# Output: {os.path.relpath(self.output, self.rootdir)}')
        
        # redirect output to file 
         if redirect: 
@@ -121,8 +122,6 @@ class Bmt:
         pass
 
     def summary(self, sort=0, order='>'): 
-        list() 
-
         if sort:  
             if order == '>': 
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)

@@ -5,6 +5,7 @@ import re
 import argparse
 
 from math  import sqrt
+from env   import module_list
 from cpu   import cpu_info
 from gpu   import gpu_info, gpu_memory
 from hpcnv import Hpcnv
@@ -43,6 +44,7 @@ class Hpl(Hpcnv):
         
         cpu_info(self.host[0])
         gpu_info(self.host[0])
+        module_list()
     
     def mpi_grid(self): 
         self.pgrid = [] 
@@ -60,7 +62,7 @@ class Hpl(Hpcnv):
 
     def matrix_size(self):
         total_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
-        self.size = [10000*int(sqrt(0.9*total_mem*1024**2/8)/10000)]
+        self.size = [10000*int(sqrt(0.9*total_mem*1000**2/8)/10000)]
 
     def write_input(self):
         with open(self.input, 'w') as fh:
@@ -170,7 +172,7 @@ class Hpl(Hpcnv):
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops_single)/1024, float(gflops_mixed)/1024])
+                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops_single)/1000, float(gflops_mixed)/1000])
 
                 line = output_fh.readline() 
     
@@ -186,8 +188,8 @@ class Hpl(Hpcnv):
         # back up output files
         os.rename('HPL.out', self.output)
 
-    def summary(self): 
-        super().summary() 
+    def summary(self, sort=0, order='>'): 
+        super().summary(sort, order)
 
         if self.ai: 
             print() 

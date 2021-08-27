@@ -5,6 +5,7 @@ import re
 import logging
 import argparse
 
+from env import module_list
 from cpu import cpu_info
 from gpu import gpu_id, gpu_info, device_query
 from bmt import Bmt
@@ -33,6 +34,7 @@ class Qe(Bmt):
 
         cpu_info(self.host[0])
         gpu_info(self.host[0])
+        module_list()
 
     def build(self): 
         if self.sif: 

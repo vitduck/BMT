@@ -3,6 +3,7 @@
 import re
 import argparse
 
+from env import module_list
 from cpu import cpu_info
 from gpu import gpu_info
 from bmt import Bmt
@@ -26,6 +27,7 @@ class StreamCuda(Bmt):
 
         cpu_info(self.host[0])
         gpu_info(self.host[0])
+        module_list() 
         
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
@@ -63,7 +65,7 @@ class StreamCuda(Bmt):
             for line in output_fh:
                 for kernel in self.kernel:
                     if re.search(f'{kernel}:?', line):
-                        bandwidth.append(float(line.split()[1])/1024)
+                        bandwidth.append(float(line.split()[1])/1000)
     
         self.result.append(bandwidth)
 

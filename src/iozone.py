@@ -7,6 +7,7 @@ import argparse
 from glob  import glob 
 from cpu   import cpu_info
 from utils import sync
+from env   import module_list
 from bmt   import Bmt
 
 class Iozone(Bmt):
@@ -21,7 +22,7 @@ class Iozone(Bmt):
         self.prefix          = prefix
 
         self.bandwidth       = []
-        self.header          = ['Size', 'Record', 'Thread', 'Write(MB/s)', 'Read(MB/s)', 'RWrite(OPS)', 'RRead(OPS)']
+        self.header          = ['Size', 'Record', 'Thread', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
         
         self.buildcmd += [
            f'wget http://www.iozone.org/src/current/iozone3_491.tgz -O {self.builddir}/iozone3_491.tgz',
@@ -35,6 +36,7 @@ class Iozone(Bmt):
         self.thread = self.thread_per_host * len(self.host) 
 
         cpu_info(self.host[0])
+        module_list() 
 
     def run(self): 
         self.mkoutdir()
@@ -92,7 +94,7 @@ class Iozone(Bmt):
                 if re.search('Children see throughput', line):
                     result, unit = line.split()[-2:]
                     if unit == 'kB/sec': 
-                        self.bandwidth.append(float(result)/1024)
+                        self.bandwidth.append(float(result)/1000)
                     else: 
                         self.bandwidth.append(float(result))
 

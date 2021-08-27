@@ -5,6 +5,7 @@ import re
 import argparse
 
 from glob  import glob
+from env   import module_list
 from cpu   import cpu_info
 from utils import sync
 from bmt   import Bmt
@@ -42,6 +43,7 @@ class Ior(Bmt):
             'make install')]
 
         cpu_info(self.host[0])
+        module_list()
 
     def run(self): 
         self.mkoutdir()

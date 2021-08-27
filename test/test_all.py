@@ -2,10 +2,11 @@
 
 import subprocess 
 
-from utils import syscmd, list, load, unload
+from utils import syscmd
+from env   import module_load, module_unload
 
 bmt = {
-    'stream_omp'  : ['gcc/8.3.0'], 
+    'stream_omp'  : [], 
     'stream_cuda' : ['cuda/10.1'], 
     'iozone'      : [], 
     'ior'         : ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
@@ -17,22 +18,20 @@ bmt = {
     'hpl_ai'      : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4'], 
     'hpcg'        : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4']}
 
-
 for code in bmt:
-    print(f'> {code}: ', end='')
 
     # load requires module 
-    load(bmt[code])
+    module_load(bmt[code])
     
     # run test
     result = syscmd(f'./test_{code}.py')
     if result: 
-        print('PASSED')
+        print(f'[{code.upper()}] DONE')
         print(result) 
     else: 
-        print('FAILED')
+        print(f'[{codeupper} ERROR ]')
 
     # unload required modules
-    unload(bmt[code])
+    module_unload(bmt[code])
 
     print() 

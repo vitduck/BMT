@@ -31,23 +31,17 @@ def syscmd(cmd, output=None):
             return pout
 
 # modulecmd wrapper
-def list():
-    print('> Environment: '+' '.join(os.environ['LOADEDMODULES'].split(os.pathsep)))
+def module_list():
+    print('# Environment: '+' '.join(os.environ['LOADEDMODULES'].split(os.pathsep)))
 
-def purge():
-    #  print('> purging module')
-
+def module_purge():
     cmd = subprocess.run(['modulecmd', 'python', 'purge'], stdout=subprocess.PIPE).stdout.decode('utf-8')
     exec(cmd)
 
-def unload(module=[]):
-    #  print(f'> Unloading module: {", ".join(module)}')
-    
+def module_unload(module=[]):
     cmd = subprocess.run(['modulecmd', 'python', 'unload'] + module, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout.decode('utf-8')
     exec(cmd)
     
-def load(module=[]):
-    #  print(f'> loading module: {", ".join(module)}')
-    
+def module_load(module=[]):
     cmd = subprocess.run(['modulecmd', 'python', 'load'] + module, stdout=subprocess.PIPE).stdout.decode('utf-8')
     exec(cmd)

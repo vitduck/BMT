@@ -6,43 +6,38 @@ import logging
 import argparse
 
 from cpu import cpu_info
-from bmt   import Bmt
+from env import module_list
+from bmt import Bmt
 
 class StreamOmp(Bmt):
-    def __init__ (self, march='skylake-avx512', size=40000000, ntimes=100, thread=8, affinity='spread', prefix='./'):
+    def __init__ (self, size=40000000, ntimes=100, thread=0, affinity='spread', prefix='./'):
 
         super().__init__('stream_omp')
 
         self.bin      = 'stream_omp'
         self.kernel   = ['Copy', 'Scale', 'Add', 'Triad']
 
-        self.march    = march 
         self.size     = size 
         self.ntimes   = ntimes 
-        self.thread   = thread
+        self.thread   = thread or self.ntasks
         self.affinity = affinity
         self.prefix   = prefix 
         self.header   = ['Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
         
         self.getopt()
         
-        cpu_info(self.host[0])
-        
-    def build(self): 
-        self.check_prerequisite('gcc', '7')
-
         self.buildcmd += [
            f'wget https://www.cs.virginia.edu/stream/FTP/Code/stream.c -O {self.builddir}/stream.c', 
            ('gcc ' 
                 '-O3 '
                 '-fopenmp '
                 '-ffreestanding '
-               f'-march={self.march} '
                f'-DSTREAM_ARRAY_SIZE={str(self.size)} '
                f'-DNTIMES={str(self.ntimes)} '
                f'-o {self.bin} {self.builddir}/stream.c')]
 
-        super().build() 
+        cpu_info(self.host[0])
+        module_list()
 
     def run(self): 
         self.mkoutdir() 
@@ -65,7 +60,7 @@ class StreamOmp(Bmt):
             for line in output_fh:
                 for kernel in self.kernel:
                     if re.search(f'{kernel}:?', line):
-                        bandwidth.append(float(line.split()[1])/1024)
+                        bandwidth.append(float(line.split()[1])/1000)
 
         self.result.append(bandwidth)
 
@@ -81,7 +76,6 @@ class StreamOmp(Bmt):
             description = (
                 '-h, --help           show this help message and exit\n'
                 '-v, --version        show program\'s version number and exit\n'
-                '-m, --march          targeting architecture\n'
                 '-s, --size           size of matrix\n'
                 '-n, --ntimes         run each kernel n times\n'
                 '-t, --thread         number of OMP threads\n'
@@ -91,7 +85,6 @@ class StreamOmp(Bmt):
         opt.add_argument('-h', '--help'    , action='help'                   , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version' , action='version', 
                                              version='%(prog)s '+self.version, help=argparse.SUPPRESS)
-        opt.add_argument('-m', '--march'   , type=str, metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-s', '--size'    , type=int, metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-n', '--ntimes'  , type=int, metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-t', '--thread'  , type=int, metavar='', help=argparse.SUPPRESS)

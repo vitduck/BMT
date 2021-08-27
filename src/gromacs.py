@@ -6,6 +6,7 @@ import logging
 import argparse
 
 from slurm import slurm_ntasks
+from env   import module_list
 from cpu   import cpu_info
 from gpu   import gpu_id, gpu_info
 from bmt   import Bmt
@@ -42,6 +43,7 @@ class Gromacs(Bmt):
         
         cpu_info(self.host[0])
         gpu_info(self.host[0])
+        module_list()
 
     def build(self): 
         if self.sif: 
