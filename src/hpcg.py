@@ -23,7 +23,7 @@ class Hpcg(Hpcnv):
 
         self.grid    = grid 
         self.time    = time
-        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(Gflops)']
+        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(GFlops)']
         
         self.getopt() 
 

@@ -26,9 +26,8 @@ def cpu_info(host):
         cpu['NUMA'] = numa
     
     print()
-    logging.info('CPU')
-    logging.info(f'{"Model:":<9}{cpu["Model"]}')
-    logging.info(f'{"CPUs:":<9}{cpu["CPUs"]}')
+    logging.info(f'{"CPU:":<9}{cpu["Model"]}')
+    logging.info(f'{"Cores:":<9}{cpu["CPUs"]}')
     logging.info(f'{"Threads:":<9}{cpu["Threads"]}')
 
     for i in range(0, len(cpu['NUMA'])): 

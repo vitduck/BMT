@@ -5,7 +5,7 @@ from hpl import Hpl
 hpl = Hpl(
     prefix    = '../run/HPL',
     sif       = '../images/hpc-benchmarks_20.10-hpl.sif', 
-    blocksize = [64, 128, 256])
+    blocksize = [256])
 
 for nodes in [1, 2]:
     for ngpus in [2]: 
@@ -17,4 +17,5 @@ for nodes in [1, 2]:
             hpl.matrix_size() 
             hpl.run() 
 
-hpl.summary()
+# hpl.summary()
+hpl.summary(sort=1, order='>')

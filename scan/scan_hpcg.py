@@ -17,4 +17,5 @@ for nodes in [1, 2]:
         
                 hpcg.run() 
 
-hpcg.summary()
+# hpcg.summary()
+hpcg.summary(sort=1, order='>')

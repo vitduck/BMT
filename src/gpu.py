@@ -14,7 +14,6 @@ def gpu_id(host):
     return [i for i in gpu]
 
 def gpu_info(host):
-    logging.info('GPU')
     nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
     
     for gpu in nvidia_smi.splitlines():
