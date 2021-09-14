@@ -18,7 +18,7 @@ class Gromacs(Bmt):
         self.bin      = 'gmx_mpi'
         self.gpu_id   = gpu_id(self.host[0])
 
-        self.input    = os.path.abspath(input)
+        self.input    = input
         self.nsteps   = nsteps
         self.tune_pme = tune_pme
         self.nodes    = nodes  or len(self.host)
@@ -72,6 +72,8 @@ class Gromacs(Bmt):
         super().build() 
 
     def run(self): 
+        self.input = os.path.abspath(self.input)
+
         self.mkoutdir()
         self.write_hostfile()
 

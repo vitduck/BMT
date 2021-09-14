@@ -66,8 +66,7 @@ class Bmt:
 
         for opt in args:   
             if args[opt]: 
-                setattr(self, opt, 
-                        args[opt]) 
+                setattr(self, opt, args[opt]) 
 
     # print object attributeis for debug purpose 
     def debug(self): 

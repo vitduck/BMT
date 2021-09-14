@@ -4,7 +4,8 @@ from qe import Qe
 
 qe = Qe(
     prefix = '../run/QE',
-    input  = '../input/QE/Si_512.in')
+    input  = '../input/QE/Si_neb.in', 
+    neb    = True)
 
 qe.build()
 qe.run()

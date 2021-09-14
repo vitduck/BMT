@@ -11,6 +11,7 @@ bmt = {
     'iozone'      : [], 
     'ior'         : ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
     'qe'          : ['nvidia_hpc_sdk/21.5'],
+    'qe_neb'      : ['nvidia_hpc_sdk/21.5'],
     'qe_ngc'      : ['pgi/19.1' , 'cuda/10.0', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4'],
     'gromacs'     : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc'],
     'gromacs_ngc' : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4'],

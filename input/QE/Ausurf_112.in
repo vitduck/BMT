@@ -1,42 +1,33 @@
 &CONTROL
-  title = ' DEISA pw benchmark ',
-  calculation = 'scf',
-  restart_mode = 'from_scratch', ! 'restart',
-  tprnfor = .TRUE.,
-  etot_conv_thr = 1.d-8,
-  prefix = 'ausurf'
+    title        = 'Ausurf',
+    calculation  = 'scf',
+    restart_mode = 'from_scratch'
+    prefix       = 'ausurf'
+    tprnfor      = .true.
+    disk_io      = 'none'
 /
 
 &SYSTEM
-  ibrav = 8, 
-  celldm(1) = 38.7583, 
-  celldm(2) = 0.494393, 
-  celldm(3) = 1.569966, 
-  nat = 112,
-  ntyp = 1,
-  nbnd = 800, 
-  ecutwfc = 25.0,
-  ecutrho = 200.0,
-  occupations='smearing', smearing='marzari-vanderbilt', degauss=0.05
+    ibrav       = 8 
+    celldm(1)   = 38.7583
+    celldm(2)   = 0.494393
+    celldm(3)   = 1.569966 
+    nat         = 112
+    ntyp        = 1
+    ecutwfc     = 30.0
+    occupations = 'smearing'
+    smearing    = 'marzari-vanderbilt'
+    degauss     = 0.05
 /
 
 &ELECTRONS
-    diagonalization='david'
-    electron_maxstep = 10
-    conv_thr         = 1.0D-2
-    mixing_beta = 0.7
-/
-
-&IONS
-  ion_dynamics = 'none',
-/
-
-&CELL
-  cell_dynamics = 'none',
+    diagonalization  = 'david'
+    conv_thr         = 1.0D-8
+    electron_maxstep = 40
 /
 
 ATOMIC_SPECIES
- AU  196.96  Au.pbe-nd-van.UPF  
+AU  196.96  Au.pbe-nd-van.UPF  
 
 K_POINTS (automatic)
 2 2 1 1 1 0
@@ -118,7 +109,7 @@ AU       33.678001       41.424000        2.391000
 AU       33.678001       36.355999        2.391000
 AU       36.605999       41.424000        2.391000
 AU       36.605999       36.355999        2.391000
-AU       39.535000       41.424000        2.391000
+AU       39.535000       41.424000       2.391000
 AU       39.535000       36.355999        2.391000
 AU       42.464001       41.424000        2.391000
 AU       42.464001       36.355999        2.391000

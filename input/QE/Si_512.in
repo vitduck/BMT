@@ -2,9 +2,8 @@
     title        = 'Si'
     calculation  = 'scf'
     restart_mode = 'from_scratch'
-    outdir       = './outdir'
     prefix       = 'Si'
-    tprnfor      = .false.
+    tprnfor      = .true.
     disk_io      =  'none'
 /
 
@@ -14,7 +13,6 @@
     nat          = 512
     ntyp         = 1
     ecutwfc      = 40
-    ecutrho      = 400
     occupations  ='smearing'
     smearing     ='gaussian',
     degauss      = 0.001
@@ -23,7 +21,7 @@
 &ELECTRONS
     diagonalization  = 'david'
     conv_thr         = 1.0D-10
-    electron_maxstep = 10
+    electron_maxstep = 40
 /
 
 ATOMIC_SPECIES

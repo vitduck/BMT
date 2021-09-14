@@ -11,7 +11,6 @@ from bmt import Bmt
 
 class StreamOmp(Bmt):
     def __init__ (self, size=40000000, ntimes=100, thread=0, affinity='spread', prefix='./'):
-
         super().__init__('stream_omp')
 
         self.bin      = 'stream_omp'
@@ -66,7 +65,7 @@ class StreamOmp(Bmt):
 
     def getopt(self):
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -m skylake-avx512 -t 24 -a spread',
+            usage           = '%(prog)s -t 24 -a spread',
             description     = 'STREAM_OMP Benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter,
             add_help        = False)
