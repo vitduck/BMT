@@ -25,26 +25,44 @@ class StreamOmp(Bmt):
         
         self.getopt()
         
+        cpu_info(self.host[0])
+        module_list()
+
+    def build(self): 
+        # default gcc
+        if 'CC' not in os.environ: 
+            os.environ['CC'] = 'gcc'
+        
+        # intel icc 
+        if os.environ['CC'] == 'icc': 
+            openmp_flag = '-qopenmp' 
+        else: 
+            openmp_flag = '-fopenmp' 
+
         self.buildcmd += [
            f'wget https://www.cs.virginia.edu/stream/FTP/Code/stream.c -O {self.builddir}/stream.c', 
-           ('gcc ' 
+          (f'{os.environ["CC"]} '
                 '-O3 '
-                '-fopenmp '
+               f'{openmp_flag} '
                 '-ffreestanding '
                f'-DSTREAM_ARRAY_SIZE={str(self.size)} '
                f'-DNTIMES={str(self.ntimes)} '
                f'-o {self.bin} {self.builddir}/stream.c')]
-
-        cpu_info(self.host[0])
-        module_list()
+        
+        super().build() 
 
     def run(self): 
+        module_cmd = ''
+        if os.environ['CC'] == 'icc':
+            module_cmd = 'module load intel;'
+
         self.mkoutdir() 
 
         self.output = f'stream-{self.affinity}-omp_{self.thread}.out'
         self.runcmd = (
             f'ssh {self.host[0]} '                   # ssh to remote host 
             f'"builtin cd {self.outdir}; '           # cd to caller dir 
+            f'{module_cmd} '                         # for intel compiler
              'OMP_PLACES=threads '                   # thread placement 
             f'OMP_PROC_BIND={self.affinity} '        # thread affinity (close, spread, master) 
             f'OMP_NUM_THREADS={str(self.thread)} '   # thread number 

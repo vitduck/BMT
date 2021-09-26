@@ -15,7 +15,7 @@ from utils    import syscmd
 from slurm    import slurm_nodelist, slurm_ntasks
 
 class Bmt: 
-    version  = '0.6'
+    version  = '0.5'
     
     # initialize root logger 
     logging.basicConfig( 
@@ -41,7 +41,7 @@ class Bmt:
         self.output   = ''
         self.header   = [] 
         self.result   = []
-
+    
     # set up sub-directories 
     @property 
     def prefix(self): 
@@ -91,10 +91,6 @@ class Bmt:
 
     # returns if previously built binary exists 
     def build(self):
-        if os.path.exists(self.bin): 
-            logging.info('Skipping build phase')
-            return
-
         logging.info(f'Building {self.name}')
         os.makedirs(self.builddir, exist_ok=True) 
         os.makedirs(self.bindir  , exist_ok=True) 

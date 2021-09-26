@@ -24,7 +24,7 @@ class StreamCuda(Bmt):
         self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
         
         self.getopt()  
-
+        
         cpu_info(self.host[0])
         gpu_info(self.host[0])
         module_list() 
@@ -48,6 +48,8 @@ class StreamCuda(Bmt):
         super().build() 
 
     def run(self): 
+        self.check_prerequisite('cuda', '10.1')
+
         self.mkoutdir()
         
         self.output = 'stream-cuda.out'

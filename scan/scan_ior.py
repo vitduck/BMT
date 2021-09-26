@@ -7,7 +7,7 @@ ior = Ior(
 
 ior.build()
 
-for nodes in [2]: 
+for nodes in [1, 2]: 
     for ntasks in [1, 2, 4, 8]: 
         for block in ['16m', '64m', '256m']:
             ior.nodes  = nodes 

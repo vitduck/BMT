@@ -2,7 +2,6 @@
     title        = 'Si'
     calculation  = 'scf'
     restart_mode = 'from_scratch'
-    prefix       = 'Si'
     tprnfor      = .true.
     disk_io      =  'none'
 /

@@ -28,7 +28,14 @@ class Ior(Bmt):
 
         self.getopt()
         
+        cpu_info(self.host[0])
+        module_list()
+
+    def build(self): 
         self.check_prerequisite('openmpi', '3')
+
+        if os.path.exists(self.bin):
+            return
 
         self.buildcmd += [
            f'wget https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz',
@@ -41,11 +48,12 @@ class Ior(Bmt):
                f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib;' 
             'make -j 8;' 
             'make install')]
-
-        cpu_info(self.host[0])
-        module_list()
+        
+        super().build()
 
     def run(self): 
+        self.check_prerequisite('openmpi', '3')
+
         self.mkoutdir()
         self.write_hostfile() 
 
@@ -68,7 +76,7 @@ class Ior(Bmt):
            f'-r '  # read benchmark
            f'-k '  # do not remove files
            f'-z '  # random access to file 
-           f'-e '  # fsync upon POSIS upon write close
+           f'-e '  # fsync upon write close
            f'-F '  # N-to-N 
            f'-C ') # reorderTasks
         

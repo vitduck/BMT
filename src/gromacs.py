@@ -50,6 +50,9 @@ class Gromacs(Bmt):
             logging.info('Using NGC image')
             return 
 
+        if os.path.exists(self.bin):
+            return
+
         self.check_prerequisite('cmake', '3.16.3')
         
         self.buildcmd += [  
@@ -64,7 +67,8 @@ class Gromacs(Bmt):
                     '-DGMX_GPU=ON ' 
                     '-DGMX_SIMD=AVX2_256 '
                     '-DGMX_DOUBLE=OFF '
-                    '-DGMX_FFT_LIBRARY=fftpack '
+                    '-DGMX_FFT_LIBRARY=fftw3 '
+                    '-DGMX_BUILD_OWN_FFTW=ON '
                    f'-DCMAKE_INSTALL_PREFIX={self.prefix};'
                 'make -j 16;'
                 'make install')]
@@ -101,7 +105,8 @@ class Gromacs(Bmt):
         # NVIDIA NGC (single-node only using thread-mpi)
         if self.sif: 
             self.check_prerequisite('nvidia', '450')
-            
+            self.check_prerequisite('cuda', '10.1')
+
             gmx_opts += f'-ntmpi {self.ntasks}'
 
             self.runcmd = ( 
@@ -110,6 +115,8 @@ class Gromacs(Bmt):
                f'singularity run --nv {self.sif} '
                f'gmx {gmx_opts}"' )
         else: 
+            self.check_prerequisite('openmpi', '3')
+
             self.runcmd = ( 
                f'mpirun --hostfile {self.hostfile} '
                f'{self.bin} {gmx_opts}' )

@@ -11,7 +11,7 @@ from env   import module_list
 from bmt   import Bmt
 
 class Iozone(Bmt):
-    def __init__(self, size='16m', record='64k', thread_per_host=4, prefix='./'): 
+    def __init__(self, size='64m', record='1m', thread_per_host=4, prefix='./'): 
         super().__init__('iozone')
         
         self.bin             = 'iozone'
@@ -24,12 +24,6 @@ class Iozone(Bmt):
         self.bandwidth       = []
         self.header          = ['Size', 'Record', 'Thread', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
         
-        self.buildcmd += [
-           f'wget http://www.iozone.org/src/current/iozone3_491.tgz -O {self.builddir}/iozone3_491.tgz',
-           f'cd {self.builddir}; tar xf iozone3_491.tgz', 
-           f'cd {self.builddir}/iozone3_491/src/current; make linux', 
-           f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}' ]
-
         self.getopt() 
 
         # default thread 
@@ -37,6 +31,18 @@ class Iozone(Bmt):
 
         cpu_info(self.host[0])
         module_list() 
+
+    def build(self): 
+        if os.path.exists(self.bin): 
+            return 
+
+        self.buildcmd += [
+           f'wget http://www.iozone.org/src/current/iozone3_491.tgz -O {self.builddir}/iozone3_491.tgz',
+           f'cd {self.builddir}; tar xf iozone3_491.tgz', 
+           f'cd {self.builddir}/iozone3_491/src/current; make linux', 
+           f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}']
+
+        super().build() 
 
     def run(self): 
         self.mkoutdir()
@@ -50,7 +56,6 @@ class Iozone(Bmt):
             '-c '                    # includes close in timing calculation  
             '-e '                    # incldues flush in timing calculation
             '-w '                    # keep temporary files for read test
-            '-I '                    # use O_Direct 
             '-+n')                   # skip retests
         
         self.bandwidth = [] 
@@ -70,8 +75,10 @@ class Iozone(Bmt):
         super().run(1) 
         
         # random read/write
+        # -I: Use direct IO 
+        # -O: Return result in OPS
         self.output = f'iozone-2-{self.size}-{self.record}-thr_{self.thread}.out'
-        self.runcmd = f'RSH=ssh {self.bin} -i 2 -O {option}'
+        self.runcmd = f'RSH=ssh {self.bin} -i 2 -I -O {option}'
 
         sync(self.host)
         super().run(1) 
@@ -104,7 +111,7 @@ class Iozone(Bmt):
         
     def getopt(self): 
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -s 1G -r 1024K -t 8',
+            usage           = '%(prog)s -s 1G -r 1M -t 8',
             description     = 'IOZONE Benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter,
             add_help        = False )

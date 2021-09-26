@@ -157,7 +157,7 @@ class Hpl(Hpcnv):
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1024])
+                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1000])
                 
                 line = output_fh.readline()
         

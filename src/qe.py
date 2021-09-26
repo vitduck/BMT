@@ -47,10 +47,12 @@ class Qe(Bmt):
         if self.sif: 
             logging.info('Using NGC image')
             return 
+
+        if os.path.exists(self.bin):
+            return
                 
         runtime, cuda_cc = device_query(self.host[0])
 
-        # HPC_SDK
         self.check_prerequisite('hpc_sdk', '21.5')
         
         self.buildcmd += [
@@ -62,7 +64,7 @@ class Qe(Bmt):
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
-                '--with-scalapack=no CC=nvcc;'
+                '--with-scalapack=yes CC=nvcc;'
             'make -j 8 pw;' 
             'make -j 8 neb;'
             'make install')]
@@ -73,9 +75,9 @@ class Qe(Bmt):
         self.mkoutdir()
         self.write_hostfile()
 
-        os.environ['NO_STOP_MESSAGE']     = 'yes'
-        os.environ['OMP_NUM_THREADS']     = str(self.omp)
-        os.environ['ESPRESSO_PSEUDO']     = os.path.dirname(self.input)
+        os.environ['NO_STOP_MESSAGE']      = 'yes'
+        os.environ['OMP_NUM_THREADS']      = str(self.omp)
+        os.environ['ESPRESSO_PSEUDO']      = os.path.dirname(self.input)
         os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
         
         self.output = (
@@ -97,6 +99,7 @@ class Qe(Bmt):
         # NVIDIA NGC
         if self.sif: 
             self.check_prerequisite('nvidia', '450')
+            self.check_prerequisite('openmpi', '3')
             self.check_prerequisite('singularity', '3.1')
 
             self.runcmd += (
