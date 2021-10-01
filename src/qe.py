@@ -11,7 +11,7 @@ from gpu import gpu_id, gpu_info, device_query
 from bmt import Bmt
 
 class Qe(Bmt):
-    def __init__(self, input='Ausurf.in', npool=1, nimage=1, neb=False, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'): 
+    def __init__(self, input='Ausurf_512.in', npool=1, nimage=1, neb=False, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'): 
         super().__init__('qe')
 
         self.bin    = 'pw.x'

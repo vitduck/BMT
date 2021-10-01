@@ -96,7 +96,7 @@ class Hpcg(Hpcnv):
 
     def getopt(self): 
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -g 256 256 256 -t 60 --thread 8 --sif hpc-benchmarks_20.10-hpcg.sif',
+            usage           = '%(prog)s -g 256 256 256 -t 60 --omp 8 --sif hpc-benchmarks_20.10-hpcg.sif',
             description     = 'HPCG benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter, 
             add_help        = False )

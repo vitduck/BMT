@@ -10,17 +10,15 @@ gmx = Gromacs(
 gmx.build()
 
 for nodes in [1, 2]: 
-    for ngpus in [2]:
-        for ntasks in [8, 16, 32, 40]:
-            omp = 1 
-            while omp <= int(40/ntasks): 
-                gmx.nodes  = nodes
-                gmx.ngpus  = ngpus
-                gmx.ntasks = ntasks
-                gmx.omp    = omp 
-            
-                gmx.run()
+    for ntasks in [8, 16, 32, 40]:
+        omp = 1 
+        while omp <= int(40/ntasks): 
+            gmx.nodes  = nodes
+            gmx.ntasks = ntasks
+            gmx.omp    = omp 
 
-                omp *= 2 
+            gmx.run()
+
+            omp *= 2 
 
 gmx.summary()

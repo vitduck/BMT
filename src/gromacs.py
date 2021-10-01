@@ -12,7 +12,7 @@ from gpu   import gpu_id, gpu_info
 from bmt   import Bmt
 
 class Gromacs(Bmt):
-    def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=0, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
+    def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=False, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
         super().__init__('gromacs')
 
         self.bin      = 'gmx_mpi'
@@ -154,17 +154,17 @@ class Gromacs(Bmt):
                 '    --sif            singulariy image\n'
                 '    --prefix         bin/build/output directory\n' ))
 
-        opt.add_argument('-h', '--help'     , action='help'                   , help=argparse.SUPPRESS)
+        opt.add_argument('-h', '--help'     , action='help'                    , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version'  , action='version', 
-                                              version='%(prog)s '+self.version, help=argparse.SUPPRESS)
-        opt.add_argument('-i', '--input'    , type=str           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nsteps'   , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--tune_pme' , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nodes'    , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ngpus'    , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ntasks'   , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--omp'      , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--sif'      , type=str           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix'   , type=str           , metavar='' , help=argparse.SUPPRESS)
+                                              version='%(prog)s '+self.version , help=argparse.SUPPRESS)
+        opt.add_argument('-i', '--input'    , type=str            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--nsteps'   , type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--tune_pme' , action='store_true'              , help=argparse.SUPPRESS)
+        opt.add_argument(      '--nodes'    , type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--ngpus'    , type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--ntasks'   , type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--omp'      , type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--sif'      , type=str            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--prefix'   , type=str            , metavar='' , help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

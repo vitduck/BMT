@@ -19,7 +19,7 @@
 
 &ELECTRONS
     diagonalization  = 'david'
-    conv_thr         = 1.0D-10
+    conv_thr         = 5.0D-10
     electron_maxstep = 40
 /
 

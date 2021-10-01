@@ -11,7 +11,7 @@ from utils import sync
 from bmt   import Bmt
 
 class Ior(Bmt):
-    def __init__(self, transfer='1m', block='16m', ltrsize=0, ltrcount=0, segment=16, nodes=0, ntasks=8, prefix='./'): 
+    def __init__(self, transfer='1M', block='16M', segment=16, ltrsize=0, ltrcount=0, nodes=0, ntasks=8, prefix='./'): 
         super().__init__('ior')
 
         self.bin    = 'ior'
@@ -119,7 +119,7 @@ class Ior(Bmt):
 
     def getopt(self): 
         parser=argparse.ArgumentParser(
-            usage           = '%(prog)s -b 16m -t 1m -s 16',
+            usage           = '%(prog)s -b 16M -t 1M -s 16',
             description     = 'IOR Benchmark', 
             formatter_class = argparse.RawDescriptionHelpFormatter, 
             add_help        = False)

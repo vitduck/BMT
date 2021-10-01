@@ -3,15 +3,15 @@
 from iozone import Iozone
 
 io = Iozone(
-    prefix          = '../run/IOZONE', 
-    thread_per_host = 4)
+    prefix = '../run/IOZONE', 
+    size   = '1G')
 
 io.build()
 
-for size in ['64m', '256m']:
-    for record in ['64k', '256K', '1024K']: 
+for nodes in [1, 2]: 
+    for record in ['64k', '256K']: 
         for thread in [1, 2, 4]:
-            io.size   = size
+            io.nodes  = nodes
             io.record = record 
             io.thread = thread
 
