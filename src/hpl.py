@@ -13,7 +13,7 @@ from hpcnv import Hpcnv
 class Hpl(Hpcnv): 
     def __init__(self, 
         size=[], blocksize=[256], pmap=0, 
-        threshold=16.0, pfact=[1], nbmin=[4], ndiv=[4], rfact=[1], bcast=[0], ai=False, 
+        threshold=16.0, pfact=[1], nbmin=[4], ndiv=[4], rfact=[1], bcast=[1], ai=False, 
         nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_20.10-hpl.sif', prefix='./'):  
 
         super().__init__('hpl-nvidia', nodes, ngpus, omp, sif, prefix)
