@@ -5,7 +5,7 @@ from gromacs import Gromacs
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
     input  = '../input/GROMACS/stmv.tpr', 
-    sif    = '../images/gromacs-2020_2.sif',
+    sif    = '../image/gromacs-2020_2.sif',
     nsteps = 4000) 
 
 gmx.build()

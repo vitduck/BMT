@@ -4,7 +4,7 @@ from hpcg import Hpcg
 
 hpcg = Hpcg(
     prefix = '../run/HPCG',
-    sif    = '../images/hpc-benchmarks_20.10-hpcg.sif')
+    sif    = '../image/hpc-benchmarks_20.10-hpcg.sif')
 
 for nodes in [1, 2]:
     for omp in [1, 2, 4]: 

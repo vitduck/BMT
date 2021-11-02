@@ -4,7 +4,7 @@ from hpl import Hpl
 
 hpl = Hpl(
     prefix = '../run/HPL',
-    sif    = '../images/hpc-benchmarks_20.10-hpl.sif')
+    sif    = '../image/hpc-benchmarks_20.10-hpl.sif')
 
 hpl.run() 
 hpl.summary() 

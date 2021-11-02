@@ -5,7 +5,7 @@ from qe import Qe
 qe = Qe(
     prefix = '../run/QE', 
     input  = '../input/QE/Si_512.in', 
-    sif    = '../images/QE-6.7.sif')
+    sif    = '../image/QE-6.7.sif')
 
 qe.build()
 qe.run()
