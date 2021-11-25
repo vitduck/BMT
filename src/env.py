@@ -1,10 +1,11 @@
 #!/usr/bin/env python3 
 
 import os
+import logging
 import subprocess
 
 def module_list():
-    print('# Environment: '+' '.join(os.environ['LOADEDMODULES'].split(os.pathsep)))
+    logging.info(f'{"Modules":<7} : {" ".join(os.environ["LOADEDMODULES"].split(os.pathsep))}')
 
 def module_purge():
     cmd = subprocess.run(['modulecmd', 'python', 'purge'], stdout=subprocess.PIPE).stdout.decode('utf-8')

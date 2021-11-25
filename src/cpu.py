@@ -25,14 +25,12 @@ def cpu_info(host):
 
         cpu['NUMA'] = numa
     
-    print()
-    logging.info(f'{"CPU:":<9}{cpu["Model"]}')
-    logging.info(f'{"Cores:":<9}{cpu["CPUs"]}')
-    logging.info(f'{"Threads:":<9}{cpu["Threads"]}')
+    logging.info(f'{"CPU":<7} : {cpu["Model"]}')
+    logging.info(f'{"Cores":<7} : {cpu["CPUs"]}')
+    logging.info(f'{"Threads":<7} : {cpu["Threads"]}')
 
     for i in range(0, len(cpu['NUMA'])): 
-        numa = f'NUMA {++i}:'
-        logging.info(f'{numa:9}{cpu["NUMA"][i]}')
+        numa = f'NUMA {++i}'
+        logging.info(f'{numa:<7} : {cpu["NUMA"][i]}')
 
-    logging.info(f'{"AVXs:":9}{cpu["AVXs"]}')
-    print()
+    logging.info(f'{"AVXs":<7} : {cpu["AVXs"]}')

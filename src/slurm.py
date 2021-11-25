@@ -9,17 +9,14 @@ def slurm_nodelist():
 
     for node in index.split(','):
         if re.search('-', node):
-            node_start, node_end = node.split('-')
-            length = len(node_start)
+            istart, iend = node.split('-')
                 
             # return the list of node with leading zeroes
-            nodelist.extend(
-                map(lambda x: str(x).zfill(length), 
-                range(int(node_start), int(node_end)+1)))
+            nodelist += [ name + str(node).zfill(len(istart)) for node in range(int(istart), int(iend)+1) ]
         else:
-            nodelist.append(node)
+            nodelist += [ name + str(node) ]
 
-    return [ name+str(node) for node in nodelist ]
+    return nodelist
 
 def slurm_ntasks(): 
     return int(os.environ['SLURM_NTASKS_PER_NODE'])

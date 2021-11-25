@@ -92,9 +92,9 @@ class Qe(Bmt):
         # pass CUDA_VISIBLE_DEVICES to remote host
         self.runcmd = ( 
             'mpirun '
-           f'--hostfile {self.hostfile} '
            f'-x CUDA_VISIBLE_DEVICES ' 
-           f'-x NO_STOP_MESSAGE ')
+           f'-x NO_STOP_MESSAGE '
+           f'--hostfile {self.hostfile} ')
 
         # NVIDIA NGC
         if self.sif: 

@@ -12,8 +12,8 @@ from hpcnv import Hpcnv
 
 class Hpcg(Hpcnv): 
     def __init__(self,
-        grid=[256, 256, 256], time=60, 
-        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_20.10-hpcg.sif', prefix='./'):
+        grid=[256, 256, 256], time=300, 
+        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpcg.sif', prefix='./'):
 
         super().__init__('hpcg-nvidia', nodes, ngpus, omp, sif, prefix)
 
@@ -43,7 +43,7 @@ class Hpcg(Hpcnv):
     def run(self): 
         # bug in 20.10 
         os.environ['CUDA_VISIBLE_DEVICES']           = ",".join([str(i) for i in range(0, self.ngpus)])
-        os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.1/targets/x86_64-linux/lib'
+        os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.2/targets/x86_64-linux/lib'
         
         # ncpus = ngpus
         self.ntasks = self.ngpus
@@ -88,11 +88,11 @@ class Hpcg(Hpcnv):
     def summary(self, sort=0, order='>'): 
         super().summary(sort, order)
 
-        print() 
+        print('[Note]')
         print('SpMV:  sparse matrix-vector multiplication')
         print('SymGS: symmetric Gauss-Seidel method')
-        print('Total: total performance')
-        print('Final: total performance including initialization overhead')
+        print('Total: GPU performance')
+        print('Final: GPU + CPU initialization overhead')
 
     def getopt(self): 
         parser = argparse.ArgumentParser(

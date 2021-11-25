@@ -4,9 +4,7 @@ from hpcg import Hpcg
 
 hpcg = Hpcg(
     prefix = '../run/HPCG',
-    sif    = '../image/hpc-benchmarks_20.10-hpcg.sif')
+    sif    = '../image/hpc-benchmarks:21.4-hpcg.sif' )
 
-#hpcg.debug()
 hpcg.run() 
 hpcg.summary()
-#hpl.summary(sort=1, order='>')

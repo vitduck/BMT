@@ -13,13 +13,13 @@ from hpcnv import Hpcnv
 class Hpl(Hpcnv): 
     def __init__(self, 
         size=[], blocksize=[256], pmap=0, 
-        threshold=16.0, pfact=[1], nbmin=[4], ndiv=[4], rfact=[1], bcast=[1], ai=False, 
-        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_20.10-hpl.sif', prefix='./'):  
+        threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], ai=False, 
+        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpl.sif', prefix='./'):  
 
         super().__init__('hpl-nvidia', nodes, ngpus, omp, sif, prefix)
 
         self.wrapper   = 'hpl.sh'
-        self.input     = 'HPL.in'
+        self.input     = 'HPL.dat'
         self.output    = 'HPL.out'
         
         self.size      = size
@@ -56,18 +56,28 @@ class Hpl(Hpcnv):
                 p = i
                 q = int(ngpus_tot/i)
 
-                if p <= q:
+                if p >= q:
                     self.pgrid.append(p)
                     self.qgrid.append(q)
 
+        if len(self.pgrid) > 1:
+            self.pgrid.pop()
+            self.qgrid.pop()
+
     def matrix_size(self):
         total_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
-        self.size = [10000*int(sqrt(0.9*total_mem*1000**2/8)/10000)]
+        
+        if self.ai: 
+            self.size = [10000*int(sqrt(0.4*total_mem*1024**2/2)/10000)]
+        else: 
+            self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
 
     def write_input(self):
+        self.input = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.dat'
+
         with open(self.input, 'w') as fh:
             fh.write(f'HPL input\n')
-            fh.write(f'KISTI\n')
+            fh.write(f'BMT\n')
             fh.write(f'{"HPL.out":<20} output file name\n')
             fh.write(f'{"file":<20} device out (6=stdout,7=stderr,file)\n')
 
@@ -113,8 +123,8 @@ class Hpl(Hpcnv):
             fh.write(f'{"1":<20} DEPTHs (>=0)\n')
 
             # swapping ( ignored by HPL-NVIDIA)
-            fh.write(f'{"2":<20} SWAP (0=bin-exch,1=long,2=mix)\n')
-            fh.write(f'{"60":<20} swapping threshold \n')
+            fh.write(f'{"1":<20} SWAP (0=bin-exch,1=long,2=mix)\n')
+            fh.write(f'{"192":<20} swapping threshold \n')
 
             # LU (L1 = 1, U = 0 required by HPL-NVIDIA)
             fh.write(f'{"1":<20} L1 in (0=transposed,1=no-transposed) form\n')
@@ -143,7 +153,7 @@ class Hpl(Hpcnv):
         # HPL-AI 
         if self.ai: 
             self.runcmd += '--xhpl-ai'
-        
+       	
         super().run()
 
     def parse_hpl(self): 
@@ -166,7 +176,7 @@ class Hpl(Hpcnv):
             line = output_fh.readline()
             while line:
                 if re.search('W[RC]', line):
-                    ai, config, size, blocksize, p, q, time, gflops_single, fgmres, gflops_mixed = line.split()
+                    ai, config, size, blocksize, p, q, time, gflops_single, refine, niter, gflops_mixed = line.split()
 
                     # passed/failed status
                     output_fh.readline()
@@ -192,8 +202,8 @@ class Hpl(Hpcnv):
         super().summary(sort, order)
 
         if self.ai: 
-            print() 
-            print('Perf:     half-precision performance')
+            print('[Note]')
+            print('Perf:     half-precision performance (FP16)')
             print('Perf_IRS: mixed-precision performance (Iteractive Residual Solver)')
 
     def getopt(self):

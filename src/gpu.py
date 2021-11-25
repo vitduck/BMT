@@ -17,10 +17,11 @@ def gpu_info(host):
     nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
     
     for gpu in nvidia_smi.splitlines():
-        logging.info(' '.join(gpu.split()[0:4]))
-    
-    print()
+        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): NVIDIA (.+?) \(UUID: (.+?)\)', gpu).groups()
+        gpu_id = f'GPU {gpu_id}'
 
+        logging.info(f'{gpu_id:7} : {gpu_name} {gpu_uuid}')
+    
 def gpu_memory(host): 
     memory = syscmd(f'ssh {host} "nvidia-smi -i 0 --query-gpu=memory.total --format=csv,noheader"').split()[0]
 
@@ -32,7 +33,11 @@ def gpu_affinity(host):
 
     for line in topology.splitlines():
         if re.search('^GPU\d+', line): 
-            affinity.append(line.split()[-1])
+            numa = line.split()[-1]
+            if re.search('^\d+$', numa): 
+                affinity.append(numa) 
+            else: 
+                affinity.append('0') 
 
     return affinity
 

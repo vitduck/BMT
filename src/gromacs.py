@@ -37,24 +37,22 @@ class Gromacs(Bmt):
             self.sif   = os.path.abspath(self.sif)
             self.nodes = 1 
 
-        self.check_prerequisite('gcc', '7.2' )
-        self.check_prerequisite('cuda', '10.0')
-        self.check_prerequisite('openmpi', '3.0')
-        
         cpu_info(self.host[0])
         gpu_info(self.host[0])
         module_list()
 
     def build(self): 
         if self.sif: 
-            logging.info('Using NGC image')
             return 
 
         if os.path.exists(self.bin):
             return
 
         self.check_prerequisite('cmake', '3.16.3')
-        
+        self.check_prerequisite('gcc', '7.2' )
+        self.check_prerequisite('cuda', '10.0')
+        self.check_prerequisite('openmpi', '3.0')
+
         self.buildcmd += [  
             f'wget http://ftp.gromacs.org/pub/gromacs/gromacs-2020.2.tar.gz -O {self.builddir}/gromacs-2020.2.tar.gz',
             f'cd {self.builddir}; tar xf gromacs-2020.2.tar.gz', 
@@ -105,7 +103,6 @@ class Gromacs(Bmt):
         # NVIDIA NGC (single-node only using thread-mpi)
         if self.sif: 
             self.check_prerequisite('nvidia', '450')
-            self.check_prerequisite('cuda', '10.1')
 
             gmx_opts += f'-ntmpi {self.ntasks}'
 
@@ -115,7 +112,9 @@ class Gromacs(Bmt):
                f'singularity run --nv {self.sif} '
                f'gmx {gmx_opts}"' )
         else: 
-            self.check_prerequisite('openmpi', '3')
+            self.check_prerequisite('gcc', '7.2' )
+            self.check_prerequisite('cuda', '10.0')
+            self.check_prerequisite('openmpi', '3.0')
 
             self.runcmd = ( 
                f'mpirun --hostfile {self.hostfile} '

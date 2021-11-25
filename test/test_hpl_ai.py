@@ -3,10 +3,10 @@
 from hpl import Hpl
 
 hpl = Hpl(
-    prefix = '../run/HPL',
-    ai     = True, 
-    sif    = '../image/hpc-benchmarks_20.10-hpl.sif')
+    prefix    = '../run/HPL',
+    sif       = '/home/moasys/BMT/images/hpc-benchmarks:21.4-hpl.sif',
+    blocksize = [1024], 
+    ai        = True )
 
 hpl.run() 
 hpl.summary() 
-#  hpl.summary(sort=1, order='>')

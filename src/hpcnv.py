@@ -28,8 +28,11 @@ class Hpcnv(Bmt):
         self.check_prerequisite('singularity', '3.4.1')
 
     def ngc_cmd(self): 
+        nprocs = self.nodes * self.ntasks
+
         return (
-           f'mpirun ' 
+           f'mpirun '
+	       f'-np {nprocs} '
                 '--hostfile hostfile '
                 '--mca btl ^openib '
                 '-x CUDA_VISIBLE_DEVICES '
