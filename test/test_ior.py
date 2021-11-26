@@ -3,7 +3,7 @@
 from ior import Ior
 
 ior = Ior(
-    prefix = '../run/IOR')
+    prefix = '../run/IOR' )
 
 ior.build()
 ior.run() 

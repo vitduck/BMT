@@ -39,13 +39,13 @@ class Qe(Bmt):
         if self.sif: 
             self.sif = os.path.abspath(self.sif)
 
-        cpu_info(self.host[0])
-        gpu_info(self.host[0])
+        self.cpu = cpu_info(self.host[0])
+        self.gpu = gpu_info(self.host[0])
+
         module_list()
 
     def build(self): 
         if self.sif: 
-            logging.info('Using NGC image')
             return 
 
         if os.path.exists(self.bin):

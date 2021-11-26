@@ -17,7 +17,7 @@ bmt = {
     'gromacs_ngc'    : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4'],
     'hpl'            : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4'], 
     'hpl_ai'         : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4'], 
-    'hpcg'           : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4']}
+    'hpcg'           : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-test_2', 'singularity/3.6.4'] }
 
 for case in bmt:
     # load requires module 

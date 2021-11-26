@@ -12,7 +12,7 @@ def sync(host=[]):
         for hostname in host: 
             syscmd(f'ssh {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"')
     else:
-        logging.warning('Cannot flush cache without root privileges!')
+        logging.warning(f'{"Warning":7} : Cannot flush cache without root privileges!')
 
 # wrapper for system commands 
 def syscmd(cmd, output=None):

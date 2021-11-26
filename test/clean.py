@@ -1,5 +1,6 @@
 #!/usr/bin/env python 
 
+import os
 import glob 
 import shutil 
 
@@ -14,4 +15,5 @@ for rundir in [
         '../run/GROMACS']: 
 
     for subdir in glob.glob('/'.join([rundir, '*'])): 
-        shutil.rmtree(subdir)
+        if os.path.isdir(subdir):
+            shutil.rmtree(subdir)

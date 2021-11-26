@@ -32,18 +32,18 @@ class Hpl(Hpcnv):
         self.rfact     = rfact 
         self.bcast     = bcast 
         self.ai        = ai 
-        
-        self.getopt()
-
         self.pgrid     = []
         self.qgrid     = []
+
+        self.getopt()
+        
+        self.cpu = cpu_info(self.host[0])
+        self.gpu = gpu_info(self.host[0])
 
         # automatically set size
         if not self.size: 
             self.matrix_size() 
-        
-        cpu_info(self.host[0])
-        gpu_info(self.host[0])
+
         module_list()
     
     def mpi_grid(self): 
@@ -67,8 +67,13 @@ class Hpl(Hpcnv):
     def matrix_size(self):
         total_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
         
-        if self.ai: 
-            self.size = [10000*int(sqrt(0.4*total_mem*1024**2/2)/10000)]
+        # for A100 with Tensor Core
+        if re.search("A100", self.gpu): 
+            if self.ai: 
+                self.size = [10000*int(sqrt(0.35*total_mem*1024**2/2)/10000)]
+            else:  
+                self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
+        # for V100 and others
         else: 
             self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
 
@@ -202,7 +207,6 @@ class Hpl(Hpcnv):
         super().summary(sort, order)
 
         if self.ai: 
-            print('[Note]')
             print('Perf:     half-precision performance (FP16)')
             print('Perf_IRS: mixed-precision performance (Iteractive Residual Solver)')
 

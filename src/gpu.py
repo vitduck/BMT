@@ -15,12 +15,14 @@ def gpu_id(host):
 
 def gpu_info(host):
     nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
-    
+
     for gpu in nvidia_smi.splitlines():
-        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): NVIDIA (.+?) \(UUID: (.+?)\)', gpu).groups()
+        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): \w+ (.+?) \(UUID: (.+?)\)', gpu).groups()
         gpu_id = f'GPU {gpu_id}'
 
         logging.info(f'{gpu_id:7} : {gpu_name} {gpu_uuid}')
+
+    return gpu_name
     
 def gpu_memory(host): 
     memory = syscmd(f'ssh {host} "nvidia-smi -i 0 --query-gpu=memory.total --format=csv,noheader"').split()[0]

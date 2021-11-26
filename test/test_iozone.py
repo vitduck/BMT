@@ -3,7 +3,7 @@
 from iozone import Iozone
 
 iozone = Iozone(
-    prefix = '../run/IOZONE') 
+    prefix = '../run/IOZONE' ) 
 
 iozone.build()
 iozone.run() 

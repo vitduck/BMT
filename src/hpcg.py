@@ -27,8 +27,9 @@ class Hpcg(Hpcnv):
         
         self.getopt() 
 
-        cpu_info(self.host[0])
-        gpu_info(self.host[0])
+        self.cpu = cpu_info(self.host[0])
+        self.gpu = gpu_info(self.host[0])
+
         module_list()
 
     def write_input(self):
@@ -88,7 +89,6 @@ class Hpcg(Hpcnv):
     def summary(self, sort=0, order='>'): 
         super().summary(sort, order)
 
-        print('[Note]')
         print('SpMV:  sparse matrix-vector multiplication')
         print('SymGS: symmetric Gauss-Seidel method')
         print('Total: GPU performance')

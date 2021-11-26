@@ -24,6 +24,8 @@ class Bmt:
         format  = '# %(message)s')
 
     def __init__(self, name):
+        self.cpu      = '' 
+        self.gpu      = ''
         self.name     = name
         self._prefix  = './'
         self._args    = {} 
@@ -91,7 +93,7 @@ class Bmt:
 
     # returns if previously built binary exists 
     def build(self):
-        logging.info(f'Building {self.name}')
+        logging.info(f'{"Bin":7} : source build')
         os.makedirs(self.builddir, exist_ok=True) 
         os.makedirs(self.bindir  , exist_ok=True) 
 
@@ -103,7 +105,7 @@ class Bmt:
         os.chdir(self.outdir)
 
     def run(self, redirect=0):
-        logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
+        print(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
        
        # redirect output to file 
         if redirect: 
@@ -123,4 +125,9 @@ class Bmt:
             else:
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
-        print(tabulate(self.result, self.header, tablefmt='pretty', floatfmt=".1f", numalign='decimal', stralign='right'))
+        if self.gpu: 
+            print(f'\n[{"/".join([self.cpu, self.gpu])}]')
+        else: 
+            print(f'\n[{self.cpu}]')
+
+        print(tabulate(self.result, self.header, tablefmt='pretty', floatfmt=".2f", numalign='decimal', stralign='right'))

@@ -27,7 +27,8 @@ class Iozone(Bmt):
         
         self.getopt() 
 
-        cpu_info(self.host[0])
+        self.cpu = cpu_info(self.host[0])
+
         module_list() 
 
     def build(self): 

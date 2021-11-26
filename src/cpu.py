@@ -9,7 +9,7 @@ def cpu_info(host):
     cpu   = {} 
     numa  = []
     lscpu = syscmd(f'ssh {host} lscpu')
-    
+
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 
             cpu['CPUs'] = line.split()[-1]
@@ -34,3 +34,10 @@ def cpu_info(host):
         logging.info(f'{numa:<7} : {cpu["NUMA"][i]}')
 
     logging.info(f'{"AVXs":<7} : {cpu["AVXs"]}')
+
+    # Intel CPU
+    if re.search('^Intel', cpu['Model']): 
+        return "-".join(cpu['Model'].split()[1:4]) 
+    # AMD CPU
+    else: 
+        return "-".join(cpu['Model'].split()[1:3]) 

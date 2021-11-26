@@ -25,8 +25,9 @@ class StreamCuda(Bmt):
         
         self.getopt()  
         
-        cpu_info(self.host[0])
-        gpu_info(self.host[0])
+        self.cpu = cpu_info(self.host[0])
+        self.gpu = gpu_info(self.host[0])
+
         module_list() 
         
     def build(self): 
