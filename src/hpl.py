@@ -44,6 +44,12 @@ class Hpl(Hpcnv):
         if not self.size: 
             self.matrix_size() 
 
+        # table header
+        if self.ai: 
+            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)', 'Perf_IRS(Tflops)']
+        else:
+            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)']
+
         module_list()
     
     def mpi_grid(self): 
@@ -66,16 +72,11 @@ class Hpl(Hpcnv):
 
     def matrix_size(self):
         total_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
-        
-        # for A100 with Tensor Core
-        if re.search("A100", self.gpu): 
-            if self.ai: 
-                self.size = [10000*int(sqrt(0.35*total_mem*1024**2/2)/10000)]
-            else:  
-                self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
-        # for V100 and others
-        else: 
-            self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
+
+        self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
+
+        if self.ai and re.search("A100", self.gpu):
+            self.size = [10000*int(sqrt(1.6*total_mem*1024**2/8)/10000)]
 
     def write_input(self):
         self.input = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.dat'
@@ -161,44 +162,27 @@ class Hpl(Hpcnv):
        	
         super().run()
 
-    def parse_hpl(self): 
+    def parse(self): 
         with open('HPL.out', 'r') as output_fh:
             line = output_fh.readline()
+
             while line:
                 if re.search('W[RC]', line):
-                    config, size, blocksize, p, q, time, gflops = line.split()
+                    if self.ai: 
+                        ai, config, size, blocksize, p, q, time, gflops_half, refine, niter, gflops_mixed = line.split()
+                    else:
+                        config, size, blocksize, p, q, time, gflops = line.split()
 
                     # passed/failed status
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1000])
+                    if self.ai: 
+                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops_half)/1000, float(gflops_mixed)/1000])
+                    else:
+                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1000])
                 
                 line = output_fh.readline()
-        
-    def parse_hpl_ai(self): 
-        with open('HPL.out', 'r') as output_fh:
-            line = output_fh.readline()
-            while line:
-                if re.search('W[RC]', line):
-                    ai, config, size, blocksize, p, q, time, gflops_single, refine, niter, gflops_mixed = line.split()
-
-                    # passed/failed status
-                    output_fh.readline()
-                    status = output_fh.readline().split()[-1]
-
-                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops_single)/1000, float(gflops_mixed)/1000])
-
-                line = output_fh.readline() 
-    
-    def parse(self): 
-        if self.ai: 
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)', 'Perf_IRS(Tflops)']
-            self.parse_hpl_ai() 
-
-        else: 
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)']
-            self.parse_hpl() 
 
         # back up output files
         os.rename('HPL.out', self.output)
