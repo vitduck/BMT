@@ -4,12 +4,12 @@ from gromacs import Gromacs
 
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
-    input  = '../input/GROMACS/stmv.tpr', 
-    nsteps = 4000) 
+    input  = '../input/GROMACS/water_1536.tpr', 
+    nsteps = 4000 )  
 
 gmx.build()
 
-for nodes in [1, 2]: 
+for nodes in [1]: 
     for ntasks in [8, 16, 32, 40]:
         omp = 1 
         while omp <= int(40/ntasks): 

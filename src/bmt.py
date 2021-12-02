@@ -105,7 +105,7 @@ class Bmt:
         os.chdir(self.outdir)
 
     def run(self, redirect=0):
-        print(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
+        logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
        
        # redirect output to file 
         if redirect: 

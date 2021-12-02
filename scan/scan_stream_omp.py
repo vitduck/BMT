@@ -2,7 +2,8 @@
 
 from stream_omp import StreamOmp
 
-stream = StreamOmp(prefix = '../run/STREAM/OMP')
+stream = StreamOmp(
+    prefix = '../run/STREAM/OMP' )
 
 stream.build()
 

@@ -9,8 +9,8 @@ hpl = Hpl(
     ai        = True )
 
 for nodes in [1]:
-    for ngpus in [2, 4]:
-        for omp in [1, 2, 4]: 
+    for ngpus in [2, 4, 6, 8]:
+        for omp in [1, 2, 4, 8]: 
             hpl.nodes = nodes
             hpl.ngpus = ngpus
             hpl.omp   = omp

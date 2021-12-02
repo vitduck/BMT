@@ -7,9 +7,9 @@ hpl = Hpl(
     sif       = '../image/hpc-benchmarks:21.4-hpl.sif',
     blocksize = ['256', '288', '384'] ) 
 
-for nodes in [1]:
-    for ngpus in [1, 2]:
-        for omp in [1, 2, 4]: 
+for nodes in [1]: 
+    for ngpus in [1, 2, 4, 6, 8]:
+        for omp in [1, 2, 4, 8]: 
             hpl.nodes = nodes
             hpl.ngpus = ngpus
             hpl.omp   = omp

@@ -4,7 +4,7 @@ from iozone import Iozone
 
 io = Iozone(
     prefix = '../run/IOZONE', 
-    size   = '1G')
+    size   = '1G' )
 
 io.build()
 
