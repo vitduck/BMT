@@ -5,11 +5,11 @@ import re
 import logging
 import argparse
 
-from cpu import cpu_info
-from env import module_list
-from bmt import Bmt
+from cpu    import cpu_info
+from env    import module_list
+from stream import Stream
 
-class StreamOmp(Bmt):
+class StreamOmp(Stream):
     def __init__ (self, size=40000000, ntimes=100, thread=0, affinity='spread', prefix='./'):
         super().__init__('stream_omp')
 
@@ -21,6 +21,7 @@ class StreamOmp(Bmt):
         self.thread   = thread or self.ntasks
         self.affinity = affinity
         self.prefix   = prefix 
+
         self.header   = ['Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
         
         self.getopt()
@@ -72,15 +73,10 @@ class StreamOmp(Bmt):
         super().run(1)
 
     def parse(self):
-        bandwidth = [self.thread, self.affinity]
+        super().parse() 
 
-        with open(self.output, 'r') as output_fh:
-            for line in output_fh:
-                for kernel in self.kernel:
-                    if re.search(f'{kernel}:?', line):
-                        bandwidth.append(float(line.split()[1])/1000)
-
-        self.result.append(bandwidth)
+        # insert thread number and affinity to beginning
+        self.result[-1] = [self.thread, self.affinity] + self.result[-1]
 
     def getopt(self):
         parser = argparse.ArgumentParser(

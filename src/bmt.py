@@ -27,6 +27,7 @@ class Bmt:
         self.cpu      = '' 
         self.gpu      = ''
         self.name     = name
+
         self._prefix  = './'
         self._args    = {} 
         
@@ -41,7 +42,8 @@ class Bmt:
         self.buildcmd = []
         self.runcmd   = ''
         self.output   = ''
-        self.header   = [] 
+
+        self.header   = []
         self.result   = []
     
     # set up sub-directories 
@@ -93,7 +95,6 @@ class Bmt:
 
     # returns if previously built binary exists 
     def build(self):
-        logging.info(f'{"Bin":7} : source build')
         os.makedirs(self.builddir, exist_ok=True) 
         os.makedirs(self.bindir  , exist_ok=True) 
 
@@ -129,5 +130,5 @@ class Bmt:
             print(f'\n[{"/".join([self.cpu, self.gpu])}]')
         else: 
             print(f'\n[{self.cpu}]')
-
-        print(tabulate(self.result, self.header, tablefmt='pretty', floatfmt=".2f", numalign='decimal', stralign='right'))
+        
+        print(tabulate(self.result, self.header, tablefmt='fancy_grid', floatfmt='.2f', numalign='decimal', stralign='right'))

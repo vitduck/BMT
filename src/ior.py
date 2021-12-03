@@ -102,7 +102,8 @@ class Ior(Bmt):
             while line: 
                 if re.search('aggregate filesize', line): 
                     size, unit = line.split()[-2:] 
-                    size = f'{size}{unit[0].lower()}'
+                    size = f'{size}{unit[0]}'
+                    # size = f'{size}{unit[0].lower()}'
 
                 if re.search('Summary', line): 
                     output_fh.readline() 

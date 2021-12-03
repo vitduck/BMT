@@ -3,12 +3,12 @@
 import re
 import argparse
 
-from env import module_list
-from cpu import cpu_info
-from gpu import gpu_info
-from bmt import Bmt
+from env    import module_list
+from cpu    import cpu_info
+from gpu    import gpu_info
+from stream import Stream
 
-class StreamCuda(Bmt):
+class StreamCuda(Stream):
     def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, prefix='./'): 
 
         super().__init__('stream_cuda')
@@ -34,10 +34,10 @@ class StreamCuda(Bmt):
         self.check_prerequisite('cuda', '10.1')
 
         self.buildcmd += [
-           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/Stream.h -O {self.builddir}/Stream.h', 
-           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/main.cpp -O {self.builddir}/main.cpp',  
-           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.h -O {self.builddir}/CUDAStream.h', 
-           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/CUDAStream.cu -O {self.builddir}/CUDAStream.cu',
+           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/Stream.h -O {self.builddir}/Stream.h', 
+           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/main.cpp -O {self.builddir}/main.cpp',  
+           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.h -O {self.builddir}/CUDAStream.h', 
+           f'wget https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu -O {self.builddir}/CUDAStream.cu',
            ('nvcc '
                '-O3 '
                '-std=c++11 '
@@ -60,17 +60,6 @@ class StreamCuda(Bmt):
             f'{self.bin} -s {str(self.size)} -n {str(self.ntimes)}"')  # stream_cuda cmd 
         
         super().run(1) 
-
-    def parse(self):
-        bandwidth = [] 
-
-        with open(self.output, 'r') as output_fh: 
-            for line in output_fh:
-                for kernel in self.kernel:
-                    if re.search(f'{kernel}:?', line):
-                        bandwidth.append(float(line.split()[1])/1000)
-    
-        self.result.append(bandwidth)
 
     def getopt(self):
         parser = argparse.ArgumentParser(
