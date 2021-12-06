@@ -38,6 +38,7 @@ class StreamOmp(Stream):
         # intel icc 
         if os.environ['CC'] == 'icc': 
             openmp_flag = '-qopenmp' 
+            self.name   = self.name + '/icc'
         else: 
             openmp_flag = '-fopenmp' 
 

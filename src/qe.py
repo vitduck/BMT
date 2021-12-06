@@ -64,7 +64,7 @@ class Qe(Bmt):
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
-                '--with-scalapack=yes CC=nvcc;'
+                '--with-scalapack=yes; '
             'make -j 8 pw;' 
             'make -j 8 neb;'
             'make install')]
@@ -92,12 +92,16 @@ class Qe(Bmt):
         # pass CUDA_VISIBLE_DEVICES to remote host
         self.runcmd = ( 
             'mpirun '
+            '-bind-to core '
+            '-map-by numa '
            f'-x CUDA_VISIBLE_DEVICES ' 
            f'-x NO_STOP_MESSAGE '
            f'--hostfile {self.hostfile} ')
 
         # NVIDIA NGC
         if self.sif: 
+            self.name = self.name + '/NGC'
+
             self.check_prerequisite('nvidia', '450')
             self.check_prerequisite('openmpi', '3')
             self.check_prerequisite('singularity', '3.1')

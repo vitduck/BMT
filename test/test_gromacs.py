@@ -4,8 +4,8 @@ from gromacs import Gromacs
 
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
-    input  = '../input/GROMACS/water_1536.tpr', 
-    nsteps = 4000 ) 
+    input  = '../input/GROMACS/stmv.tpr', 
+    nsteps = 20000 ) 
 
 gmx.build()
 gmx.run()

@@ -15,7 +15,7 @@ class Hpcg(Hpcnv):
         grid=[256, 256, 256], time=300, 
         nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpcg.sif', prefix='./'):
 
-        super().__init__('hpcg-nvidia', nodes, ngpus, omp, sif, prefix)
+        super().__init__('hpcg/ngc', nodes, ngpus, omp, sif, prefix)
 
         self.wrapper = 'hpcg.sh'
         self.input   = 'HPCG.in'
@@ -23,7 +23,7 @@ class Hpcg(Hpcnv):
 
         self.grid    = grid 
         self.time    = time
-        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'Time(s)', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(GFlops)']
+        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(GFlops)', 'Time(s)']
         
         self.getopt() 
 
@@ -42,6 +42,11 @@ class Hpcg(Hpcnv):
             input_fh.write(f'{self.time}')
 
     def run(self): 
+        self.check_prerequisite('openmpi', '4')
+        self.check_prerequisite('connectx', '4')
+        self.check_prerequisite('nvidia', '450.36')
+        self.check_prerequisite('singularity', '3.4.1')
+
         # bug in 20.10 
         os.environ['CUDA_VISIBLE_DEVICES']           = ",".join([str(i) for i in range(0, self.ngpus)])
         os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.2/targets/x86_64-linux/lib'
@@ -84,7 +89,7 @@ class Hpcg(Hpcnv):
                 if regex_final: 
                     final = float(line.split()[2])
 
-        self.result.append([self.nodes, self.ngpus, self.omp, grid, domain, time, SpMV, SymGS, total, final])
+        self.result.append([self.nodes, self.ngpus, self.omp, grid, domain, SpMV, SymGS, total, final, time])
 
     def summary(self, sort=0, order='>'): 
         super().summary(sort, order)

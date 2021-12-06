@@ -22,11 +22,6 @@ class Hpcnv(Bmt):
         self.prefix = prefix
         self.sif    = os.path.abspath(self.sif)
 
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
-
     def ngc_cmd(self): 
         nprocs = self.nodes * self.ntasks
 

@@ -16,7 +16,7 @@ class Hpl(Hpcnv):
         threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], ai=False, 
         nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpl.sif', prefix='./'):  
 
-        super().__init__('hpl-nvidia', nodes, ngpus, omp, sif, prefix)
+        super().__init__('hpl', nodes, ngpus, omp, sif, prefix)
 
         self.wrapper   = 'hpl.sh'
         self.input     = 'HPL.dat'
@@ -46,9 +46,9 @@ class Hpl(Hpcnv):
 
         # table header
         if self.ai: 
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)', 'Perf_IRS(Tflops)']
+            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Perf_IRS(Tflops)', 'Time(s)']
         else:
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Time(s)', 'Perf(Tflops)']
+            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Time(s)']
 
         module_list()
     
@@ -143,6 +143,11 @@ class Hpl(Hpcnv):
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
     def run(self): 
+        self.check_prerequisite('openmpi', '4')
+        self.check_prerequisite('connectx', '4')
+        self.check_prerequisite('nvidia', '450.36')
+        self.check_prerequisite('singularity', '3.4.1')
+
         os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
 
         # ncpus = ngpus
@@ -158,7 +163,11 @@ class Hpl(Hpcnv):
         
         # HPL-AI 
         if self.ai: 
+            self.name    = self.name + '-ai/ngc'
+
             self.runcmd += '--xhpl-ai'
+        else: 
+            self.name    = self.name + '/ngc'
        	
         super().run()
 
@@ -178,9 +187,9 @@ class Hpl(Hpcnv):
                     status = output_fh.readline().split()[-1]
 
                     if self.ai: 
-                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops_half)/1000, float(gflops_mixed)/1000])
+                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops_half)/1000, float(gflops_mixed)/1000, time])
                     else:
-                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, time, float(gflops)/1000])
+                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops)/1000, time])
                 
                 line = output_fh.readline()
 

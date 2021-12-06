@@ -4,9 +4,9 @@ from gromacs import Gromacs
 
 gmx = Gromacs(
     prefix = '../run/GROMACS', 
-    input  = '../input/GROMACS/water_1536.tpr', 
+    input  = '../input/GROMACS/stmv.tpr',
     sif    = '../image/gromacs-2021.3.sif',
-    nsteps = 4000 )  
+    nsteps = 20000 )  
 
 gmx.run()
 gmx.summary()

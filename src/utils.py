@@ -19,9 +19,9 @@ def syscmd(cmd, output=None):
     logging.debug(cmd)
 
     try: 
-        pout = subprocess.check_output(cmd, stderr=subprocess.PIPE, shell=True).decode('utf-8').strip()
+        pout = subprocess.check_output(cmd, stderr=subprocess.PIPE, shell=True).decode('utf-8').rstrip()
     except subprocess.CalledProcessError as e:
-        logging.error(f'{e.stderr.decode("utf-8").strip()}')
+        logging.error(f'{e.stderr.decode("utf-8").rstrip()}')
         sys.exit()
     else: 
         if output: 

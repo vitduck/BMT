@@ -12,7 +12,7 @@ from gpu   import gpu_id, gpu_info
 from bmt   import Bmt
 
 class Gromacs(Bmt):
-    def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=False, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
+    def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=True, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
         super().__init__('gromacs')
 
         self.bin      = 'gmx_mpi'
@@ -27,7 +27,7 @@ class Gromacs(Bmt):
         self.omp      = omp
         self.sif      = sif
         self.prefix   = prefix
-        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)']
+        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)', 'Time(s)']
         
         # cmdline options 
         self.getopt() 
@@ -55,15 +55,15 @@ class Gromacs(Bmt):
         self.check_prerequisite('openmpi', '3.0')
 
         self.buildcmd += [  
-            f'wget http://ftp.gromacs.org/pub/gromacs/gromacs-2020.2.tar.gz -O {self.builddir}/gromacs-2020.2.tar.gz',
-            f'cd {self.builddir}; tar xf gromacs-2020.2.tar.gz', 
-           (f'cd {self.builddir}/gromacs-2020.2;'
+            f'wget --no-check-certificate http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz -O {self.builddir}/gromacs-2021.3.tar.gz',
+            f'cd {self.builddir}; tar xf gromacs-2021.3.tar.gz', 
+           (f'cd {self.builddir}/gromacs-2021.3;'
                 'mkdir build;'
                 'cd build;'
                 'cmake .. '  
                     '-DGMX_OPENMP=ON ' 
                     '-DGMX_MPI=ON ' 
-                    '-DGMX_GPU=ON ' 
+                    '-DGMX_GPU=CUDA ' 
                     '-DGMX_SIMD=AVX2_256 '
                     '-DGMX_DOUBLE=OFF '
                     '-DGMX_FFT_LIBRARY=fftw3 '
@@ -92,17 +92,21 @@ class Gromacs(Bmt):
            f'-s {self.input} '
            f'-g {self.output} '
            f'-nsteps {str(self.nsteps)} '
-            '-noconfout ' 
            f'-gpu_id {"".join([str(i) for i in range(0, self.ngpus)])} '
            f'-ntomp {self.omp} '
-           f'-pin on ')
+           f'-pin on '
+            '-noconfout ')
         
         # for real test with load-balancing 
         if self.tune_pme: 
-            gmx_opts += '-tunepme -resethway'
+            gmx_opts += '-resethway '
+        else: 
+            gmx_opts += '-notunepme '
 
         # NVIDIA NGC (single-node only using thread-mpi)
         if self.sif: 
+            self.name = self.name + '/NGC'
+
             self.check_prerequisite('nvidia', '450')
 
             gmx_opts += f'-ntmpi {self.ntasks}'
@@ -130,8 +134,12 @@ class Gromacs(Bmt):
         with open(self.output, 'r') as fh:
             for line in fh:
                 if re.search('Performance:', line):
-                    self.result.append([self.nodes, self.ngpus, self.ntasks, self.omp, float(line.split()[1])])
-        
+                    perf = float(line.split()[1])
+                if re.search('Time:', line):
+                    time = float(line.split()[2])
+                    
+        self.result.append([self.nodes, self.ngpus, self.ntasks, self.omp, perf, time])
+
     def getopt(self):
         parser = argparse.ArgumentParser(
             usage           = '%(prog)s -i stmv.tpr --sif gromacs-2020_2.sif',

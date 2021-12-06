@@ -108,7 +108,7 @@ class Bmt:
     def run(self, redirect=0):
         logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
        
-       # redirect output to file 
+        # redirect output to file 
         if redirect: 
             syscmd(self.runcmd, self.output) 
         else: 
@@ -120,15 +120,16 @@ class Bmt:
         pass
 
     def summary(self, sort=0, order='>'): 
+        if self.gpu: 
+            print(f'\n>> {self.name.upper()}: {" / ".join([self.cpu, self.gpu])}')
+        else: 
+            print(f'\n>> {self.name.upper()}: {self.cpu}')
+
+        # sort data 
         if sort:  
             if order == '>': 
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)
             else:
                 self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
-        if self.gpu: 
-            print(f'\n[{"/".join([self.cpu, self.gpu])}]')
-        else: 
-            print(f'\n[{self.cpu}]')
-        
-        print(tabulate(self.result, self.header, tablefmt='fancy_grid', floatfmt='.2f', numalign='decimal', stralign='right'))
+        print(tabulate(self.result, self.header, tablefmt='psql', floatfmt='.2f', numalign='decimal', stralign='right'))
