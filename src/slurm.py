@@ -17,6 +17,3 @@ def slurm_nodelist():
             nodelist += [ name + str(node) ]
 
     return nodelist
-
-def slurm_ntasks(): 
-    return int(os.environ['SLURM_NTASKS_PER_NODE'])

@@ -5,47 +5,27 @@ import re
 import logging
 import argparse
 
-from slurm import slurm_ntasks
-from env   import module_list
-from cpu   import cpu_info
-from gpu   import gpu_id, gpu_info
-from bmt   import Bmt
+from bmt import Bmt
 
 class Gromacs(Bmt):
-    def __init__(self, input='stmv.tpr',nsteps=10000, tune_pme=True, nodes=0, ngpus=0, ntasks=0, omp=1, sif=None, prefix='./'):  
-        super().__init__('gromacs')
+    def __init__(self, input='stmv.tpr', nsteps=10000, tune_pme=True, **kwargs):
+        super().__init__(**kwargs)
 
+        self.name     = 'GROMACS'
         self.bin      = 'gmx_mpi'
-        self.gpu_id   = gpu_id(self.host[0])
+        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)', 'Time(s)']
 
         self.input    = input
         self.nsteps   = nsteps
         self.tune_pme = tune_pme
-        self.nodes    = nodes  or len(self.host)
-        self.ngpus    = ngpus  or len(self.gpu_id)
-        self.ntasks   = ntasks or slurm_ntasks()
-        self.omp      = omp
-        self.sif      = sif
-        self.prefix   = prefix
-        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)', 'Time(s)']
-        
-        # cmdline options 
+
         self.getopt() 
 
-        # sif aboslution path 
-        if self.sif: 
-            self.sif   = os.path.abspath(self.sif)
-            self.nodes = 1 
-
-        self.cpu = cpu_info(self.host[0])
-        self.gpu = gpu_info(self.host[0])
-
-        module_list()
+        # default ntasks 
+        if not self.ntasks: 
+            self.ntasks = int(os.environ['SLURM_NTASKS_PER_NODE'])
 
     def build(self): 
-        if self.sif: 
-            return 
-
         if os.path.exists(self.bin):
             return
 
@@ -105,7 +85,7 @@ class Gromacs(Bmt):
 
         # NVIDIA NGC (single-node only using thread-mpi)
         if self.sif: 
-            self.name = self.name + '/NGC'
+            self.nodes = 1 
 
             self.check_prerequisite('nvidia', '450')
 
@@ -142,7 +122,7 @@ class Gromacs(Bmt):
 
     def getopt(self):
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -i stmv.tpr --sif gromacs-2020_2.sif',
+            usage           = '%(prog)s -i stmv.tpr --nsteps 4000',
             description     = 'GROMACS Benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter,
             add_help        = False)

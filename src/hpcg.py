@@ -6,31 +6,23 @@ import argparse
 
 from math  import sqrt
 from env   import module_list
-from cpu   import cpu_info
-from gpu   import gpu_info, gpu_id
 from hpcnv import Hpcnv
 
 class Hpcg(Hpcnv): 
-    def __init__(self,
-        grid=[256, 256, 256], time=300, 
-        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpcg.sif', prefix='./'):
+    def __init__(self, grid=[256, 256, 256], time=180, **kwargs):
 
-        super().__init__('hpcg/ngc', nodes, ngpus, omp, sif, prefix)
+        super().__init__(**kwargs)
 
+        self.name    = 'HPCG/NGC'
         self.wrapper = 'hpcg.sh'
         self.input   = 'HPCG.in'
-        self.output  = 'HPCG.out'
+        self.output  = ''
+        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(GFlops)', 'Time(s)']
 
         self.grid    = grid 
         self.time    = time
-        self.header  = ['Node', 'Ngpu', 'Thread', 'Mpi', 'Grid', 'SpMV(GFlops)', 'SymGS(GFlops)', 'Total(GFlops)', 'Final(GFlops)', 'Time(s)']
         
         self.getopt() 
-
-        self.cpu = cpu_info(self.host[0])
-        self.gpu = gpu_info(self.host[0])
-
-        module_list()
 
     def write_input(self):
         input_file = os.path.join(self.outdir, 'HPCG.in')
@@ -42,26 +34,12 @@ class Hpcg(Hpcnv):
             input_fh.write(f'{self.time}')
 
     def run(self): 
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
-
-        # bug in 20.10 
-        os.environ['CUDA_VISIBLE_DEVICES']           = ",".join([str(i) for i in range(0, self.ngpus)])
+        # bug in 21.4
         os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.2/targets/x86_64-linux/lib'
         
-        # ncpus = ngpus
-        self.ntasks = self.ngpus
-
-        self.mkoutdir() 
-        self.write_hostfile() 
-        self.write_input() 
-
         self.output = f'HPCG-n{self.nodes}-g{self.ngpus}-t{self.omp}-{"x".join([str(grid) for grid in self.grid])}.out'
-        self.runcmd = self.ngc_cmd() 
         
-        super().run(1)
+        super().run()
 
     def parse(self): 
         with open(self.output, 'r') as output_fh: 
@@ -101,7 +79,7 @@ class Hpcg(Hpcnv):
 
     def getopt(self): 
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -g 256 256 256 -t 60 --omp 8 --sif hpc-benchmarks_20.10-hpcg.sif',
+            usage           = '%(prog)s -g 256 256 256 -t 60 --omp 8',
             description     = 'HPCG benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter, 
             add_help        = False )
@@ -116,21 +94,16 @@ class Hpcg(Hpcnv):
                 '-t, --time           targeted run time\n'
                 '    --nodes          number of nodes\n'
                 '    --ngpus          number of gpus per node\n'
-                '    --omp            number of omp threads\n'
-                '    --sif            path of singularity images\n'
-                '    --prefix         bin/build/output dir\n' ))
+                '    --omp            number of omp threads\n' ))
     
         # version string
         opt.add_argument('-h', '--help'   , action='help'                  , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version', action='version', 
-                                           version='%(prog)s '+self.version, help=argparse.SUPPRESS)
-
+                                  version='%(prog)s '+self.version         , help=argparse.SUPPRESS)
         opt.add_argument('-g', '--grid'   , type=int, nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-t', '--time'   , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--nodes'  , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'  , type=int           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'    , type=int           , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--sif'    , type=str           , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix' , type=str           , metavar='', help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

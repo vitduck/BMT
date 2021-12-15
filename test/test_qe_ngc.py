@@ -7,5 +7,6 @@ qe = Qe(
     input  = '../input/QE/Si_512.in', 
     sif    = '../image/qe-6.8.sif' )
 
+qe.info()
 qe.run()
 qe.summary()

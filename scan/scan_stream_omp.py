@@ -5,6 +5,7 @@ from stream_omp import StreamOmp
 stream = StreamOmp(
     prefix = '../run/STREAM/OMP' )
 
+stream.info() 
 stream.build()
 
 # scan affinity/thread 

@@ -7,6 +7,7 @@ gmx = Gromacs(
     input  = '../input/GROMACS/stmv.tpr', 
     nsteps = 20000 ) 
 
+gmx.info()
 gmx.build()
 gmx.run()
 gmx.summary()

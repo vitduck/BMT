@@ -12,10 +12,13 @@ import prerequisite
 
 from tabulate import tabulate
 from utils    import syscmd
-from slurm    import slurm_nodelist, slurm_ntasks
+from cpu      import lscpu, cpu_info
+from gpu      import nvidia_smi, gpu_info
+from env      import module_list
+from slurm    import slurm_nodelist
 
 class Bmt: 
-    version  = '0.5'
+    version = '0.6'
     
     # initialize root logger 
     logging.basicConfig( 
@@ -23,43 +26,79 @@ class Bmt:
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    def __init__(self, name):
-        self.cpu      = '' 
-        self.gpu      = ''
-        self.name     = name
+    def __init__(self, prefix='./', sif=None, nodes=0, ngpus=0, ntasks=0, omp=1):
+        self.name     = ''
+        self.header   = []
+        self.result   = [] 
 
-        self._prefix  = './'
+        self._bin     = ''
         self._args    = {} 
         
-        self.nodes    = 1 
-        self.ntasks   = slurm_ntasks() 
         self.host     = slurm_nodelist()
         self.hostfile = 'hostfile'
-        
+
+        self.cpu      = lscpu(self.host[0])
+        self.gpu      = nvidia_smi(self.host[0])
+
+        self.sif      = sif 
+
+        self.prefix   = os.path.abspath(prefix)
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
-        self.bin      = ''
+        self.bindir   = os.path.join(self.prefix, 'bin')
+        self.builddir = os.path.join(self.prefix, 'build')
+        self.outdir   = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
         self.input    = ''
-        self.buildcmd = []
-        self.runcmd   = ''
         self.output   = ''
 
-        self.header   = []
-        self.result   = []
-    
-    # set up sub-directories 
+        self._nodes   = nodes  or len(self.host)
+        self._ngpus   = ngpus  or len(self.gpu.keys())
+        self._ntasks  = ntasks
+        self.omp      = omp
+
+        self.buildcmd = []
+        self.runcmd   = ''
+        
+        # NVIDIA/NGC 
+        if self.sif:
+            self.sif  = os.path.abspath(self.sif)
+     
+    # bin decorator 
     @property 
-    def prefix(self): 
-        return self._prefix
+    def bin(self): 
+        return self._bin
 
-    @prefix.setter 
-    def prefix(self, prefix): 
-        self._prefix  = os.path.abspath(prefix)
-        self.bindir   = os.path.join(self._prefix, 'bin')
-        self.builddir = os.path.join(self._prefix, 'build')
-        self.outdir   = os.path.join(self._prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
-        self.bin      = os.path.join(self.bindir, self.bin)
+    @bin.setter 
+    def bin(self, bin): 
+        self._bin = os.path.join(self.bindir, bin)
+  
+    # nodes decorator 
+    @property 
+    def nodes(self): 
+        return self._nodes
 
-    # override attributes from cmd line argument
+    @nodes.setter 
+    def nodes(self, nodes): 
+        self._nodes = nodes
+
+    # ntasks decorator 
+    @property 
+    def ntasks(self): 
+        return self._ntasks
+
+    @ntasks.setter 
+    def ntasks(self, ntasks): 
+        self._ntasks = ntasks
+
+    # ngpus decorator
+    @property 
+    def ngpus(self): 
+        return self._ngpus
+
+    @ngpus.setter
+    def ngpus(self, ngpus): 
+        self._ngpus = ngpus 
+
+    # override attributes with cmd line arguments
     @property 
     def args(self): 
         return self._args 
@@ -119,11 +158,28 @@ class Bmt:
     def parse(self):  
         pass
 
+    def info(self): 
+        cpu_info(self.cpu)
+        gpu_info(self.gpu)
+
+        module_list()
+
     def summary(self, sort=0, order='>'): 
-        if self.gpu: 
-            print(f'\n>> {self.name.upper()}: {" / ".join([self.cpu, self.gpu])}')
+        cpu_model = '' 
+        gpu_model = self.gpu['0'][0]
+
+        # Intel CPU
+        if re.search('^Intel', self.cpu['Model']): 
+            cpu_model = "-".join(self.cpu['Model'].split()[1:4]) 
+        # AMD CPU
         else: 
-            print(f'\n>> {self.name.upper()}: {self.cpu}')
+            cpu_model = "-".join(self.cpu['Model'].split()[1:3]) 
+
+        # NGC 
+        if self.sif: 
+            self.name = self.name + '/NGC'
+
+        print(f'\n>> {self.name}: {" / ".join([cpu_model, gpu_model])}')
 
         # sort data 
         if sort:  

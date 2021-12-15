@@ -11,7 +11,7 @@
     A            = 21.8781
     nat          = 512
     ntyp         = 1
-    ecutwfc      = 40
+    ecutwfc      = 35
     occupations  ='smearing'
     smearing     ='gaussian',
     degauss      = 0.001

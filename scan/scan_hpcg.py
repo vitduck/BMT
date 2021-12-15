@@ -6,6 +6,8 @@ hpcg = Hpcg(
     prefix = '../run/HPCG',
     sif    = '../image/hpc-benchmarks_20.10-hpcg.sif' )
 
+hpcg.info() 
+
 for nodes in [1]:
     for ngpus in [1, 2, 4, 6, 8]:
         for omp in [1, 2, 6, 4]: 

@@ -6,5 +6,6 @@ hpcg = Hpcg(
     prefix = '../run/HPCG',
     sif    = '../image/hpc-benchmarks:21.4-hpcg.sif' )
 
+hpcg.info()
 hpcg.run() 
 hpcg.summary()

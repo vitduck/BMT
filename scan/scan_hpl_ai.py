@@ -1,12 +1,13 @@
 #!/usr/bin/env python3 
 
-from hpl import Hpl
+from hpl import Hpl_Ai
 
-hpl = Hpl(
+hpl = Hpl_Ai(
     prefix    = '../run/HPL',
     sif       = '../image/hpc-benchmarks:21.4-hpl.sif',
-    blocksize = [1024],   
-    ai        = True )
+    blocksize = [1024] ) 
+
+hpl.info()
 
 for nodes in [1]:
     for ngpus in [2, 4, 6, 8]:

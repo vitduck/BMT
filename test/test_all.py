@@ -6,15 +6,15 @@ from utils import syscmd
 from env   import module_load, module_unload
 
 bmt = {
-    'stream_omp/gcc' : [], 
+    'stream_omp/gcc' : [],
     'stream_omp/icc' : ['intel/18.0.2'],
-    'stream_cuda'    : ['cuda/10.1'], 
-    'iozone'         : [], 
-    'ior'            : ['gcc/8.3.0', 'mpi/openmpi-3.1.5'],  
+    'stream_cuda'    : ['cuda/10.1'],
+    'iozone'         : [],
+    'ior'            : ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
     'qe'             : ['nvidia_hpc_sdk/21.5'],
-    'qe_ngc'         : ['gcc/8.3.0' ,'mpi/openmpi-3.1.5', 'singularity/3.6.4'],
+    'qe_ngc'         : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4'],
     'gromacs'        : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc'],
-    'gromacs_ngc'    : ['gcc/8.3.0' ,'mpi/openmpi-3.1.5'],
+    'gromacs_ngc'    : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc'],
     'hpl'            : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
     'hpl_ai'         : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
     'hpcg'           : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'] }
@@ -23,7 +23,7 @@ for case in bmt:
     # load requires module 
     module_load(bmt[case])
     
-    code   = case.split('/')[0]
+    code = case.split('/')[0]
     
     print(syscmd(f'./test_{code}.py'))
 

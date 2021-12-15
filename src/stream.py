@@ -5,10 +5,11 @@ import re
 from bmt import Bmt
 
 class Stream(Bmt):
-    def __init__(self, name): 
-        super().__init__(name)
-
-        self.kernel = [] 
+    def __init__(self, *args, **kwargs): 
+        super().__init__(*args, **kwargs)
+        
+        # stream kernel
+        self.kernel   = ['Copy', 'Scale', 'Add', 'Triad']
     
     def parse(self):
         bandwidth = [] 

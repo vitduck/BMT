@@ -1,34 +1,28 @@
 #!/usr/bin/env python 
 
+import os
 import re
 import argparse
 
 from env    import module_list
-from cpu    import cpu_info
-from gpu    import gpu_info
 from stream import Stream
 
 class StreamCuda(Stream):
-    def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, prefix='./'): 
+    def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
 
-        super().__init__('stream_cuda')
+        super().__init__(**kwargs)
         
+        self.name   = 'STREAM/CUDA'
         self.bin    = 'stream_cuda'
         self.kernel = ['Copy', 'Mul', 'Add', 'Triad', 'Dot']
+        self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
 
         self.arch   = arch 
         self.mem    = mem 
         self.size   = size 
         self.ntimes = ntimes 
-        self.prefix = prefix
-        self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
-        
+                
         self.getopt()  
-        
-        self.cpu = cpu_info(self.host[0])
-        self.gpu = gpu_info(self.host[0])
-
-        module_list() 
         
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
@@ -76,16 +70,14 @@ class StreamCuda(Stream):
                 '-a, --arch          targeting architecture\n'
                 '-m, --mem           memory mode\n'
                 '-s, --size          size of matrix\n'
-                '-n, --ntimes        run each kernel n times\n'
-                '    --prefix        bin/build/output directory\n' ))
+                '-n, --ntimes        run each kernel n times\n' ))
 
-        opt.add_argument('-h', '--help'   , action='help'                   , help=argparse.SUPPRESS)
+        opt.add_argument('-h', '--help'   , action='help'         , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version', action='version', 
-                                            version='%(prog)s '+self.version, help=argparse.SUPPRESS)
-        opt.add_argument('-a', '--arch'   , type=str, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-m', '--mem'    , type=str, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-s', '--size'   , type=int, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-n', '--ntimes' , type=int, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix' , type=str, metavar='', help=argparse.SUPPRESS)
+                                  version='%(prog)s '+self.version, help=argparse.SUPPRESS)
+        opt.add_argument('-a', '--arch'   , type=str, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-m', '--mem'    , type=str, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-s', '--size'   , type=int, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-n', '--ntimes' , type=int, metavar=''  , help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args()) 

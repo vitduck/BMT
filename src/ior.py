@@ -5,33 +5,25 @@ import re
 import argparse
 
 from glob  import glob
-from env   import module_list
-from cpu   import cpu_info
 from utils import sync
 from bmt   import Bmt
 
 class Ior(Bmt):
-    def __init__(self, transfer='1M', block='16M', segment=16, ltrsize=0, ltrcount=0, nodes=0, ntasks=8, prefix='./'): 
-        super().__init__('ior')
+    def __init__(self, transfer='1M', block='16M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
+        super().__init__(**kwargs)
 
-        self.bin    = 'ior'
+        self.name     = 'IOR'
+        self.bin      = 'ior'
+        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
         
         self.transfer = transfer
         self.block    = block 
         self.segment  = segment
         self.ltrsize  = ltrsize
         self.ltrcount = ltrcount
-        self.nodes    = nodes or len(self.host)
-        self.ntasks   = ntasks
-        self.prefix   = prefix 
-        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
 
         self.getopt()
         
-        self.cpu = cpu_info(self.host[0])
-
-        module_list()
-
     def build(self): 
         self.check_prerequisite('openmpi', '3')
 
@@ -137,12 +129,12 @@ class Ior(Bmt):
                 '    --ltrsize        lustre stripe size\n' 
                 '    --ltrcount       lustre stripe count\n'
                 '    --nodes          number of nodes\n'
-                '    --ntasks         number of mpi tasks per node\n'
-                '    --prefix         bin/build/output directory\n' ))
+                '    --ntasks          number of mpi tasks per node\n' ))
 
         # options for stream setup
-        opt.add_argument('-h', '--help'     , action='help',                                      help=argparse.SUPPRESS)
-        opt.add_argument('-v', '--version'  , action='version', version='%(prog)s '+self.version, help=argparse.SUPPRESS)
+        opt.add_argument('-h', '--help'     , action='help'        , help=argparse.SUPPRESS)
+        opt.add_argument('-v', '--version'  , action='version', 
+                                 version='%(prog)s '+self.version  , help=argparse.SUPPRESS)
         opt.add_argument('-t', '--transfer' , type=str, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument('-b', '--block'    , type=str, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument('-s', '--segment'  , type=int, metavar='' , help=argparse.SUPPRESS)
@@ -150,6 +142,6 @@ class Ior(Bmt):
         opt.add_argument(      '--ltrcount' , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--nodes'    , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ntasks'   , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix'   , type=str, metavar='' , help=argparse.SUPPRESS)
 
+        
         self.args = vars(parser.parse_args())

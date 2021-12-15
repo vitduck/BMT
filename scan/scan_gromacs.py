@@ -7,6 +7,7 @@ gmx = Gromacs(
     input  = '../input/GROMACS/water_1536.tpr', 
     nsteps = 4000 )  
 
+gmx.info()
 gmx.build()
 
 for nodes in [1]: 

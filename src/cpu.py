@@ -2,10 +2,12 @@
 
 import re
 import logging
+import os
+import sys
 
 from utils import syscmd
 
-def cpu_info(host): 
+def lscpu(host): 
     cpu   = {} 
     numa  = []
     lscpu = syscmd(f'ssh {host} lscpu')
@@ -24,20 +26,22 @@ def cpu_info(host):
             cpu['AVXs'] = ', '.join([flag.upper() for flag in avx])
 
         cpu['NUMA'] = numa
-    
+
+    return cpu
+
+def cpu_info(cpu): 
+    logging.basicConfig( 
+        stream  = sys.stderr,
+        level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
+        format  = '# %(message)s')
+
     logging.info(f'{"CPU":<7} : {cpu["Model"]}')
     logging.info(f'{"Cores":<7} : {cpu["CPUs"]}')
     logging.info(f'{"Threads":<7} : {cpu["Threads"]}')
 
+    # NUMA domain
     for i in range(0, len(cpu['NUMA'])): 
         numa = f'NUMA {++i}'
         logging.info(f'{numa:<7} : {cpu["NUMA"][i]}')
 
     logging.info(f'{"AVXs":<7} : {cpu["AVXs"]}')
-
-    # Intel CPU
-    if re.search('^Intel', cpu['Model']): 
-        return "-".join(cpu['Model'].split()[1:4]) 
-    # AMD CPU
-    else: 
-        return "-".join(cpu['Model'].split()[1:3]) 

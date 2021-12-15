@@ -6,6 +6,7 @@ qe = Qe(
     prefix = '../run/QE', 
     input  = '../input/QE/Si_512.in' )
 
+qe.info()
 qe.build()
 
 for nodes in [1]: 

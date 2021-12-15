@@ -5,6 +5,7 @@ from ior import Ior
 ior = Ior(
     prefix = '../run/IOR' )
 
+ior.info()
 ior.build()
 
 for nodes in [1, 2]: 

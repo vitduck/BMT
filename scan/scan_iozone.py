@@ -6,6 +6,7 @@ io = Iozone(
     prefix = '../run/IOZONE', 
     size   = '1G' )
 
+io.info()
 io.build()
 
 for nodes in [1, 2]: 

@@ -6,24 +6,20 @@ import re
 
 from utils import syscmd
 
-def gpu_id(host):
+def nvidia_smi(host):
+    gpu        = {} 
     nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
 
-    gpu = re.findall('GPU\s+(\d+)', nvidia_smi)
+    for line in nvidia_smi.splitlines():
+        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): \w+ (.+?) \(UUID: (.+?)\)', line).groups()
+        gpu[gpu_id] = [gpu_name, gpu_uuid] 
 
-    return [i for i in gpu]
+    return gpu
 
-def gpu_info(host):
-    nvidia_smi = syscmd(f'ssh {host} "nvidia-smi -L"')
+def gpu_info(gpu):
+    for index in gpu: 
+        logging.info(f'{"GPU "+index:7} : {gpu[index][0]} {gpu[index][1]}')
 
-    for gpu in nvidia_smi.splitlines():
-        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): \w+ (.+?) \(UUID: (.+?)\)', gpu).groups()
-        gpu_id = f'GPU {gpu_id}'
-
-        logging.info(f'{gpu_id:7} : {gpu_name} {gpu_uuid}')
-
-    return gpu_name
-    
 def gpu_memory(host): 
     memory = syscmd(f'ssh {host} "nvidia-smi -i 0 --query-gpu=memory.total --format=csv,noheader"').split()[0]
 

@@ -7,6 +7,7 @@ qe = Qe(
     input  = '../input/QE/Si_neb.in', 
     neb    = True )
 
+qe.info()
 qe.build()
 qe.run()
 qe.summary()

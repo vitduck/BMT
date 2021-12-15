@@ -6,77 +6,85 @@ import argparse
 
 from math  import sqrt
 from env   import module_list
-from cpu   import cpu_info
-from gpu   import gpu_info, gpu_memory
+from gpu   import gpu_memory
 from hpcnv import Hpcnv
 
 class Hpl(Hpcnv): 
-    def __init__(self, 
-        size=[], blocksize=[256], pmap=0, 
-        threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], ai=False, 
-        nodes=0, ngpus=0, omp=4, sif='hpc-benchmarks_21.4-hpl.sif', prefix='./'):  
+    def __init__(self, size=[], blocksize=[256], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], **kwargs):
+        super().__init__(**kwargs)
 
-        super().__init__('hpl', nodes, ngpus, omp, sif, prefix)
-
+        self.name      = 'HPL/NGC'
         self.wrapper   = 'hpl.sh'
         self.input     = 'HPL.dat'
-        self.output    = 'HPL.out'
+        self.output    = ''
+        self.header    = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Time(s)']
         
         self.size      = size
         self.blocksize = blocksize 
         self.pmap      = pmap 
+        self.pgrid     = pgrid 
+        self.qgrid     = qgrid 
         self.threshold = threshold 
         self.pfact     = pfact 
         self.nbmin     = nbmin 
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
-        self.ai        = ai 
-        self.pgrid     = []
-        self.qgrid     = []
+        self._reset    = False
 
         self.getopt()
-        
-        self.cpu = cpu_info(self.host[0])
-        self.gpu = gpu_info(self.host[0])
 
-        # automatically set size
+        # set matrix size
         if not self.size: 
-            self.matrix_size() 
+            self._reset = True
+            self._matrix_size() 
 
-        # table header
-        if self.ai: 
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Perf_IRS(Tflops)', 'Time(s)']
-        else:
-            self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Time(s)']
+        # mpi grid 
+        if not self.pgrid and not self.qgrid:
+            self._mpi_grid() 
+ 
+    # recalcuate MPI grid and matrix size
+    @Hpcnv.nodes.setter
+    def nodes(self, nodes): 
+        super(Hpl, Hpl).nodes.__set__(self, nodes) 
+        
+        self._mpi_grid() 
 
-        module_list()
-    
-    def mpi_grid(self): 
-        self.pgrid = [] 
-        self.qgrid = [] 
-        ngpus_tot  = self.nodes*self.ngpus
+        if self._reset and not self.args['size']:
+            self._matrix_size()
 
-        for i in range(1, ngpus_tot +1):
-            if ngpus_tot%i == 0:
+    @Hpcnv.ngpus.setter
+    def ngpus(self, ngpus): 
+        super(Hpl, Hpl).ngpus.__set__(self, ngpus) 
+
+        self._mpi_grid() 
+        
+        if self._reset and not self.args['size']: 
+            self._matrix_size()
+
+    def _mpi_grid(self): 
+        self.pgrid = []
+        self.qgrid = []
+        tot_ngpus  = self.nodes*self.ngpus
+
+        for i in range(1, tot_ngpus + 1):
+            if tot_ngpus % i == 0:
                 p = i
-                q = int(ngpus_tot/i)
+                q = int(tot_ngpus/i)
 
                 if p >= q:
                     self.pgrid.append(p)
                     self.qgrid.append(q)
 
+        # remove iregular 1 x n grid 
         if len(self.pgrid) > 1:
             self.pgrid.pop()
             self.qgrid.pop()
 
-    def matrix_size(self):
-        total_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
+    def _matrix_size(self):
+        tot_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
 
-        self.size = [10000*int(sqrt(0.95*total_mem*1024**2/8)/10000)]
-
-        if self.ai and re.search("A100", self.gpu):
-            self.size = [10000*int(sqrt(1.6*total_mem*1024**2/8)/10000)]
+        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
 
     def write_input(self):
         self.input = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.dat'
@@ -85,7 +93,7 @@ class Hpl(Hpcnv):
             fh.write(f'HPL input\n')
             fh.write(f'BMT\n')
             fh.write(f'{"HPL.out":<20} output file name\n')
-            fh.write(f'{"file":<20} device out (6=stdout,7=stderr,file)\n')
+            fh.write(f'{"6":<20} device out (6=stdout,7=stderr,file)\n')
 
             # problem size
             fh.write(f'{len(self.size):<20} number of problem size (N)\n')
@@ -143,69 +151,29 @@ class Hpl(Hpcnv):
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
     def run(self): 
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
-
-        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
-
-        # ncpus = ngpus
-        self.ntasks = self.ngpus
-        
-        self.mpi_grid() 
-        self.mkoutdir() 
-        self.write_hostfile() 
-        self.write_input() 
-        
         self.output = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.out'
-        self.runcmd = self.ngc_cmd() 
-        
-        # HPL-AI 
-        if self.ai: 
-            self.name    = self.name + '-ai/ngc'
 
-            self.runcmd += '--xhpl-ai'
-        else: 
-            self.name    = self.name + '/ngc'
-       	
         super().run()
 
     def parse(self): 
-        with open('HPL.out', 'r') as output_fh:
+        with open(self.output, 'r') as output_fh:
             line = output_fh.readline()
 
             while line:
                 if re.search('W[RC]', line):
-                    if self.ai: 
-                        ai, config, size, blocksize, p, q, time, gflops_half, refine, niter, gflops_mixed = line.split()
-                    else:
-                        config, size, blocksize, p, q, time, gflops = line.split()
+                    config, size, blocksize, p, q, time, gflops = line.split()
 
                     # passed/failed status
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    if self.ai: 
-                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops_half)/1000, float(gflops_mixed)/1000, time])
-                    else:
-                        self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops)/1000, time])
+                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops)/1000, time])
                 
                 line = output_fh.readline()
 
-        # back up output files
-        os.rename('HPL.out', self.output)
-
-    def summary(self, sort=0, order='>'): 
-        super().summary(sort, order)
-
-        if self.ai: 
-            print('Perf:     half-precision performance (FP16)')
-            print('Perf_IRS: mixed-precision performance (Iteractive Residual Solver)')
-
     def getopt(self):
         parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -s 40000 -b 256 --omp 4 --sif hpc-benchmarks_20.10-hpl.sif',
+            usage           = '%(prog)s -s 40000 -b 256 --omp 4',
             description     = 'HPL Benchmark',
             formatter_class = argparse.RawDescriptionHelpFormatter,
             add_help        = False )
@@ -218,38 +186,35 @@ class Hpl(Hpcnv):
                 '-v, --version          show program\'s version number and exit\n'
                 '-s, --size             list of problem size\n'
                 '-b, --blocksize        list of block size\n'
+                '-p, --pgrid            MPI pgrid\n'
+                '-q, --qgrid            MPI qgrid\n'
                 '    --pmap             MPI processes mapping\n'
+                '    --broadcast        MPI broadcasting algorithms\n'
                 '    --threshold        Validation threshold\n'
                 '    --pfact            list of PFACT variants\n'
                 '    --nbmin            list of NBMIN\n'
                 '    --ndiv             list of NDIV\n'
                 '    --rfact            list of RFACT variants\n'
-                '    --broadcast        MPI broadcasting algorithms\n'
-                '    --ai               using hpl-ai\n'
                 '    --nodes            number of nodes\n'
                 '    --ngpus            number of gpus per node\n'
-                '    --omp              number of omp threads\n'
-                '    --sif              path of singularity images\n'
-                '    --prefix           output directory\n' ))
+                '    --omp              number of omp threads\n' ))
 
         opt.add_argument('-h', '--help'     , action='help'                    , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version'  , action='version', 
-                                              version='%(prog)s '+ self.version, help=argparse.SUPPRESS)
-        opt.add_argument('-m', '--mem'      , type=int             , metavar='', help=argparse.SUPPRESS)
+                                  version='%(prog)s '+ self.version            , help=argparse.SUPPRESS)
         opt.add_argument('-s', '--size'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument('-b', '--blocksize', type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        opt.add_argument('-p', '--pgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        opt.add_argument('-q', '--qgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--pmap'     , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--threshold', type=float           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--pfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--ai'       , action='store_true'              , help=argparse.SUPPRESS)
         opt.add_argument(      '--nodes'    , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'    , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--sif'      , type=str             , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix'   , type=str             , metavar='', help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

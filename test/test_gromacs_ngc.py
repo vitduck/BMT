@@ -8,5 +8,6 @@ gmx = Gromacs(
     sif    = '../image/gromacs-2021.3.sif',
     nsteps = 20000 )  
 
+gmx.info()
 gmx.run()
 gmx.summary()

@@ -5,31 +5,23 @@ import os
 import argparse
 
 from glob  import glob 
-from cpu   import cpu_info
 from utils import sync
-from env   import module_list
 from bmt   import Bmt
 
 class Iozone(Bmt):
-    def __init__(self, size='64M', record='1M', nodes=0, thread=4, prefix='./'): 
-        super().__init__('iozone')
+    def __init__(self, size='64M', record='1M', threads=4, **kwargs): 
+        super().__init__(**kwargs)
         
+        self.name      = 'IOZONE'
         self.bin       = 'iozone'
+        self.header    = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
+        self.bandwidth = []
 
         self.size      = size
         self.record    = record
-        self.nodes     = nodes or len(self.host)
-        self.thread    = thread
-        self.prefix    = prefix
+        self.threads    = threads
 
-        self.bandwidth = []
-        self.header    = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
-        
         self.getopt() 
-
-        self.cpu = cpu_info(self.host[0])
-
-        module_list() 
 
     def build(self): 
         if os.path.exists(self.bin): 
@@ -48,10 +40,10 @@ class Iozone(Bmt):
         self.write_hostfile() 
 
         option = (
-           f'-s {self.size} '                         # file size per thread 
+           f'-s {self.size} '                         # file size per threads 
            f'-r {self.record} '                       # record size 
            f'-+m {self.hostfile} '                    # hostfile: <hostname> <outdir> <iozone bin> 
-           f'-t {str(self.thread*len(self.host))} ' # total number of thread 
+           f'-t {str(self.threads*len(self.host))} ' # total number of threads 
             '-c '                                     # includes close in timing calculation  
             '-e '                                     # incldues flush in timing calculation
             '-w '                                     # keep temporary files for read test
@@ -60,14 +52,14 @@ class Iozone(Bmt):
         self.bandwidth = [] 
         
         # write
-        self.output = f'iozone-i0-n{self.nodes}-t{self.thread}-s{self.size}-r{self.record}.out'
+        self.output = f'iozone-i0-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
         self.runcmd = f'RSH=ssh {self.bin} -i 0 {option}'
 
         sync(self.host)
         super().run(1) 
         
         # read 
-        self.output = f'iozone-i1-n{self.nodes}-t{self.thread}-s{self.size}-r{self.record}.out'
+        self.output = f'iozone-i1-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
         self.runcmd = f'RSH=ssh {self.bin} -i 1 {option}'
 
         sync(self.host)
@@ -76,13 +68,13 @@ class Iozone(Bmt):
         # random read/write
         # -I: Use direct IO 
         # -O: Return result in OPS
-        self.output = f'iozone-i2-n{self.nodes}-t{self.thread}-s{self.size}-r{self.record}.out'
+        self.output = f'iozone-i2-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
         self.runcmd = f'RSH=ssh {self.bin} -i 2 -I -O {option}'
 
         sync(self.host)
         super().run(1) 
 
-        self.result.append([self.nodes, self.thread, self.size, self.record] + self.bandwidth)
+        self.result.append([self.nodes, self.threads, self.size, self.record] + self.bandwidth)
 
         self.clean()
 
@@ -91,7 +83,7 @@ class Iozone(Bmt):
 
         with open(self.hostfile, 'w') as fh:
             for host in self.host:
-                for thread in range(self.thread): 
+                for threads in range(self.threads): 
                     fh.write(f'{host} {self.outdir} {self.bin}\n')
 
     def parse(self):
@@ -120,17 +112,17 @@ class Iozone(Bmt):
             description=(
                 '-h, --help         show this help message and exit\n'
                 '-v, --version      show program\'s version number and exit\n'
-                '-s, --size         file size/thread\n'
+                '-s, --size         file size/threads\n'
                 '-r, --record       record size\n'
-                '-t, --thread       number of threads/host\n'
-                '    --prefix       bin/build/output directory\n' ))
+                '-n, --nodes        number of nodes\n'
+                '-t, --threads      number of threadss per node\n' ))
         
-        opt.add_argument('-h', '--help'   , action='help'                     , help=argparse.SUPPRESS)
+        opt.add_argument('-h', '--help'   , action='help'         , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version', action='version', 
-                                            version='%(prog)s ' + self.version, help=argparse.SUPPRESS)
-        opt.add_argument('-s', '--size'   , type=str, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-r', '--record' , type=str, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-t', '--thread' , type=int, metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix' , type=str, metavar='', help=argparse.SUPPRESS)
+                                  version='%(prog)s '+self.version, help=argparse.SUPPRESS)
+        opt.add_argument('-s', '--size'   , type=str, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-r', '--record' , type=str, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-n', '--nodes'  , type=int, metavar=''  , help=argparse.SUPPRESS)
+        opt.add_argument('-t', '--threads', type=int, metavar=''  , help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())
