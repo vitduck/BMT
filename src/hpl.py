@@ -13,7 +13,7 @@ class Hpl(Hpcnv):
     def __init__(self, size=[], blocksize=[256], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], **kwargs):
         super().__init__(**kwargs)
 
-        self.name      = 'HPL/NGC'
+        self.name      = 'HPL'
         self.wrapper   = 'hpl.sh'
         self.input     = 'HPL.dat'
         self.output    = ''
@@ -61,30 +61,6 @@ class Hpl(Hpcnv):
         
         if self._reset and not self.args['size']: 
             self._matrix_size()
-
-    def _mpi_grid(self): 
-        self.pgrid = []
-        self.qgrid = []
-        tot_ngpus  = self.nodes*self.ngpus
-
-        for i in range(1, tot_ngpus + 1):
-            if tot_ngpus % i == 0:
-                p = i
-                q = int(tot_ngpus/i)
-
-                if p >= q:
-                    self.pgrid.append(p)
-                    self.qgrid.append(q)
-
-        # remove iregular 1 x n grid 
-        if len(self.pgrid) > 1:
-            self.pgrid.pop()
-            self.qgrid.pop()
-
-    def _matrix_size(self):
-        tot_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
-
-        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
 
     def write_input(self):
         self.input = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.dat'
@@ -170,6 +146,30 @@ class Hpl(Hpcnv):
                     self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops)/1000, time])
                 
                 line = output_fh.readline()
+
+    def _mpi_grid(self): 
+        self.pgrid = []
+        self.qgrid = []
+        tot_ngpus  = self.nodes*self.ngpus
+
+        for i in range(1, tot_ngpus + 1):
+            if tot_ngpus % i == 0:
+                p = i
+                q = int(tot_ngpus/i)
+
+                if p >= q:
+                    self.pgrid.append(p)
+                    self.qgrid.append(q)
+
+        # remove iregular 1 x n grid 
+        if len(self.pgrid) > 1:
+            self.pgrid.pop()
+            self.qgrid.pop()
+
+    def _matrix_size(self):
+        tot_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
+
+        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
 
     def getopt(self):
         parser = argparse.ArgumentParser(

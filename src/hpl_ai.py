@@ -13,7 +13,7 @@ class Hpl_Ai(Hpl):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.name   = 'HPL-AI/NGC'
+        self.name   = 'HPL-AI'
         self.header = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Perf_IRS(Tflops)', 'Time(s)']
     
     def _matrix_size(self):

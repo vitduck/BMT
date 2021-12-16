@@ -5,27 +5,53 @@ import subprocess
 from utils import syscmd
 from env   import module_load, module_unload
 
-bmt = {
-    'stream_omp/gcc' : [],
-    'stream_omp/icc' : ['intel/18.0.2'],
-    'stream_cuda'    : ['cuda/10.1'],
-    'iozone'         : [],
-    'ior'            : ['gcc/8.3.0', 'mpi/openmpi-3.1.5'], 
-    'qe'             : ['nvidia_hpc_sdk/21.5'],
-    'qe_ngc'         : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4'],
-    'gromacs'        : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc'],
-    'gromacs_ngc'    : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc'],
-    'hpl'            : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
-    'hpl_ai'         : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
-    'hpcg'           : ['gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'] }
+bmt = [ 
+        { 
+            'env' : [ ],  
+            'cmd' : './test_stream_omp.py' }, 
+        { 
+            'env' : [ 'intel/18.0.2' ], 
+            'cmd' : './test_stream_omp.py' }, 
+        { 
+            'env' : [ 'cuda/10.1' ], 
+            'cmd' : './test_stream_cuda.py' }, 
+        { 
+            'env' : [ ], 
+            'cmd' : './test_iozone.py' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'mpi/openmpi-3.1.5' ],  
+            'cmd' : './test_ior.py' }, 
+        { 
+            'env' : [ 'nvidia_hpc_sdk/21.5' ],  
+            'cmd' : './test_qe.py' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4' ], 
+            'cmd' : './test_qe_ngc.py' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc' ], 
+            'cmd' : './test_gromacs.py' }, 
+        { 
+            'env' : [ ], 
+            'cmd' : './test_gromacs_ngc.py' }, 
+        { 
+            'env' : [ ], 
+            'cmd' : './test_gromacs_ngc.py --gpudirect' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
+            'cmd' : './test_hpl.py' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
+            'cmd' : './test_hpl_ai.py' }, 
+        { 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 
+            'cmd' : './test_hpcg.py' }, 
+    ]
 
-for case in bmt:
+for test in bmt:
     # load requires module 
-    module_load(bmt[case])
+    module_load(test['env'])
     
-    code = case.split('/')[0]
-    
-    print(syscmd(f'./test_{code}.py'))
+    print(syscmd(test['cmd']))
 
     # unload required modules
-    module_unload(bmt[case])
+    module_unload(test['env'])

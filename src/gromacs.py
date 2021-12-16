@@ -8,16 +8,17 @@ import argparse
 from bmt import Bmt
 
 class Gromacs(Bmt):
-    def __init__(self, input='stmv.tpr', nsteps=10000, tune_pme=True, **kwargs):
+    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
-        self.name     = 'GROMACS'
-        self.bin      = 'gmx_mpi'
-        self.header   = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)', 'Time(s)']
+        self.name      = 'GROMACS'
+        self.bin       = 'gmx_mpi'
+        self.header    = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Perf(ns/day)', 'Time(s)']
 
-        self.input    = input
-        self.nsteps   = nsteps
-        self.tune_pme = tune_pme
+        self.input     = input
+        self.nsteps    = nsteps
+        self.resetstep = resetstep
+        self.gpudirect = gpudirect
 
         self.getopt() 
 
@@ -25,14 +26,18 @@ class Gromacs(Bmt):
         if not self.ntasks: 
             self.ntasks = int(os.environ['SLURM_NTASKS_PER_NODE'])
 
+        # reset perf measure at 80% mark of simulation
+        if not self.resetstep: 
+            self.resetstep = 1000*int(0.8*self.nsteps/1000)
+
     def build(self): 
         if os.path.exists(self.bin):
             return
 
-        self.check_prerequisite('cmake', '3.16.3')
-        self.check_prerequisite('gcc', '7.2' )
-        self.check_prerequisite('cuda', '10.0')
-        self.check_prerequisite('openmpi', '3.0')
+        self.check_prerequisite('cmake'  , '3.16.3')
+        self.check_prerequisite('gcc'    , '7.2'   )
+        self.check_prerequisite('cuda'   , '10.0'  )
+        self.check_prerequisite('openmpi', '3.0'   )
 
         self.buildcmd += [  
             f'wget --no-check-certificate http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz -O {self.builddir}/gromacs-2021.3.tar.gz',
@@ -60,54 +65,43 @@ class Gromacs(Bmt):
         self.mkoutdir()
         self.write_hostfile()
 
-        self.output = (
-           f'{os.path.splitext(os.path.basename(self.input))[0]}-'
-           f'n{self.nodes}_'
-           f'g{self.ngpus}_'
-           f'p{self.ntasks}_'
-           f't{self.omp}.log')
-
-        gmx_opts = (
-            'mdrun ' 
-           f'-s {self.input} '
-           f'-g {self.output} '
-           f'-nsteps {str(self.nsteps)} '
-           f'-gpu_id {"".join([str(i) for i in range(0, self.ngpus)])} '
-           f'-ntomp {self.omp} '
-           f'-pin on '
-            '-noconfout ')
-        
-        # for real test with load-balancing 
-        if self.tune_pme: 
-            gmx_opts += '-resethway '
-        else: 
-            gmx_opts += '-notunepme '
-
         # NVIDIA NGC (single-node only using thread-mpi)
+        # Experimental support for GPUDirect implementation
         if self.sif: 
             self.nodes = 1 
-
+            gmx_export = ''
+            
             self.check_prerequisite('nvidia', '450')
 
-            gmx_opts += f'-ntmpi {self.ntasks}'
+            if self.gpudirect: 
+                self.name   = self.name + '/GPUDIRECT'
+                self.ntasks = self.ngpus 
+                self.omp    = 4
 
+                gmx_export  = ( 
+                    'GMX_GPU_DD_COMMS=true '
+                    'GMX_GPU_PME_PP_COMMS=true '
+                    'GMX_FORCE_UPDATE_DEFAULT_GPU=true ' )
+            
             self.runcmd = ( 
-               f'ssh {self.host[0]} '
-               f'"cd {self.outdir}; module load singularity; ' 
+               f'ssh {self.host[0]} ' 
+               f'"cd {self.outdir}; '
+                'module load singularity; ' 
+               f'{gmx_export} '
                f'singularity run --nv {self.sif} '
-               f'gmx {gmx_opts}"' )
+               f'gmx {self._mdrun()}"' )
         else: 
-            self.check_prerequisite('gcc', '7.2' )
-            self.check_prerequisite('cuda', '10.0')
-            self.check_prerequisite('openmpi', '3.0')
-
+            self.check_prerequisite('gcc'    , '7.2' )
+            self.check_prerequisite('cuda'   , '10.0')
+            self.check_prerequisite('openmpi', '3.0' )
+            
             self.runcmd = ( 
                f'mpirun --hostfile {self.hostfile} '
-               f'{self.bin} {gmx_opts}' )
-               
+               f'{self.bin} {self._mdrun()}' )
+       
         super().run()
 
-        # clean redundant files
+        #  clean redundant files
         os.remove('ener.edr')
 
     def parse(self):
@@ -119,6 +113,41 @@ class Gromacs(Bmt):
                     time = float(line.split()[2])
                     
         self.result.append([self.nodes, self.ngpus, self.ntasks, self.omp, perf, time])
+
+    def _mdrun(self): 
+        self.output = (
+           f'{os.path.splitext(os.path.basename(self.input))[0]}-'
+           f'n{self.nodes}_'
+           f'g{self.ngpus}_'
+           f'p{self.ntasks}_'
+           f't{self.omp}.log' )
+
+        # gromacs MPI crashes unless thread is explicitly set to 1
+        cmd = (
+            'mdrun ' 
+            '-noconfout ' 
+           f'-s {self.input} '
+           f'-g {self.output} '
+           f'-gpu_id {"".join([str(i) for i in range(0, self.ngpus)])} '
+           f'-nsteps {str(self.nsteps)} '
+           f'-resetstep {self.resetstep} '
+           f'-pin on '
+           f'-ntomp {self.omp} ' )
+
+        # gromacs thread-MPI requires -ntmpi
+        if self.sif:
+            cmd += ( 
+               f'-ntmpi {self.ntasks} ' )
+
+        if self.gpudirect: 
+            cmd += (
+                '-nb gpu '
+                '-bonded gpu '
+                '-pme gpu '
+                '-npme 1 ' 
+                '-nstlist 200 ' )
+
+        return cmd
 
     def getopt(self):
         parser = argparse.ArgumentParser(
@@ -134,25 +163,23 @@ class Gromacs(Bmt):
                 '-v, --version        show program\'s version number and exit\n'
                 '-i, --input          input file\n'
                 '    --nsteps         number of md steps\n'
-                '    --tune_pme       optimize pme grids and shift workload to GPU\n'
+                '    --resetstep      start performance measurement\n'
+                '    --gpudirect      enable experimental GPUDirect\n'
                 '    --nodes          number of node\n'
                 '    --ngpus          number of gpus per node\n'
                 '    --ntasks         number of mpi tasks per node\n'
-                '    --omp            number of openmp thread\n'
-                '    --sif            singulariy image\n'
-                '    --prefix         bin/build/output directory\n' ))
+                '    --omp            number of openmp thread\n' ))
 
         opt.add_argument('-h', '--help'     , action='help'                    , help=argparse.SUPPRESS)
         opt.add_argument('-v', '--version'  , action='version', 
                                               version='%(prog)s '+self.version , help=argparse.SUPPRESS)
         opt.add_argument('-i', '--input'    , type=str            , metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--nsteps'   , type=int            , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--tune_pme' , action='store_true'              , help=argparse.SUPPRESS)
+        opt.add_argument(      '--resetstep', type=int            , metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--gpudirect', action='store_true'              , help=argparse.SUPPRESS)
         opt.add_argument(      '--nodes'    , type=int            , metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'    , type=int            , metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ntasks'   , type=int            , metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int            , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--sif'      , type=str            , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--prefix'   , type=str            , metavar='' , help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

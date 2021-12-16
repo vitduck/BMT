@@ -40,10 +40,10 @@ class Hpcnv(Bmt):
                    f'--gpu-affinity {":".join([str(i) for i in range(0, self.ngpus)])} ')
 
     def run(self): 
-        self.check_prerequisite('openmpi', '4')
-        self.check_prerequisite('connectx', '4')
-        self.check_prerequisite('nvidia', '450.36')
-        self.check_prerequisite('singularity', '3.4.1')
+        self.check_prerequisite('openmpi'    , '4'     )
+        self.check_prerequisite('connectx'   , '4'     )
+        self.check_prerequisite('nvidia'     , '450.36')
+        self.check_prerequisite('singularity', '3.4.1' )
         
         os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
         

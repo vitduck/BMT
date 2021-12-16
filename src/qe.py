@@ -82,8 +82,8 @@ class Qe(Bmt):
 
         # NVIDIA NGC
         if self.sif: 
-            self.check_prerequisite('nvidia', '450')
-            self.check_prerequisite('openmpi', '3')
+            self.check_prerequisite('nvidia'     , '450')
+            self.check_prerequisite('openmpi'    , '3'  )
             self.check_prerequisite('singularity', '3.1')
 
             self.runcmd += (

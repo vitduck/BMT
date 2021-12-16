@@ -13,7 +13,7 @@ class Hpcg(Hpcnv):
 
         super().__init__(**kwargs)
 
-        self.name    = 'HPCG/NGC'
+        self.name    = 'HPCG'
         self.wrapper = 'hpcg.sh'
         self.input   = 'HPCG.in'
         self.output  = ''
