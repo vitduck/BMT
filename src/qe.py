@@ -39,7 +39,8 @@ class Qe(Bmt):
         runtime, cuda_cc = device_query(self.host[0])
 
         self.check_prerequisite('hpc_sdk', '21.5')
-        
+       
+        # test 
         self.buildcmd += [
            f'wget https://gitlab.com/QEF/q-e/-/archive/develop/q-e-develop.tar.gz -O {self.builddir}/q-e-develop.tar.gz', 
            f'cd {self.builddir}; tar xf q-e-develop.tar.gz',
@@ -48,9 +49,10 @@ class Qe(Bmt):
                 '--enable-openmp '
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
-               f'--with-cuda-runtime={runtime} '
-            'make -j 8 pw;' 
-            'make -j 8 neb;'
+               f'--with-cuda-runtime={runtime}; '
+            'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
+            'make -j 8 pw; ' 
+            'make -j 8 neb; '
             'make install')]
 
         super().build() 

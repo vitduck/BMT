@@ -10,7 +10,7 @@ stream.build()
 
 # scan affinity/thread 
 for affinity in ['close', 'spread']: 
-    for thread in [1, 2, 4, 8, 16, 24, 32]: 
+    for thread in [1, 2, 4, 8, 16, 24, 32, 40]: 
         stream.affinity = affinity
         stream.thread   = thread 
 
