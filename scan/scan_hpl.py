@@ -16,7 +16,6 @@ for nodes in [1]:
             hpl.ngpus = ngpus
             hpl.omp   = omp
         
-            hpl.matrix_size() 
             hpl.run() 
 
 hpl.summary()

@@ -49,7 +49,7 @@ class StreamCuda(Stream):
         
         self.output = 'stream-cuda.out'
         self.runcmd = ( 
-            f'ssh {self.host[0]} '                                     # ssh to remote host 
+            f'ssh -oStrictHostKeyChecking=no {self.host[0]} '          # ssh to remote host 
             f'"builtin cd {self.outdir}; '                             # cd to caller dir
             f'{self.bin} -s {str(self.size)} -n {str(self.ntimes)}"')  # stream_cuda cmd 
         

@@ -10,7 +10,7 @@ from utils import syscmd
 def lscpu(host): 
     cpu   = {} 
     numa  = []
-    lscpu = syscmd(f'ssh {host} lscpu')
+    lscpu = syscmd(f'ssh -oStrictHostKeyChecking=no {host} lscpu')
 
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 

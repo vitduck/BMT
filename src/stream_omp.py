@@ -57,13 +57,13 @@ class StreamOmp(Stream):
         self.output = f'stream-{self.affinity}-omp_{self.thread}.out'
 
         self.runcmd = (
-            f'ssh {self.host[0]} '                 # ssh to remote host 
-            f'"builtin cd {self.outdir}; '         # cd to caller dir 
-            f'{module_cmd} '                       # for intel compiler
-             'OMP_PLACES=threads '                 # thread placement 
-            f'OMP_PROC_BIND={self.affinity} '      # thread affinity
-            f'OMP_NUM_THREADS={str(self.thread)} ' # thread number 
-            f'{self.bin}"')                        # stream_omp cmd 
+            f'ssh -oStrictHostKeyChecking=no {self.host[0]} ' # ssh to remote host 
+            f'"builtin cd {self.outdir}; '                    # cd to caller dir 
+            f'{module_cmd} '                                  # for intel compiler
+             'OMP_PLACES=threads '                            # thread placement 
+            f'OMP_PROC_BIND={self.affinity} '                 # thread affinity
+            f'OMP_NUM_THREADS={str(self.thread)} '            # thread number 
+            f'{self.bin}"')                                   # stream_omp cmd 
         
         super().run(1)
 

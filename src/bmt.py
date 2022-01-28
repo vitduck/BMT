@@ -118,7 +118,7 @@ class Bmt:
     # check for minimum software/hardware requirements 
     def check_prerequisite(self, module, min_ver):  
         # insert hostname after ssh 
-        cmd     = prerequisite.cmd[module].replace('ssh', f'ssh {self.host[0]}')
+        cmd     = prerequisite.cmd[module].replace('ssh', f'ssh -oStrictHostKeyChecking=no {self.host[0]}')
         regex   = prerequisite.regex[module]
         version = re.search(regex, syscmd(cmd)).group(1)
                 

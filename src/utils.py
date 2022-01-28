@@ -10,7 +10,7 @@ import subprocess
 def sync(host=[]): 
     if os.getuid() == 0:
         for hostname in host: 
-            syscmd(f'ssh {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"')
+            syscmd(f'ssh -oStrictHostKeyChecking=no {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"')
     else:
         logging.warning(f'{"Warning":7} : Cannot flush cache without root privileges!')
 

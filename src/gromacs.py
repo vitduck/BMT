@@ -84,7 +84,7 @@ class Gromacs(Bmt):
                     'GMX_FORCE_UPDATE_DEFAULT_GPU=true ' )
             
             self.runcmd = ( 
-               f'ssh {self.host[0]} ' 
+               f'ssh -oStrictHostKeyChecking=no {self.host[0]} ' 
                f'"cd {self.outdir}; '
                 'module load singularity; ' 
                f'{gmx_export} '

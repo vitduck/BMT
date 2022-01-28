@@ -9,7 +9,7 @@ from utils import sync
 from bmt   import Bmt
 
 class Ior(Bmt):
-    def __init__(self, transfer='1M', block='16M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
+    def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
         super().__init__(**kwargs)
 
         self.name     = 'IOR'
