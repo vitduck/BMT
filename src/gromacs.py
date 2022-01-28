@@ -96,7 +96,7 @@ class Gromacs(Bmt):
             self.check_prerequisite('openmpi', '3.0' )
             
             self.runcmd = ( 
-               f'mpirun --hostfile {self.hostfile} '
+               f'mpirun --hostfile {self.hostfile} --allow-run-as-root '
                f'{self.bin} {self._mdrun()}' )
        
         super().run()

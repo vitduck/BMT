@@ -25,6 +25,9 @@ class StreamCuda(Stream):
         self.getopt()  
         
     def build(self): 
+        if os.path.exists(self.bin): 
+            return 
+
         self.check_prerequisite('cuda', '10.1')
 
         self.buildcmd += [

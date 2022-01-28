@@ -27,6 +27,7 @@ class Hpcnv(Bmt):
 
         return (
            f'mpirun '
+                '--allow-run-as-root '
 	       f'-np {nprocs} '
                 '--hostfile hostfile '
                 '--mca btl ^openib '

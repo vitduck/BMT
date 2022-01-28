@@ -78,6 +78,7 @@ class Qe(Bmt):
         # pass CUDA_VISIBLE_DEVICES to remote host
         self.runcmd = ( 
             'mpirun '
+            '--allow-run-as-root '
            f'-x CUDA_VISIBLE_DEVICES ' 
            f'-x NO_STOP_MESSAGE '
            f'--hostfile {self.hostfile} ')

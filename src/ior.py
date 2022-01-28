@@ -60,6 +60,7 @@ class Ior(Bmt):
 
         self.runcmd = (
             'mpirun '
+            '--allow-run-as-root '
            f'--hostfile {self.hostfile} '
            f'{self.bin} '
            f'-t {self.transfer} ' 

@@ -23,6 +23,9 @@ class StreamOmp(Stream):
         self.getopt()
         
     def build(self): 
+        if os.path.exists(self.bin): 
+            return 
+
         # default gcc
         if 'CC' not in os.environ: 
             os.environ['CC'] = 'gcc'

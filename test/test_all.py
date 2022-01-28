@@ -10,7 +10,7 @@ test = []
 
 bmt  = { 
         'stream/omp' : { 
-            'env' : [],  
+            'env' : [ 'gcc/4.8.5' ],  
             'cmd' : './test_stream_omp.py' }, 
         'stream/omp/intel' : { 
             'env' : [ 'intel/18.0.2' ], 
