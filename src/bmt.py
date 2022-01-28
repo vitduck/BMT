@@ -166,7 +166,6 @@ class Bmt:
 
     def summary(self, sort=0, order='>'): 
         cpu_model = '' 
-        gpu_model = self.gpu['0'][0]
 
         # Intel CPU
         if re.search('^Intel', self.cpu['Model']): 
@@ -179,7 +178,11 @@ class Bmt:
         if self.sif: 
             self.name = self.name + '/NGC'
 
-        print(f'\n>> {self.name}: {" / ".join([cpu_model, gpu_model])}')
+        if self.gpu: 
+            gpu_model = self.gpu['0'][0]
+            print(f'\n>> {self.name}: {" / ".join([cpu_model, gpu_model])}')
+        else: 
+            print(f'\n>> {self.name}: {cpu_model}')
 
         # sort data 
         if sort:  

@@ -19,7 +19,7 @@ bmt  = {
             'env' : [ 'cuda/10.1' ], 
             'cmd' : './test_stream_cuda.py' }, 
         'iozone' : { 
-            'env' : [ ], 
+            'env' : [], 
             'cmd' : './test_iozone.py' }, 
         'ior' : { 
             'env' : [ 'gcc/8.3.0', 'mpi/openmpi-3.1.5' ],  
@@ -28,16 +28,16 @@ bmt  = {
             'env' : [ 'nvidia_hpc_sdk/21.5' ],  
             'cmd' : './test_qe.py' }, 
         'qe/ngc' : { 
-            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc', 'singularity/3.6.4' ], 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4' ], 
             'cmd' : './test_qe_ngc.py' }, 
         'gromacs' : { 
-            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-3.1.5_hwloc' ], 
+            'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5' ], 
             'cmd' : './test_gromacs.py' }, 
         'gromacs/ngc' : { 
-            'env' : [ ], 
+            'env' : [], 
             'cmd' : './test_gromacs_ngc.py' }, 
         'gromacs/gpudirect/ngc' : { 
-            'env' : [ ], 
+            'env' : [], 
             'cmd' : './test_gromacs_ngc.py --gpudirect' }, 
         'hpl' : { 
             'env' : [ 'gcc/8.3.0', 'cuda/10.1', 'cudampi/openmpi-4.0.5', 'singularity/3.6.4'], 

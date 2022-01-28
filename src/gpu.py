@@ -8,11 +8,15 @@ from utils import syscmd
 
 def nvidia_smi(host):
     gpu        = {} 
-    nvidia_smi = syscmd(f'ssh -oStrictHostKeyChecking=no {host} "nvidia-smi -L"')
 
-    for line in nvidia_smi.splitlines():
-        gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): \w+ (.+?) \(UUID: (.+?)\)', line).groups()
-        gpu[gpu_id] = [gpu_name, gpu_uuid] 
+    try: 
+        nvidia_smi = syscmd(f'ssh -oStrictHostKeyChecking=no {host} "nvidia-smi -L"')
+
+        for line in nvidia_smi.splitlines():
+            gpu_id, gpu_name, gpu_uuid = re.search('^GPU (\d+): \w+ (.+?) \(UUID: (.+?)\)', line).groups()
+            gpu[gpu_id] = [gpu_name, gpu_uuid] 
+    except: 
+        pass
 
     return gpu
 
