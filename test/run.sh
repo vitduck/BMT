@@ -13,14 +13,14 @@
 module purge 
 module load python/3.9.5
 
-export PATH=/apps/Modules/3.2.10/bin/modulecmd:$PATH
+export PATH=/apps/Modules/3.2.10/bin:$PATH
 export PYTHONPATH=$(readlink --canonicalize ../src):$PYTHONPATH
 
-time -p ./test_all.py  \
-    'stream/omp/'      \
+time ./test_all.py     \
+    'stream/omp'       \
     'stream/omp/intel' \
     'stream/cuda'      \
-    'iozne'            \
+    'iozone'           \
     'ior'              \
     'qe/ngc'           \
     'gromacs/ngc'      \
