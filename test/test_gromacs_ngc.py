@@ -6,7 +6,7 @@ gmx = Gromacs(
     prefix = '../run/GROMACS', 
     input  = '../input/GROMACS/water_1536.tpr',
     sif    = '../image/gromacs-2021.3.sif',
-    nsteps = 60000 )  
+    nsteps = 20000 )  
 
 gmx.info()
 gmx.run()
