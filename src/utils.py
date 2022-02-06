@@ -5,12 +5,19 @@ import re
 import sys
 import logging
 import subprocess
+import collections 
+
+from ssh import ssh_cmd
+
+# emulate perl vivificaiton
+def autovivification(): 
+    return collections.defaultdict(autovivification)
 
 # clear cache on client (root required)
-def sync(host=[]): 
+def sync(nodelist=[]): 
     if os.getuid() == 0:
-        for hostname in host: 
-            syscmd(f'ssh -oStrictHostKeyChecking=no {hostname} "sync; echo 1 > /proc/sys/vm/drop_caches"')
+        for node in nodelist: 
+            syscmd(f'{ssh_cmd} {node} "sync; echo 1 > /proc/sys/vm/drop_caches"')
     else:
         logging.warning(f'{"Warning":7} : Cannot flush cache without root privileges!')
 

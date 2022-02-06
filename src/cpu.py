@@ -5,43 +5,44 @@ import logging
 import os
 import sys
 
+from ssh   import ssh_cmd
 from utils import syscmd
 
-def lscpu(host): 
-    cpu   = {} 
+def lscpu(node): 
+    host  = {} 
     numa  = []
-    lscpu = syscmd(f'ssh -oStrictHostKeyChecking=no {host} lscpu')
+    lscpu = syscmd(f'{ssh_cmd} {node} lscpu')
 
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 
-            cpu['CPUs'] = line.split()[-1]
+            host['CPUs'] = line.split()[-1]
         if re.search('Model name', line): 
-            cpu['Model'] = ' '.join(line.split()[2:])
+            host['Model'] = ' '.join(line.split()[2:])
         if re.search('Thread\(s\)', line): 
-            cpu['Threads'] = line.split()[-1]
+            host['Threads'] = line.split()[-1]
         if re.search('^NUMA node\d+', line): 
             numa.append(line.split()[-1])
         if re.search('Flags', line): 
             avx = re.findall('(avx\w+)\s+', line)
-            cpu['AVXs'] = ', '.join([flag.upper() for flag in avx])
+            host['AVXs'] = ', '.join([flag.upper() for flag in avx])
 
-        cpu['NUMA'] = numa
+        host['NUMA'] = numa
 
-    return cpu
+    return host
 
-def cpu_info(cpu): 
+def cpu_info(host): 
     logging.basicConfig( 
         stream  = sys.stderr,
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    logging.info(f'{"CPU":<7} : {cpu["Model"]}')
-    logging.info(f'{"Cores":<7} : {cpu["CPUs"]}')
-    logging.info(f'{"Threads":<7} : {cpu["Threads"]}')
+    logging.info(f'{"CPU":<7} : {host["Model"]}')
+    logging.info(f'{"Cores":<7} : {host["CPUs"]}')
+    logging.info(f'{"Threads":<7} : {host["Threads"]}')
 
     # NUMA domain
-    for i in range(0, len(cpu['NUMA'])): 
+    for i in range(0, len(host['NUMA'])): 
         numa = f'NUMA {++i}'
-        logging.info(f'{numa:<7} : {cpu["NUMA"][i]}')
+        logging.info(f'{numa:<7} : {host["NUMA"][i]}')
 
-    logging.info(f'{"AVXs":<7} : {cpu["AVXs"]}')
+    logging.info(f'{"AVXs":<7} : {host["AVXs"]}')

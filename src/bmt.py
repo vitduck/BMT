@@ -5,20 +5,21 @@ import re
 import sys
 import inspect
 import logging
-import pprint
 import packaging.version
 import datetime
 import prerequisite
 
 from tabulate import tabulate
-from utils    import syscmd
+from pprint   import pprint
+from utils    import syscmd, autovivification
 from cpu      import lscpu, cpu_info
 from gpu      import nvidia_smi, gpu_info
 from env      import module_list
 from slurm    import slurm_nodelist
+from ssh      import ssh_cmd
 
 class Bmt: 
-    version = '0.6'
+    version = '0.8'
     
     # initialize root logger 
     logging.basicConfig( 
@@ -26,22 +27,19 @@ class Bmt:
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    def __init__(self, prefix='./', sif=None, nodes=0, ngpus=0, ntasks=0, omp=1):
-        self.name     = ''
+    def __init__(self, name, count=1, prefix='./', sif=None, nnodes=0, ngpus=0, ntasks=0, omp=0, gpu=False):
+        self.src      = []
+        self.buildcmd = []
+        self.runcmd   = ''
+
+        self.nodelist = slurm_nodelist()
+
+        self.result   = autovivification() 
         self.header   = []
-        self.result   = [] 
+        self.table    = [] 
 
-        self._bin     = ''
-        self._args    = {} 
-        
-        self.host     = slurm_nodelist()
-        self.hostfile = 'hostfile'
-
-        self.cpu      = lscpu(self.host[0])
-        self.gpu      = nvidia_smi(self.host[0])
-
-        self.sif      = sif 
-
+        self.name     = name
+        self.count    = count
         self.prefix   = os.path.abspath(prefix)
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
         self.bindir   = os.path.join(self.prefix, 'bin')
@@ -49,19 +47,33 @@ class Bmt:
         self.outdir   = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
         self.input    = ''
         self.output   = ''
-
-        self._nodes   = nodes  or len(self.host)
-        self._ngpus   = ngpus  or len(self.gpu.keys())
+        self.hostfile = 'hostfile'
+        self.sif      = sif 
+        
+        self._bin     = ''
+        self._args    = {} 
+        self._nnodes  = nnodes or len(self.nodelist)
         self._ntasks  = ntasks
         self.omp      = omp
+        self.gpu      = gpu
 
-        self.buildcmd = []
-        self.runcmd   = ''
-        
+        # Host CPU
+        self.host     = lscpu(self.nodelist[0])
+
+        # GPU device
+        if gpu: 
+            self.device = nvidia_smi(self.nodelist[0])
+            self._ngpus = ngpus or len(self.device.keys())
+
         # NVIDIA/NGC 
-        if self.sif:
-            self.sif  = os.path.abspath(self.sif)
-     
+        if sif:
+            self.name = self.name + '/NGC'
+            self.sif  = os.path.abspath(sif)
+
+        # create build/bin directory 
+        os.makedirs(self.builddir, exist_ok=True) 
+        os.makedirs(self.bindir  , exist_ok=True) 
+    
     # bin decorator 
     @property 
     def bin(self): 
@@ -73,12 +85,12 @@ class Bmt:
   
     # nodes decorator 
     @property 
-    def nodes(self): 
-        return self._nodes
+    def nnodes(self): 
+        return self._nnodes
 
-    @nodes.setter 
-    def nodes(self, nodes): 
-        self._nodes = nodes
+    @nnodes.setter 
+    def nnodes(self, nnodes): 
+        self._nnodes = nnodes
 
     # ntasks decorator 
     @property 
@@ -113,12 +125,12 @@ class Bmt:
 
     # print object attributeis for debug purpose 
     def debug(self): 
-        pprint.pprint(vars(self))
+        pprint(vars(self))
     
     # check for minimum software/hardware requirements 
     def check_prerequisite(self, module, min_ver):  
         # insert hostname after ssh 
-        cmd     = prerequisite.cmd[module].replace('ssh', f'ssh -oStrictHostKeyChecking=no {self.host[0]}')
+        cmd     = prerequisite.cmd[module].replace('ssh', f'{ssh_cmd} {self.nodelist[0]}')
         regex   = prerequisite.regex[module]
         version = re.search(regex, syscmd(cmd)).group(1)
                 
@@ -129,14 +141,20 @@ class Bmt:
     # OpenMPI: write hostfile
     def write_hostfile(self): 
         with open(self.hostfile, 'w') as fh:
-            for host in self.host[0:self.nodes]:
+            for host in self.nodelist[0:self.nnodes]:
                 fh.write(f'{host} slots={self.ntasks}\n')
 
-    # returns if previously built binary exists 
-    def build(self):
-        os.makedirs(self.builddir, exist_ok=True) 
-        os.makedirs(self.bindir  , exist_ok=True) 
+    # download src 
+    def download(self): 
+        for url in self.src: 
+            file_name = url.split('/')[-1]
+            file_path = '/'.join([self.builddir, file_name])
 
+            if not os.path.exists(file_path): 
+                syscmd(f'wget {url} -O {file_path}')
+
+    # build 
+    def build(self):
         for cmd in self.buildcmd: 
             syscmd(cmd)
 
@@ -159,36 +177,26 @@ class Bmt:
         pass
 
     def info(self): 
-        cpu_info(self.cpu)
-        gpu_info(self.gpu)
+        cpu_info(self.host)
+
+        if self.gpu: 
+            gpu_info(self.device)
 
         module_list()
 
     def summary(self, sort=0, order='>'): 
-        cpu_model = '' 
-
-        # Intel CPU
-        if re.search('^Intel', self.cpu['Model']): 
-            cpu_model = "-".join(self.cpu['Model'].split()[1:4]) 
-        # AMD CPU
-        else: 
-            cpu_model = "-".join(self.cpu['Model'].split()[1:3]) 
-
-        # NGC 
-        if self.sif: 
-            self.name = self.name + '/NGC'
+        sys_info = self.host['Model'] 
 
         if self.gpu: 
-            gpu_model = self.gpu['0'][0]
-            print(f'\n>> {self.name}: {" / ".join([cpu_model, gpu_model])}')
-        else: 
-            print(f'\n>> {self.name}: {cpu_model}')
-
+            sys_info += ' / ' + self.device['0'][0]
+            
+        print(f'\n>> {self.name}: {sys_info}')
+        
         # sort data 
-        if sort:  
-            if order == '>': 
-                self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)
-            else:
-                self.result =  sorted(self.result, key=lambda x : float(x[-1]))
+        #  if sort:  
+            #  if order == '>': 
+                #  self.result =  sorted(self.result, key=lambda x : float(x[-1]), reverse=True)
+            #  else:
+                #  self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
-        print(tabulate(self.result, self.header, tablefmt='psql', floatfmt='.2f', numalign='decimal', stralign='right'))
+        print(tabulate(self.table, self.header, tablefmt='grid', stralign='center'))
