@@ -6,11 +6,12 @@ import argparse
 
 from statistics import mean
 from env        import module_list
+from gpu        import device_query
 from ssh        import ssh_cmd
 from bmt        import Bmt
 
 class StreamCuda(Bmt):
-    def __init__(self, arch='sm_70', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
+    def __init__(self, arch='', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
 
         super().__init__('STREAM/CUDA', **kwargs)
         
@@ -22,7 +23,7 @@ class StreamCuda(Bmt):
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu']
 
         self.kernel = ['Copy', 'Mul', 'Add', 'Triad', 'Dot']
-        self.header = ['Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
+        self.header = ['Arch', 'Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
 
         self.arch   = arch 
         self.mem    = mem 
@@ -33,6 +34,10 @@ class StreamCuda(Bmt):
         
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
+
+        if not self.arch: 
+            runtime, cuda_cc = device_query(self.nodelist[0])
+            self.arch        = f'sm_{cuda_cc}'
 
         self.buildcmd += [
            ('nvcc '
@@ -50,17 +55,17 @@ class StreamCuda(Bmt):
 
         self.mkoutdir()
     
-        for i in range(1, self.count+1): 
-            self.output = 'stream-cuda.out'
-
-            if self.count > 1: 
-                self.output += f'.{i}'
-
-            self.runcmd = ( 
-               f'{ssh_cmd} {self.nodelist[0]} '          # ssh to remote host 
+        self.runcmd = ( 
+               f'{ssh_cmd} {self.nodelist[0]} '                           # ssh to remote host 
                f'"builtin cd {self.outdir}; '                             # cd to caller dir
                f'{self.bin} -s {str(self.size)} -n {str(self.ntimes)}"')  # stream_cuda cmd 
-        
+
+        for i in range(1, self.count+1): 
+            self.output = 'stream-cuda.out'
+            
+            if self.count > 1: 
+                self.output += f'.{i}'
+                    
             super().run(1) 
 
     def parse(self):
@@ -68,24 +73,11 @@ class StreamCuda(Bmt):
             for line in output_fh:
                 for kernel in self.kernel:
                     if re.search(f'{kernel}:?', line):
-                        if not self.result[kernel]: 
-                            self.result[kernel] = [] 
+                        if not self.result[self.arch][kernel]: 
+                            self.result[self.arch][kernel] = [] 
 
-                        self.result[kernel].append(float(line.split()[1])/1000)
+                        self.result[self.arch][kernel].append(float(line.split()[1])/1000)
     
-    def summary(self): 
-        stream_bandwidth = [] 
-
-        for kernel in self.result:
-            kernel_bandwidth  = self.result[kernel] 
-            average_bandwidth = mean(kernel_bandwidth)
-
-            stream_bandwidth.append("\n".join(list(map("{:.2f}".format, kernel_bandwidth))+[f'<{average_bandwidth:.2f}>']))
-
-        self.table.append(stream_bandwidth)
-
-        super().summary()
-
     def getopt(self):
         parser = argparse.ArgumentParser(
             usage           = '%(prog)s --arch sm_70',

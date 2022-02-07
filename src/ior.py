@@ -10,10 +10,11 @@ from bmt   import Bmt
 
 class Ior(Bmt):
     def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
-        super().__init__(**kwargs)
+        super().__init__('IOR', **kwargs)
 
-        self.name     = 'IOR'
         self.bin      = 'ior'
+        self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
+
         self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
         
         self.transfer = transfer
@@ -31,7 +32,6 @@ class Ior(Bmt):
             return
 
         self.buildcmd += [
-           f'wget https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz',
            f'cd {self.builddir}; tar xf ior-3.3.0.tar.gz', 
           (f'cd {self.builddir}/ior-3.3.0;' 
             './configure '
@@ -49,14 +49,6 @@ class Ior(Bmt):
 
         self.mkoutdir()
         self.write_hostfile() 
-
-        self.output = (
-            'ior-'
-           f'n{self.nodes}-'
-           f'p{self.ntasks}-'
-           f't{self.transfer}-'
-           f'b{self.block}-'
-           f's{self.segment}.out')
 
         self.runcmd = (
             'mpirun '
@@ -84,18 +76,39 @@ class Ior(Bmt):
         if directive: 
             self.runcmd += f'-O "{",".join(directive)}"'
   
-        sync(self.host)
-        super().run(1) 
-        self.clean() 
+        sync(self.nodelist)
+        
+        for i in range(1, self.count+1): 
+            self.output = (
+                'ior-'
+               f'n{self.nnodes}-'
+               f'p{self.ntasks}-'
+               f't{self.transfer}-'
+               f'b{self.block}-'
+               f's{self.segment}.out')
+
+            if self.count > 1: 
+                self.output += f'.{i}'
+
+            super().run(1) 
+            
+            self.clean() 
 
     def parse(self): 
+        key   = ",".join(map(str, [self.nnodes, self.ntasks, self.transfer, self.block, self.segment]))
+
+        write = [] 
+        read  = [] 
+
         with open(self.output, 'r') as output_fh:
             line = output_fh.readline() 
 
             while line: 
+                # append total size to key 
                 if re.search('aggregate filesize', line): 
                     size, unit = line.split()[-2:] 
-                    size = f'{size}{unit[0]}'
+                    size  = f'{size}{unit[0]}'
+                    key  += f',{size}'
                     # size = f'{size}{unit[0].lower()}'
 
                 if re.search('Summary', line): 
@@ -106,7 +119,16 @@ class Ior(Bmt):
 
                 line = output_fh.readline() 
 
-        self.result.append([self.nodes, self.ntasks, self.transfer, self.block, self.segment, size, write[3], read[3], write[7], read[7]])
+        if not self.result[key]['write']: 
+            self.result[key]['write']        = [] 
+            self.result[key]['read']         = [] 
+            self.result[key]['random_write'] = [] 
+            self.result[key]['random_read']  = [] 
+    
+        self.result[key]['write'].append(float(write[3]))
+        self.result[key]['read' ].append(float(read[3]))
+        self.result[key]['random_write'].append(float(write[7]))
+        self.result[key]['random_read' ].append(float(read[7]))
 
     def clean(self): 
         for io_file in glob('testFile*'): 
@@ -129,7 +151,7 @@ class Ior(Bmt):
                 '-s, --segment        segment count\n'
                 '    --ltrsize        lustre stripe size\n' 
                 '    --ltrcount       lustre stripe count\n'
-                '    --nodes          number of nodes\n'
+                '    --nnodes         number of nodes\n'
                 '    --ntasks          number of mpi tasks per node\n' ))
 
         # options for stream setup
@@ -141,7 +163,7 @@ class Ior(Bmt):
         opt.add_argument('-s', '--segment'  , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ltrsize'  , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ltrcount' , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nodes'    , type=int, metavar='' , help=argparse.SUPPRESS)
+        opt.add_argument(      '--nnodes'   , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ntasks'   , type=int, metavar='' , help=argparse.SUPPRESS)
 
         

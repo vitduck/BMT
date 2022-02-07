@@ -9,14 +9,15 @@ import packaging.version
 import datetime
 import prerequisite
 
-from tabulate import tabulate
-from pprint   import pprint
-from utils    import syscmd, autovivification
-from cpu      import lscpu, cpu_info
-from gpu      import nvidia_smi, gpu_info
-from env      import module_list
-from slurm    import slurm_nodelist
-from ssh      import ssh_cmd
+from tabulate   import tabulate
+from statistics import mean
+from pprint     import pprint
+from utils      import syscmd, autovivification
+from cpu        import lscpu, cpu_info
+from gpu        import nvidia_smi, gpu_info
+from env        import module_list
+from slurm      import slurm_nodelist
+from ssh        import ssh_cmd
 
 class Bmt: 
     version = '0.8'
@@ -192,6 +193,15 @@ class Bmt:
             
         print(f'\n>> {self.name}: {sys_info}')
         
+        # unpact hash key 
+        for key in self.result: 
+            row = key.split(',')
+
+            for perf in self.result[key]: 
+                row.append(self._cell_format(self.result[key][perf])) 
+
+            self.table.append(row)
+
         # sort data 
         #  if sort:  
             #  if order == '>': 
@@ -200,3 +210,14 @@ class Bmt:
                 #  self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
         print(tabulate(self.table, self.header, tablefmt='grid', stralign='center'))
+
+    def _cell_format(self, cell):  
+        average   = mean(cell)
+        formatted = '' 
+
+        if self.count > 1: 
+            formatted = "\n".join(list(map("{:.2f}".format, cell))+[f'<{average:.2f}>'])
+        else:
+            formatted = f'{cell[0]:.2f}'
+
+        return formatted

@@ -10,91 +10,109 @@ from bmt   import Bmt
 
 class Iozone(Bmt):
     def __init__(self, size='64M', record='1M', threads=4, **kwargs): 
-        super().__init__(**kwargs)
-        
-        self.name      = 'IOZONE'
+        super().__init__('IOZONE', **kwargs)
+
         self.bin       = 'iozone'
+        self.src       = ['http://www.iozone.org/src/current/iozone3_491.tgz']
+        
         self.header    = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
-        self.bandwidth = []
 
         self.size      = size
         self.record    = record
-        self.threads    = threads
+        self.threads   = threads
 
         self.getopt() 
 
     def build(self): 
-        if os.path.exists(self.bin): 
+        if os.path.exists(self.bin):
             return 
 
         self.buildcmd += [
-           f'wget http://www.iozone.org/src/current/iozone3_491.tgz -O {self.builddir}/iozone3_491.tgz',
            f'cd {self.builddir}; tar xf iozone3_491.tgz', 
            f'cd {self.builddir}/iozone3_491/src/current; make linux', 
            f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}']
 
         super().build() 
 
+    def write_hostfile(self): 
+        outdir = os.path
+
+        with open(self.hostfile, 'w') as fh:
+            for node in self.nodelist:
+                for threads in range(self.threads): 
+                    fh.write(f'{node} {self.outdir} {self.bin}\n')
+
     def run(self): 
         self.mkoutdir()
         self.write_hostfile() 
 
         option = (
-           f'-s {self.size} '                         # file size per threads 
-           f'-r {self.record} '                       # record size 
-           f'-+m {self.hostfile} '                    # hostfile: <hostname> <outdir> <iozone bin> 
-           f'-t {str(self.threads*len(self.host))} ' # total number of threads 
-            '-c '                                     # includes close in timing calculation  
-            '-e '                                     # incldues flush in timing calculation
-            '-w '                                     # keep temporary files for read test
-            '-+n')                                    # skip retests
+           f'-s {self.size} '                            # file size per threads 
+           f'-r {self.record} '                          # record size 
+           f'-+m {self.hostfile} '                       # hostfile: <hostname> <outdir> <iozone bin> 
+           f'-t {str(self.threads*len(self.nodelist))} ' # total number of threads 
+            '-c '                                        # includes close in timing calculation  
+            '-e '                                        # incldues flush in timing calculation
+            '-w '                                        # keep temporary files for read test
+            '-+n')                                       # skip retests
         
-        self.bandwidth = [] 
+        for i in range(1, self.count+1): 
+            write_output  = f'iozone-i0-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+            read_output   = f'iozone-i1-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+            random_output = f'iozone-i2-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+
+            if self.count > 1: 
+                write_output  += f'.{i}'
+                read_output   += f'.{i}'
+                random_output += f'.{i}'
+
+            # write
+            self.output = write_output
+            self.runcmd = f'RSH=ssh {self.bin} -i 0 {option}'
+
+            sync(self.nodelist)
+            super().run(1) 
         
-        # write
-        self.output = f'iozone-i0-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
-        self.runcmd = f'RSH=ssh {self.bin} -i 0 {option}'
+            # read 
+            self.output = read_output
+            self.runcmd = f'RSH=ssh {self.bin} -i 1 {option}'
 
-        sync(self.host)
-        super().run(1) 
+            sync(self.nodelist)
+            super().run(1) 
         
-        # read 
-        self.output = f'iozone-i1-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
-        self.runcmd = f'RSH=ssh {self.bin} -i 1 {option}'
+            # random read/write
+            #-I: Use direct IO 
+            #-O: Return result in OPS
+            self.output = random_output
+            self.runcmd = f'RSH=ssh {self.bin} -i 2 -I -O {option}'
 
-        sync(self.host)
-        super().run(1) 
-        
-        # random read/write
-        # -I: Use direct IO 
-        # -O: Return result in OPS
-        self.output = f'iozone-i2-n{self.nodes}-t{self.threads}-s{self.size}-r{self.record}.out'
-        self.runcmd = f'RSH=ssh {self.bin} -i 2 -I -O {option}'
+            sync(self.nodelist)
+            super().run(1) 
 
-        sync(self.host)
-        super().run(1) 
-
-        self.result.append([self.nodes, self.threads, self.size, self.record] + self.bandwidth)
-
-        self.clean()
-
-    def write_hostfile(self): 
-        outdir = os.path
-
-        with open(self.hostfile, 'w') as fh:
-            for host in self.host:
-                for threads in range(self.threads): 
-                    fh.write(f'{host} {self.outdir} {self.bin}\n')
+            self.clean()
 
     def parse(self):
+        key = ",".join(map(str, [self.nnodes, self.threads, self.size, self.record]))
+
         with open(self.output, 'r') as output_fh: 
             for line in output_fh: 
-                if re.search('Children see throughput', line):
-                    result, unit = line.split()[-2:]
-                    if unit == 'kB/sec': 
-                        self.bandwidth.append(float(result)/1024)
+                match = re.search('Children.+?(initial|random)? (reader|writer)', line)
+
+                if match:
+                    (mode, io) = match.groups() 
+                    bandwidth  = line.split()[-2]
+
+                    # random I/O
+                    if mode == 'random': 
+                        if not self.result[key][f'random_{io}']: 
+                            self.result[key][f'random_{io}'] = [] 
+
+                        self.result[key][f'random_{io}'].append(float(bandwidth))
                     else: 
-                        self.bandwidth.append(float(result))
+                        if not self.result[key][io]:  
+                            self.result[key][io] = [] 
+
+                        self.result[key][io].append(float(bandwidth)/1024)
 
     def clean(self): 
         for io_file in sorted(glob(f'{self.outdir}/*DUMMY*')):

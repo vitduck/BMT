@@ -5,8 +5,7 @@ import re
 import logging
 import argparse
 
-from statistics import mean
-from bmt        import Bmt
+from bmt import Bmt
 
 class StreamOmp(Bmt):
     def __init__ (self, size=40000000, ntimes=100, affinity='spread', **kwargs):
@@ -55,13 +54,7 @@ class StreamOmp(Bmt):
     def run(self): 
         self.mkoutdir() 
 
-        for i in range(1, self.count+1): 
-            self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
-            
-            if self.count > 1: 
-                self.output += f'.{i}'
-
-            self.runcmd = (
+        self.runcmd = (
                f'ssh -oStrictHostKeyChecking=no {self.nodelist[0]} ' # ssh to remote host 
                f'"builtin cd {self.outdir}; '                        # cd to caller dir 
                f'module load {self.module}; '                        # for intel compiler
@@ -69,33 +62,26 @@ class StreamOmp(Bmt):
                f'OMP_PROC_BIND={self.affinity} '                     # thread affinity
                f'OMP_NUM_THREADS={str(self.omp)} '                   # thread number 
                f'{self.bin}"')                                       # stream_omp cmd 
-        
+
+        for i in range(1, self.count+1): 
+            self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
+
+            if self.count > 1: 
+                self.output += f'.{i}'
+
             super().run(1)
 
     def parse(self):
+        key = ",".join(map(str, [self.affinity, self.omp]))
+
         with open(self.output, 'r') as output_fh:
             for line in output_fh:
                 for kernel in self.kernel:
                     if re.search(f'{kernel}:?', line):
-                        if not self.result[self.affinity][self.omp][kernel]: 
-                            self.result[self.affinity][self.omp][kernel] = [] 
+                        if not self.result[key][kernel]: 
+                            self.result[key][kernel] = []
 
-                        self.result[self.affinity][self.omp][kernel].append(float(line.split()[1])/1000)
-
-    def summary(self): 
-        for affinity in self.result: 
-            for thread in self.result[affinity]: 
-                stream_bandwidth = [thread, affinity]
-                
-                for kernel in self.result[affinity][thread]: 
-                    kernel_bandwidth  = self.result[affinity][thread][kernel] 
-                    average_bandwidth = mean(kernel_bandwidth)
-
-                    stream_bandwidth.append("\n".join(list(map("{:.2f}".format, kernel_bandwidth))+[f'<{average_bandwidth:.2f}>']))
-
-                self.table.append(stream_bandwidth)
-
-        super().summary()
+                        self.result[key][kernel].append(float(line.split()[1])/1000)
 
     def getopt(self):
         parser = argparse.ArgumentParser(
