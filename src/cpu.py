@@ -23,7 +23,7 @@ def lscpu(node):
         if re.search('^NUMA node\d+', line): 
             numa.append(line.split()[-1])
         if re.search('Flags', line): 
-            avx = re.findall('(avx\w+)\s+', line)
+            avx = re.findall('(avx\w*)\s+', line)
             host['AVXs'] = ', '.join([flag.upper() for flag in avx])
 
         host['NUMA'] = numa

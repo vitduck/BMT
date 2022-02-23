@@ -30,13 +30,13 @@ class Hpl(Hpcnv):
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
-        self._reset    = False
+        self._auto     = False
 
         self.getopt()
 
         # set matrix size
         if not self.size: 
-            self._reset = True
+            self._auto = True
             self._matrix_size() 
 
         # mpi grid 
@@ -44,26 +44,26 @@ class Hpl(Hpcnv):
             self._mpi_grid() 
  
     # recalcuate MPI grid and matrix size
-    @Hpcnv.nodes.setter
-    def nodes(self, nodes): 
-        super(Hpl, Hpl).nodes.__set__(self, nodes) 
+    @Hpcnv.nnodes.setter
+    def nnodes(self, number_of_nodes): 
+        super(Hpl, Hpl).nnodes.__set__(self, number_of_nodes)
         
         self._mpi_grid() 
 
-        if self._reset and not self.args['size']:
+        if self._auto and not self.args['size']:
             self._matrix_size()
 
     @Hpcnv.ngpus.setter
-    def ngpus(self, ngpus): 
-        super(Hpl, Hpl).ngpus.__set__(self, ngpus) 
+    def ngpus(self, number_of_gpus): 
+        super(Hpl, Hpl).ngpus.__set__(self, number_of_gpus) 
 
         self._mpi_grid() 
         
-        if self._reset and not self.args['size']: 
+        if self._auto and not self.args['size']:
             self._matrix_size()
 
     def write_input(self):
-        self.input = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.dat'
+        self.input = f'HPL-n{self.nnodes}-g{self.ngpus}-t{self.omp}.dat'
 
         with open(self.input, 'w') as fh:
             fh.write(f'HPL input\n')
@@ -127,9 +127,13 @@ class Hpl(Hpcnv):
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
     def run(self): 
-        self.output = f'HPL-n{self.nodes}-g{self.ngpus}-t{self.omp}.out'
+        self.output = f'HPL-n{self.nnodes}-g{self.ngpus}-t{self.omp}.out'
 
-        super().run()
+        for i in range(1, self.count+1): 
+            if self.count > 1: 
+                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
+
+            super().run()
 
     def parse(self): 
         with open(self.output, 'r') as output_fh:
@@ -143,14 +147,21 @@ class Hpl(Hpcnv):
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    self.result.append([self.nodes, self.ngpus, self.omp, config, size, blocksize, p, q, status, float(gflops)/1000, time])
-                
+                    key = ",".join(map(str, [self.nnodes, self.ngpus, self.omp, config, size, blocksize, p, q, status]))
+
+                    if not self.result[key]['flops']: 
+                        self.result[key]['flops'] = [] 
+                        self.result[key]['time']  = [] 
+
+                    self.result[key]['flops'].append(float(gflops)/1000) 
+                    self.result[key]['time' ].append( float(time)) 
+
                 line = output_fh.readline()
 
     def _mpi_grid(self): 
         self.pgrid = []
         self.qgrid = []
-        tot_ngpus  = self.nodes*self.ngpus
+        tot_ngpus  = self.nnodes * self.ngpus
 
         for i in range(1, tot_ngpus + 1):
             if tot_ngpus % i == 0:
@@ -167,9 +178,9 @@ class Hpl(Hpcnv):
             self.qgrid.pop()
 
     def _matrix_size(self):
-        tot_mem = self.nodes * self.ngpus * gpu_memory(self.host[0])
+        tot_mem = self.nnodes * self.ngpus * gpu_memory(self.nodelist[0])
 
-        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
+        self.size = [10000*int(sqrt(0.9*tot_mem*1024**2/8)/10000)]
 
     def getopt(self):
         parser = argparse.ArgumentParser(
@@ -195,7 +206,7 @@ class Hpl(Hpcnv):
                 '    --nbmin            list of NBMIN\n'
                 '    --ndiv             list of NDIV\n'
                 '    --rfact            list of RFACT variants\n'
-                '    --nodes            number of nodes\n'
+                '    --nnodes           number of nodes\n'
                 '    --ngpus            number of gpus per node\n'
                 '    --omp              number of omp threads\n' ))
 
@@ -213,7 +224,7 @@ class Hpl(Hpcnv):
         opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--nodes'    , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--nnodes'   , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'    , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
 

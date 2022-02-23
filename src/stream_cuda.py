@@ -6,30 +6,35 @@ import argparse
 
 from statistics import mean
 from env        import module_list
-from gpu        import device_query
+from gpu        import device_query, nvidia_smi, gpu_info
 from ssh        import ssh_cmd
 from bmt        import Bmt
 
 class StreamCuda(Bmt):
     def __init__(self, arch='', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
-
         super().__init__('STREAM/CUDA', **kwargs)
-        
-        self.bin    = 'stream_cuda'
+ 
         self.src    = [ 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/Stream.h', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/main.cpp', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.h',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu']
+        self.bin    = os.path.join(self.bindir,'stream_cuda') 
 
         self.kernel = ['Copy', 'Mul', 'Add', 'Triad', 'Dot']
         self.header = ['Arch', 'Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
-
+       
         self.arch   = arch 
         self.mem    = mem 
         self.size   = size 
         self.ntimes = ntimes 
-        
+            
+        self.device = nvidia_smi(self.nodelist[0])
+
+        # default number of GPUs
+        if not self.ngpus: 
+            self.ngpus = len(self.device.keys())
+
         self.getopt()  
         
     def build(self): 
@@ -46,7 +51,9 @@ class StreamCuda(Bmt):
                 '-DCUDA '
                f'-arch={self.arch} '
                f'-D{self.mem} '
-               f'-o {self.bin} {self.builddir}/main.cpp {self.builddir}/CUDAStream.cu')]
+               f'-o {self.bin} '
+               f'{self.builddir}/main.cpp '
+               f'{self.builddir}/CUDAStream.cu')]
         
         super().build() 
 
@@ -56,15 +63,17 @@ class StreamCuda(Bmt):
         self.mkoutdir()
     
         self.runcmd = ( 
-               f'{ssh_cmd} {self.nodelist[0]} '                           # ssh to remote host 
-               f'"builtin cd {self.outdir}; '                             # cd to caller dir
-               f'{self.bin} -s {str(self.size)} -n {str(self.ntimes)}"')  # stream_cuda cmd 
+               f'{ssh_cmd} {self.nodelist[0]} '          # ssh to remote host 
+               f'"builtin cd {self.outdir}; '            # cd to caller dir
+               f'{self.bin} ' 
+               f'-s {str(self.size)} '
+               f'-n {str(self.ntimes)}"')
+
+        self.output = 'stream-cuda.out'
 
         for i in range(1, self.count+1): 
-            self.output = 'stream-cuda.out'
-            
             if self.count > 1: 
-                self.output += f'.{i}'
+                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
                     
             super().run(1) 
 

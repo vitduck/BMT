@@ -3,6 +3,7 @@
 from stream_cuda import StreamCuda
 
 stream = StreamCuda(
+    count  = 3, 
     prefix = '../run/STREAM/CUDA' )
 
 stream.info()

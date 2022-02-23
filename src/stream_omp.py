@@ -12,10 +12,9 @@ class StreamOmp(Bmt):
         super().__init__('STREAM', **kwargs)
 
         self.src      = ['https://www.cs.virginia.edu/stream/FTP/Code/stream.c']
-
         self.kernel   = ['Copy', 'Scale', 'Add', 'Triad']
         self.header   = ['Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
-        
+
         self.size     = size 
         self.ntimes   = ntimes 
         self.affinity = affinity
@@ -27,16 +26,16 @@ class StreamOmp(Bmt):
         # intel icc
         if os.environ.get('CC') == 'icc':  
             self.name    += '/ICC'
-            self.bin      = 'stream_icc'
             self.module   = 'intel'
             self.cc       = 'icc'
             self.cflags   = '-qopenmp'
+            self.bin      = os.path.join(self.bindir,'stream_icc') 
         else: 
-            self.bin      = 'stream_gcc'
             self.module   = 'gcc'
             self.cc       = 'gcc'
             self.cflags   = '-fopenmp'
-        
+            self.bin      = os.path.join(self.bindir,'stream_gcc')
+
         self.getopt()
 
     def build(self): 
@@ -47,7 +46,8 @@ class StreamOmp(Bmt):
                f'{self.cflags} '
                f'-DSTREAM_ARRAY_SIZE={str(self.size)} '
                f'-DNTIMES={str(self.ntimes)} '
-               f'-o {self.bin} {self.builddir}/stream.c')]
+               f'-o {self.bin} ' 
+               f'{self.builddir}/stream.c')]
         
         super().build() 
 
@@ -55,19 +55,19 @@ class StreamOmp(Bmt):
         self.mkoutdir() 
 
         self.runcmd = (
-               f'ssh -oStrictHostKeyChecking=no {self.nodelist[0]} ' # ssh to remote host 
-               f'"builtin cd {self.outdir}; '                        # cd to caller dir 
-               f'module load {self.module}; '                        # for intel compiler
-                'OMP_PLACES=threads '                                # thread placement 
-               f'OMP_PROC_BIND={self.affinity} '                     # thread affinity
-               f'OMP_NUM_THREADS={str(self.omp)} '                   # thread number 
-               f'{self.bin}"')                                       # stream_omp cmd 
+           f'ssh -oStrictHostKeyChecking=no {self.nodelist[0]} ' # ssh to remote host 
+           f'"builtin cd {self.outdir}; '                        # cd to caller dir 
+           f'module load {self.module}; '                        # for intel compiler
+            'OMP_PLACES=threads '                                # thread placement 
+           f'OMP_PROC_BIND={self.affinity} '                     # thread affinity
+           f'OMP_NUM_THREADS={str(self.omp)} '                   # thread number 
+           f'{self.bin}"')            
+
+        self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
 
         for i in range(1, self.count+1): 
-            self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
-
             if self.count > 1: 
-                self.output += f'.{i}'
+                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
             super().run(1)
 

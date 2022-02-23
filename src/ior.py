@@ -12,12 +12,11 @@ class Ior(Bmt):
     def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
         super().__init__('IOR', **kwargs)
 
-        self.bin      = 'ior'
         self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
-
+        self.bin      = os.path.join(self.bindir, 'ior')
         self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
-        
         self.transfer = transfer
+
         self.block    = block 
         self.segment  = segment
         self.ltrsize  = ltrsize
@@ -48,12 +47,10 @@ class Ior(Bmt):
         self.check_prerequisite('openmpi', '3')
 
         self.mkoutdir()
-        self.write_hostfile() 
+        self.mpi.write_hostfile() 
 
         self.runcmd = (
-            'mpirun '
-            '--allow-run-as-root '
-           f'--hostfile {self.hostfile} '
+           f'{self.mpi.mpirun_cmd()} '
            f'{self.bin} '
            f'-t {self.transfer} ' 
            f'-b {self.block} ' 
@@ -78,17 +75,17 @@ class Ior(Bmt):
   
         sync(self.nodelist)
         
-        for i in range(1, self.count+1): 
-            self.output = (
-                'ior-'
-               f'n{self.nnodes}-'
-               f'p{self.ntasks}-'
-               f't{self.transfer}-'
-               f'b{self.block}-'
-               f's{self.segment}.out')
+        self.output = (
+            'ior-'
+           f'n{self.nnodes}-'
+           f'p{self.ntasks}-'
+           f't{self.transfer}-'
+           f'b{self.block}-'
+           f's{self.segment}.out')
 
+        for i in range(1, self.count+1): 
             if self.count > 1: 
-                self.output += f'.{i}'
+                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
             super().run(1) 
             

@@ -27,6 +27,10 @@ class Qe(Bmt):
 
         self.getopt() 
 
+        # default ntasks 
+        if not self.ntasks: 
+            self.ntasks = self.ngpus
+        
         if self.neb: 
             self.name = self.name + '/NEB'
             self.bin  = self.bin.replace('pw.x', 'neb.x')
@@ -35,9 +39,30 @@ class Qe(Bmt):
         if os.path.exists(self.bin):
             return
 
-        self.buildcmd += [
-            f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
-           (f'cd {self.builddir}/q-e-qe-7.0/;' 
+        # gpu build         
+        if self.gpu:
+            runtime, cuda_cc = device_query(self.nodelist[0])
+
+            self.check_prerequisite('hpc_sdk', '21.5')
+       
+            self.buildcmd += [
+               f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
+              (f'cd {self.builddir}/q-e-qe-7.0/;' 
+               f'./configure '
+                   f'--prefix={os.path.abspath(self.prefix)} '
+                   f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
+                   f'--with-cuda-cc={cuda_cc} '
+                   f'--with-cuda-runtime={runtime} '
+                    '--enable-openmp; '
+                'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
+                'make -j 16 pw; ' 
+                'make -j 16 neb; '
+                'make install')]
+        # cpu build 
+        else: 
+            self.buildcmd += [
+               f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
+              (f'cd {self.builddir}/q-e-qe-7.0/;' 
                f'./configure '
                    f'--prefix={os.path.abspath(self.prefix)} '
                     '--with-scalapack=intel '
@@ -52,6 +77,11 @@ class Qe(Bmt):
         self.mkoutdir()
         self.write_hostfile()
 
+        os.environ['NO_STOP_MESSAGE']      = 'yes'
+        os.environ['OMP_NUM_THREADS']      = str(self.omp)
+        os.environ['ESPRESSO_PSEUDO']      = os.path.dirname(self.input)
+        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
+        
         self.output = (
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
            f'n{self.nodes}_'
@@ -60,6 +90,14 @@ class Qe(Bmt):
            f't{self.omp}_'
            f'k{self.npool}_'
            f'i{self.nimage}.out')
+
+        # pass CUDA_VISIBLE_DEVICES to remote host
+        self.runcmd = ( 
+            'mpirun '
+            '--allow-run-as-root '
+           f'-x CUDA_VISIBLE_DEVICES ' 
+           f'-x NO_STOP_MESSAGE '
+           f'--hostfile {self.hostfile} ')
 
         # NVIDIA NGC
         if self.sif: 

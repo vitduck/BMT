@@ -9,15 +9,16 @@ import packaging.version
 import datetime
 import prerequisite
 
-from tabulate   import tabulate
-from statistics import mean
-from pprint     import pprint
-from utils      import syscmd, autovivification
-from cpu        import lscpu, cpu_info
-from gpu        import nvidia_smi, gpu_info
-from env        import module_list
-from slurm      import slurm_nodelist
-from ssh        import ssh_cmd
+from tabulate    import tabulate
+from statistics  import mean
+from pprint      import pprint
+
+from cpu         import lscpu, cpu_info
+from gpu         import gpu_info
+from env         import module_list
+from utils       import syscmd, autovivification
+from ssh         import ssh_cmd
+from slurm       import slurm_nodelist
 
 class Bmt: 
     version = '0.8'
@@ -28,89 +29,96 @@ class Bmt:
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    def __init__(self, name, count=1, prefix='./', sif=None, nnodes=0, ngpus=0, ntasks=0, omp=0, gpu=False):
-        self.src      = []
-        self.buildcmd = []
-        self.runcmd   = ''
-
+    def __init__(self, name, prefix='./', count=1, nnodes=0, ntasks=0, omp=0, ngpus=0, mpi=None):
+        # sys info
         self.nodelist = slurm_nodelist()
-
-        self.result   = autovivification() 
-        self.header   = []
-        self.table    = [] 
+        self.host     = lscpu(self.nodelist[0])
+        self.device   = {} 
 
         self.name     = name
-        self.count    = count
         self.prefix   = os.path.abspath(prefix)
+        self.count    = count
+
+        self._nnodes  = nnodes or len(self.nodelist)
+        self._ntasks  = ntasks or self.host['CPUs']
+        self._omp     = omp
+        self._args    = {} 
+        self._ngpus   = ngpus  
+
+        self.mpi      = mpi
+        
+        self.bin      = ''
+        self.input    = ''
+        self.output   = ''
+        self.hostfile = 'hostfile'
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
         self.bindir   = os.path.join(self.prefix, 'bin')
         self.builddir = os.path.join(self.prefix, 'build')
         self.outdir   = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
-        self.input    = ''
-        self.output   = ''
-        self.hostfile = 'hostfile'
-        self.sif      = sif 
-        
-        self._bin     = ''
-        self._args    = {} 
-        self._nnodes  = nnodes or len(self.nodelist)
-        self._ntasks  = ntasks
-        self.omp      = omp
-        self.gpu      = gpu
 
-        # Host CPU
-        self.host     = lscpu(self.nodelist[0])
+        self.src       = []
+        self.buildcmd  = []
+        self.runcmd    = ''
 
-        # GPU device
-        if gpu: 
-            self.device = nvidia_smi(self.nodelist[0])
-            self._ngpus = ngpus or len(self.device.keys())
+        self.header    = []
+        self.table     = [] 
+        self.result    = autovivification() 
 
-        # NVIDIA/NGC 
-        if sif:
-            self.name = self.name + '/NGC'
-            self.sif  = os.path.abspath(sif)
+        # Propagate parameters to mpi
+        if mpi:
+            self.mpi.nodelist = self.nodelist
+            self.mpi.nnodes   = self._nnodes 
+            self.mpi.ntasks   = self._ntasks 
+            self.mpi.omp      = self._omp
 
-        # create build/bin directory 
         os.makedirs(self.builddir, exist_ok=True) 
         os.makedirs(self.bindir  , exist_ok=True) 
-    
-    # bin decorator 
-    @property 
-    def bin(self): 
-        return self._bin
 
-    @bin.setter 
-    def bin(self, bin): 
-        self._bin = os.path.join(self.bindir, bin)
-  
-    # nodes decorator 
+    # trigger: number of nodes 
     @property 
     def nnodes(self): 
-        return self._nnodes
+        return self._nnodes 
 
-    @nnodes.setter 
-    def nnodes(self, nnodes): 
-        self._nnodes = nnodes
+    @nnodes.setter
+    def nnodes(self, number_of_nodes): 
+        self._nnodes = number_of_nodes 
 
-    # ntasks decorator 
+        if self.mpi: 
+            self.mpi.nnodes = number_of_nodes 
+
+    # trigger: number of tasks 
     @property 
     def ntasks(self): 
-        return self._ntasks
+        return self._ntasks 
 
-    @ntasks.setter 
-    def ntasks(self, ntasks): 
-        self._ntasks = ntasks
+    @ntasks.setter
+    def ntasks(self, number_of_tasks): 
+        self._ntasks = number_of_tasks 
 
-    # ngpus decorator
+        if self.mpi: 
+            self.mpi.ntasks = number_of_tasks
+
+    # trigger: number of omp threads 
+    @property 
+    def omp(self): 
+        return self._omp 
+
+    @omp.setter
+    def omp(self, number_of_threads): 
+        self._omp = number_of_threads 
+
+        if self.mpi: 
+            self.mpi.omp = number_of_threads 
+
+    # trigger: default number of gpus 
     @property 
     def ngpus(self): 
         return self._ngpus
 
     @ngpus.setter
-    def ngpus(self, ngpus): 
-        self._ngpus = ngpus 
-
+    def ngpus(self, number_of_gpus): 
+        self._ngpus = number_of_gpus
+        
     # override attributes with cmd line arguments
     @property 
     def args(self): 
@@ -138,12 +146,6 @@ class Bmt:
         if packaging.version.parse(version) < packaging.version.parse(min_ver):
             logging.error(f'{module} >= {min_ver} is required by {self.name}')
             sys.exit() 
-
-    # OpenMPI: write hostfile
-    def write_hostfile(self): 
-        with open(self.hostfile, 'w') as fh:
-            for host in self.nodelist[0:self.nnodes]:
-                fh.write(f'{host} slots={self.ntasks}\n')
 
     # download src 
     def download(self): 
@@ -180,7 +182,7 @@ class Bmt:
     def info(self): 
         cpu_info(self.host)
 
-        if self.gpu: 
+        if self.ngpus: 
             gpu_info(self.device)
 
         module_list()
@@ -188,9 +190,9 @@ class Bmt:
     def summary(self, sort=0, order='>'): 
         sys_info = self.host['Model'] 
 
-        if self.gpu: 
+        if self.ngpus: 
             sys_info += ' / ' + self.device['0'][0]
-            
+
         print(f'\n>> {self.name}: {sys_info}')
         
         # unpact hash key 
@@ -209,7 +211,7 @@ class Bmt:
             #  else:
                 #  self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
-        print(tabulate(self.table, self.header, tablefmt='grid', stralign='center'))
+        print(tabulate(self.table, self.header, tablefmt='grid', stralign='center', numalign='center'))
 
     def _cell_format(self, cell):  
         average   = mean(cell)

@@ -3,41 +3,45 @@
 import os
 import re
 
-from gpu import gpu_affinity
+from gpu import gpu_affinity, nvidia_smi
 from bmt import Bmt
 
 class Hpcnv(Bmt):
-    def __init__(self, **kwargs):
+    def __init__(self, sif='', **kwargs):
 
-        super().__init__(**kwargs)
-
+        super().__init__('NGC', **kwargs)
+        
         self.wrapper = ''
-        self.omp     = 4 
-        self.ntasks  = self.ngpus 
+        self.device  = nvidia_smi(self.nodelist[0])
 
+        # default number of GPUs
+        if not self._ngpus: 
+            self._ngpus  = len(self.device.keys())
+
+        self._omp       = 4 
+        self._ntasks    = self._ngpus
+        self.sif        = os.path.abspath(sif) 
+
+        self.mpi.ntasks = self._ntasks 
+        
     @Bmt.ngpus.setter
-    def ngpus(self, ngpus): 
-        super(Hpcnv, Hpcnv).ngpus.__set__(self, ngpus) 
+    def ngpus(self, number_of_gpus): 
+        super(Hpcnv, Hpcnv).ngpus.__set__(self, number_of_gpus) 
+        
+        self._ntasks    = number_of_gpus
+        self.mpi.ntasks = number_of_gpus
 
-        # HPC requires ngpus = ntasks
-        self.ntask = ngpus 
-    
     def ngc_cmd(self): 
-        nprocs = self.nodes * self.ntasks
+        nprocs = self.nnodes * self.ntasks
 
         return (
-           f'mpirun '
-                '--allow-run-as-root '
-	       f'-np {nprocs} '
-                '--hostfile hostfile '
-                '--mca btl ^openib '
-                '-x CUDA_VISIBLE_DEVICES '
+           f'{self.mpi.mpirun_cmd()} '
                 'singularity run '
                f'--nv {self.sif} ' 
                f'{self.wrapper} '
                    f'--dat {self.input} '
                    f'--cpu-cores-per-rank {self.omp} '  
-                   f'--cpu-affinity {":".join(gpu_affinity(self.host[0])[0:self.ngpus])} '
+                   f'--cpu-affinity {":".join(gpu_affinity(self.nodelist[0])[0:self.ngpus])} '
                    f'--gpu-affinity {":".join([str(i) for i in range(0, self.ngpus)])} ')
 
     def run(self): 
@@ -48,13 +52,11 @@ class Hpcnv(Bmt):
         
         os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
         
-        self.ntasks = self.ngpus
-        
         self.mkoutdir() 
-
-        self.write_hostfile() 
+        
         self.write_input() 
+        self.mpi.write_hostfile() 
         
         self.runcmd = self.ngc_cmd() 
-
+        
         super().run(1)

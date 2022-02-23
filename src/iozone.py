@@ -12,12 +12,11 @@ class Iozone(Bmt):
     def __init__(self, size='64M', record='1M', threads=4, **kwargs): 
         super().__init__('IOZONE', **kwargs)
 
-        self.bin       = 'iozone'
         self.src       = ['http://www.iozone.org/src/current/iozone3_491.tgz']
-        
+        self.bin       = os.path.join(self.bindir,'iozone') 
         self.header    = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
-
         self.size      = size
+
         self.record    = record
         self.threads   = threads
 
@@ -56,15 +55,15 @@ class Iozone(Bmt):
             '-w '                                        # keep temporary files for read test
             '-+n')                                       # skip retests
         
-        for i in range(1, self.count+1): 
-            write_output  = f'iozone-i0-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
-            read_output   = f'iozone-i1-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
-            random_output = f'iozone-i2-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+        write_output  = f'iozone-i0-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+        read_output   = f'iozone-i1-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
+        random_output = f'iozone-i2-n{self.nnodes}-t{self.threads}-s{self.size}-r{self.record}.out'
 
+        for i in range(1, self.count+1): 
             if self.count > 1: 
-                write_output  += f'.{i}'
-                read_output   += f'.{i}'
-                random_output += f'.{i}'
+                write_output  = re.sub('out(\.\d+)?', f'out.{i}', write_output)
+                read_output   = re.sub('out(\.\d+)?', f'out.{i}', read_output)
+                random_output = re.sub('out(\.\d+)?', f'out.{i}', random_output)
 
             # write
             self.output = write_output
