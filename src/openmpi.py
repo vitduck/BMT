@@ -36,8 +36,10 @@ class OpenMPI(Mpi):
             mpirun.append(f'--report-bindings')
 
         if self.sharp:
+            mpirun.append('-mca coll_hcoll_enable 1')
             mpirun.append(f'-x HCOLL_ENABLE_SHARP={self.sharp}') 
             mpirun.append(f'-x SHARP_COLL_ENABLE_SAT=1')
+            mpirun.append(f'-x SHARP_COLL_LOG_LEVEL=3')
 
         if self.ucx: 
             mpirun.append(f'--mca pml ucx')
