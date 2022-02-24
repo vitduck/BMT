@@ -10,7 +10,7 @@ from gpu   import gpu_memory
 from hpcnv import Hpcnv
 
 class Hpl(Hpcnv): 
-    def __init__(self, size=[], blocksize=[256], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[0], **kwargs):
+    def __init__(self, size=[], blocksize=[288], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'HPL'
@@ -159,8 +159,9 @@ class Hpl(Hpcnv):
                 line = output_fh.readline()
 
     def _mpi_grid(self): 
-        self.pgrid = []
+        self.pgrid = [] 
         self.qgrid = []
+
         tot_ngpus  = self.nnodes * self.ngpus
 
         for i in range(1, tot_ngpus + 1):
@@ -172,10 +173,12 @@ class Hpl(Hpcnv):
                     self.pgrid.append(p)
                     self.qgrid.append(q)
 
-        # remove iregular 1 x n grid 
-        if len(self.pgrid) > 1:
-            self.pgrid.pop()
-            self.qgrid.pop()
+                    break
+
+        # remove iregular n x 1 grid
+        #  if len(pgrid) > 1:
+            #  pgrid.pop()
+            #  qgrid.pop()
 
     def _matrix_size(self):
         tot_mem = self.nnodes * self.ngpus * gpu_memory(self.nodelist[0])
@@ -200,7 +203,7 @@ class Hpl(Hpcnv):
                 '-p, --pgrid            MPI pgrid\n'
                 '-q, --qgrid            MPI qgrid\n'
                 '    --pmap             MPI processes mapping\n'
-                '    --broadcast        MPI broadcasting algorithms\n'
+                '    --bcast            MPI broadcasting algorithms\n'
                 '    --threshold        Validation threshold\n'
                 '    --pfact            list of PFACT variants\n'
                 '    --nbmin            list of NBMIN\n'

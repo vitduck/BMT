@@ -162,6 +162,5 @@ class Ior(Bmt):
         opt.add_argument(      '--ltrcount' , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--nnodes'   , type=int, metavar='' , help=argparse.SUPPRESS)
         opt.add_argument(      '--ntasks'   , type=int, metavar='' , help=argparse.SUPPRESS)
-
         
         self.args = vars(parser.parse_args())

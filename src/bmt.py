@@ -32,6 +32,7 @@ class Bmt:
     def __init__(self, name, prefix='./', count=1, nnodes=0, ntasks=0, omp=0, ngpus=0, mpi=None):
         # sys info
         self.nodelist = slurm_nodelist()
+
         self.host     = lscpu(self.nodelist[0])
         self.device   = {} 
 
@@ -41,9 +42,9 @@ class Bmt:
 
         self._nnodes  = nnodes or len(self.nodelist)
         self._ntasks  = ntasks or self.host['CPUs']
+        self._ngpus   = ngpus  
         self._omp     = omp
         self._args    = {} 
-        self._ngpus   = ngpus  
 
         self.mpi      = mpi
         

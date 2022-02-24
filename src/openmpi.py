@@ -3,12 +3,13 @@
 from mpi import Mpi
 
 class OpenMPI(Mpi): 
-    def __init__(self, ucx='', bind='', map='', sharp=0, **kwargs): 
+    def __init__(self, ucx='', bind='', map='', hca='', sharp=0, **kwargs): 
         super().__init__(**kwargs) 
 
         self.ucx   = ucx 
         self.bind  = bind 
         self.map   = map
+        self.hca   = hca
         self.sharp = sharp
 
     def write_hostfile(self):
@@ -37,5 +38,12 @@ class OpenMPI(Mpi):
         if self.sharp:
             mpirun.append(f'-x HCOLL_ENABLE_SHARP={self.sharp}') 
             mpirun.append(f'-x SHARP_COLL_ENABLE_SAT=1')
+
+        if self.ucx: 
+            mpirun.append(f'--mca pml ucx')
+            mpirun.append(f'-x UCX_TLS={",".join(self.ucx)}')
+
+        if self.hca: 
+            mpirun.append(f'-x UCX_NET_DEVICES={",".join(self.hca)}')
 
         return " ".join(mpirun)
