@@ -181,9 +181,15 @@ class Hpl(Hpcnv):
             #  qgrid.pop()
 
     def _matrix_size(self):
-        tot_mem = self.nnodes * self.ngpus * gpu_memory(self.nodelist[0])
+        mem_per_gpu = gpu_memory(self.nodelist[0])
 
-        self.size = [10000*int(sqrt(0.9*tot_mem*1024**2/8)/10000)]
+        # cut off memory size or A100-80GB ! 
+        if mem_per_gpu > 40000: 
+            mem_per_gpu = 40000 
+
+        tot_mem = self.nnodes * self.ngpus * mem_per_gpu
+
+        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
 
     def getopt(self):
         parser = argparse.ArgumentParser(

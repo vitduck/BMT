@@ -3,6 +3,7 @@
 import os 
 import re
 import sys
+import time
 import inspect
 import logging
 import packaging.version
@@ -176,6 +177,8 @@ class Bmt:
             syscmd(self.runcmd)
 
         self.parse()
+
+        time.sleep(10)
     
     def parse(self):  
         pass
