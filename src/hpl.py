@@ -10,14 +10,14 @@ from gpu   import gpu_memory
 from hpcnv import Hpcnv
 
 class Hpl(Hpcnv): 
-    def __init__(self, size=[], blocksize=[288], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], **kwargs):
+    def __init__(self, size=[], blocksize=[288], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=0.95, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'HPL'
         self.wrapper   = 'hpl.sh'
         self.input     = 'HPL.dat'
         self.output    = ''
-        self.header    = ['Node', 'Ngpu', 'Thread', 'T/V', 'N', 'NB', 'P', 'Q', 'Status', 'Perf(Tflops)', 'Time(s)']
+        self.header    = ['Node', 'Ngpu', 'Thread', 'N', 'NB', 'P', 'Q', 'BCAST', 'RFACT', 'NDIV', 'PFACT', 'NBMIN', 'Status', 'Perf(Tflops)', 'Time(s)']
         
         self.size      = size
         self.blocksize = blocksize 
@@ -30,6 +30,7 @@ class Hpl(Hpcnv):
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
+        self.memory    = memory
         self._auto     = False
 
         self.getopt()
@@ -147,7 +148,11 @@ class Hpl(Hpcnv):
                     output_fh.readline()
                     status = output_fh.readline().split()[-1]
 
-                    key = ",".join(map(str, [self.nnodes, self.ngpus, self.omp, config, size, blocksize, p, q, status]))
+                    # split config into string, the first character has no meaning 
+                    mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
+                    
+                    # hash key 
+                    key = ",".join(map(str, [self.nnodes, self.ngpus, self.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
 
                     if not self.result[key]['flops']: 
                         self.result[key]['flops'] = [] 
@@ -181,15 +186,9 @@ class Hpl(Hpcnv):
             #  qgrid.pop()
 
     def _matrix_size(self):
-        mem_per_gpu = gpu_memory(self.nodelist[0])
+        tot_mem = self.nnodes * self.ngpus * gpu_memory(self.nodelist[0])
 
-        # cut off memory size or A100-80GB ! 
-        if mem_per_gpu > 40000: 
-            mem_per_gpu = 40000 
-
-        tot_mem = self.nnodes * self.ngpus * mem_per_gpu
-
-        self.size = [10000*int(sqrt(0.95*tot_mem*1024**2/8)/10000)]
+        self.size = [10000*int(sqrt(self.memory*tot_mem*1024**2/8)/10000)]
 
     def getopt(self):
         parser = argparse.ArgumentParser(
@@ -215,6 +214,7 @@ class Hpl(Hpcnv):
                 '    --nbmin            list of NBMIN\n'
                 '    --ndiv             list of NDIV\n'
                 '    --rfact            list of RFACT variants\n'
+                '    --memory           percentage of total memory\n'
                 '    --nnodes           number of nodes\n'
                 '    --ngpus            number of gpus per node\n'
                 '    --omp              number of omp threads\n' ))
@@ -233,6 +233,7 @@ class Hpl(Hpcnv):
         opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--memory'   , type=float           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--nnodes'   , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ngpus'    , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
