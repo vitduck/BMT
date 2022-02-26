@@ -15,7 +15,7 @@ def lscpu(node):
 
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 
-            host['CPUs'] = line.split()[-1]
+            host['CPUs'] = int(line.split()[-1]) 
         if re.search('Model name', line): 
             host['Model'] = ' '.join(line.split()[2:])
         if re.search('Thread\(s\)', line): 
@@ -46,3 +46,8 @@ def cpu_info(host):
         logging.info(f'{numa:<7} : {host["NUMA"][i]}')
 
     logging.info(f'{"AVXs":<7} : {host["AVXs"]}')
+
+def cpu_memory(host): 
+    mem_kb = syscmd(f'{ssh_cmd} {host} grep MemTotal /proc/meminfo').split()[1]*1
+
+    return int(mem_kb)

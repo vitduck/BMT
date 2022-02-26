@@ -4,20 +4,20 @@ import os
 import re
 import argparse
 
-from math import sqrt
-from env  import module_list
-from cpu  import cpu_memory
-from bmt  import Bmt
+from math  import sqrt
+from env   import module_list
+from gpu   import gpu_memory
+from hpcnv import Hpcnv
 
-class Hpl(Bmt): 
-    def __init__(self, size=[], blocksize=[240], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=0, **kwargs):
+class Hpl(Hpcnv): 
+    def __init__(self, size=[], blocksize=[288], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=0.95, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'HPL'
-        self.bin       = os.path.join(self.bindir,'xhpl') 
+        self.wrapper   = 'hpl.sh'
         self.input     = 'HPL.dat'
         self.output    = ''
-        self.header    = ['Node', 'Ntask', 'Ngpu', 'Thread', 'N', 'NB', 'P', 'Q', 'BCAST', 'RFACT', 'NDIV', 'PFACT', 'NBMIN', 'Status', 'Perf(Tflops)', 'Time(s)']
+        self.header    = ['Node', 'Ngpu', 'Thread', 'N', 'NB', 'P', 'Q', 'BCAST', 'RFACT', 'NDIV', 'PFACT', 'NBMIN', 'Status', 'Perf(Tflops)', 'Time(s)']
         
         self.size      = size
         self.blocksize = blocksize 
@@ -30,14 +30,6 @@ class Hpl(Bmt):
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
-
-        self.depth     = [1]  
-        self.swap      = 1 
-        self.swap_thr  = 64 
-        self.l1        = 0 
-        self.u         = 0 
-
-        self.ngpus     = 0 
         self.memory    = memory
         self._auto     = False
 
@@ -53,7 +45,7 @@ class Hpl(Bmt):
             self._mpi_grid() 
  
     # recalcuate MPI grid and matrix size
-    @Bmt.nnodes.setter
+    @Hpcnv.nnodes.setter
     def nnodes(self, number_of_nodes): 
         super(Hpl, Hpl).nnodes.__set__(self, number_of_nodes)
         
@@ -62,8 +54,17 @@ class Hpl(Bmt):
         if self._auto and not self.args['size']:
             self._matrix_size()
 
+    @Hpcnv.ngpus.setter
+    def ngpus(self, number_of_gpus): 
+        super(Hpl, Hpl).ngpus.__set__(self, number_of_gpus) 
+
+        self._mpi_grid() 
+        
+        if self._auto and not self.args['size']:
+            self._matrix_size()
+
     def write_input(self):
-        #  self.input = f'HPL-n{self.nnodes}-g{self.ntasks}-t{self.omp}.dat'
+        self.input = f'HPL-n{self.nnodes}-g{self.ngpus}-t{self.omp}.dat'
 
         with open(self.input, 'w') as fh:
             fh.write(f'HPL input\n')
@@ -109,16 +110,16 @@ class Hpl(Bmt):
             fh.write(f'{" ".join(str(s) for s in self.bcast):<20} BCASTs (0=1rg,1=1rM,2=2rg,3=2rM,4=Lng,5=LnM)\n')
 
             # look-ahead (ignored by HPL-NVIDIA)
-            fh.write(f'{len(self.depth):<20} number of lookahead depth\n')
-            fh.write(f'{" ".join(str(s) for s in self.depth):<20} DEPTHs (>=0)\n')
+            fh.write(f'{"1":<20} number of lookahead depth\n')
+            fh.write(f'{"1":<20} DEPTHs (>=0)\n')
 
             # swapping ( ignored by HPL-NVIDIA)
-            fh.write(f'{self.swap:<20} SWAP (0=bin-exch,1=long,2=mix)\n')
-            fh.write(f'{self.swap_thr:<20} swapping threshold \n')
+            fh.write(f'{"1":<20} SWAP (0=bin-exch,1=long,2=mix)\n')
+            fh.write(f'{"192":<20} swapping threshold \n')
 
             # LU (L1 = 1, U = 0 required by HPL-NVIDIA)
-            fh.write(f'{self.l1:<20} L1 in (0=transposed,1=no-transposed) form\n')
-            fh.write(f'{self.u:<20} U  in (0=transposed,1=no-transposed) form\n')
+            fh.write(f'{"1":<20} L1 in (0=transposed,1=no-transposed) form\n')
+            fh.write(f'{"0":<20} U  in (0=transposed,1=no-transposed) form\n')
 
             # equilibration
             fh.write(f'{"1":<20} qquilibration (0=no,1=yes)\n')
@@ -127,19 +128,13 @@ class Hpl(Bmt):
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
     def run(self): 
-        self.mkoutdir() 
-
-        self.write_input()
-        self.mpi.write_hostfile()
-        
-        self.output = f'HPL-n{self.nnodes}-g{self.ntasks}-t{self.omp}.out'
-        self.runcmd = f'{self.mpi.mpirun()} {self.bin}'
+        self.output = f'HPL-n{self.nnodes}-g{self.ngpus}-t{self.omp}.out'
 
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
-            super().run(1)
+            super().run()
 
     def parse(self): 
         with open(self.output, 'r') as output_fh:
@@ -150,17 +145,14 @@ class Hpl(Bmt):
                     config, size, blocksize, p, q, time, gflops = line.split()
 
                     # passed/failed status
-                    while True: 
-                        status = output_fh.readline()
-                        if re.search('(PASSED|FAILED)', status): 
-                            status = status.split()[-1]
-                            break
+                    output_fh.readline()
+                    status = output_fh.readline().split()[-1]
 
                     # split config into string, the first character has no meaning 
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.nnodes, self.ntasks, self.ngpus, self.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [self.nnodes, self.ngpus, self.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
 
                     if not self.result[key]['flops']: 
                         self.result[key]['flops'] = [] 
@@ -175,12 +167,12 @@ class Hpl(Bmt):
         self.pgrid = [] 
         self.qgrid = []
 
-        tot_mpi_ranks  = self.nnodes * self.ntasks
+        tot_ngpus  = self.nnodes * self.ngpus
 
-        for i in range(1, tot_mpi_ranks + 1):
-            if tot_mpi_ranks % i == 0:
+        for i in range(1, tot_ngpus + 1):
+            if tot_ngpus % i == 0:
                 p = i
-                q = int(tot_mpi_ranks/i)
+                q = int(tot_ngpus/i)
 
                 if p >= q:
                     self.pgrid.append(p)
@@ -194,15 +186,9 @@ class Hpl(Bmt):
             #  qgrid.pop()
 
     def _matrix_size(self):
-        # cpu memory in kb 
-        
-        # memory is given in GB 
-        if self.memory:  
-            self.memory = int(self.memory.replace('GB','')) 
-            self.size   = [10000*int(sqrt(self.nnodes*self.memory*1000**3/8)/10000)]
-        # system memory is given in KB (/proc/meminfo)
-        else: 
-            self.size = [10000*int(sqrt(0.90*self.nnodes*cpu_memory(self.nodelist[0])*1000/8)/10000)]
+        tot_mem = self.nnodes * self.ngpus * gpu_memory(self.nodelist[0])
+
+        self.size = [10000*int(sqrt(self.memory*tot_mem*1024**2/8)/10000)]
 
     def getopt(self):
         parser = argparse.ArgumentParser(
@@ -228,8 +214,9 @@ class Hpl(Bmt):
                 '    --nbmin            list of NBMIN\n'
                 '    --ndiv             list of NDIV\n'
                 '    --rfact            list of RFACT variants\n'
-                '    --memory           memory usage (GB)\n'
+                '    --memory           percentage of total memory\n'
                 '    --nnodes           number of nodes\n'
+                '    --ngpus            number of gpus per node\n'
                 '    --omp              number of omp threads\n' ))
 
         opt.add_argument('-h', '--help'     , action='help'                    , help=argparse.SUPPRESS)
@@ -246,8 +233,9 @@ class Hpl(Bmt):
         opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--memory'   , type=str             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--memory'   , type=float           , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--nnodes'   , type=int             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--ngpus'    , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
 
         self.args = vars(parser.parse_args())

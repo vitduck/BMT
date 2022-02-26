@@ -10,8 +10,9 @@ from bmt   import Bmt
 
 class Ior(Bmt):
     def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
-        super().__init__('IOR', **kwargs)
-
+        super().__init__(**kwargs)
+        
+        self.name     = 'IOR'
         self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
         self.bin      = os.path.join(self.bindir, 'ior')
         self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
@@ -50,7 +51,7 @@ class Ior(Bmt):
         self.mpi.write_hostfile() 
 
         self.runcmd = (
-           f'{self.mpi.mpirun_cmd()} '
+           f'{self.mpi.mpirun()} '
            f'{self.bin} '
            f'-t {self.transfer} ' 
            f'-b {self.block} ' 

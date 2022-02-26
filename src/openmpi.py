@@ -17,36 +17,36 @@ class OpenMPI(Mpi):
             for host in self.nodelist[0:self.nnodes]:
                 fh.write(f'{host} slots={self.ntasks}\n')
 
-    def mpirun_cmd(self): 
+    def mpirun(self): 
         nprocs = self.nnodes * self.ntasks 
 
-        mpirun = [
+        mpirun_cmd = [
             'mpirun', 
-            '--allow-run-as-root', 
-           f'--np {nprocs}',
-           f'--hostfile {self.hostfile}' ]
+                '--allow-run-as-root', 
+               f'--np {nprocs}',
+               f'--hostfile {self.hostfile}' ]
 
         if self.bind: 
-            mpirun.append(f'--bind-to {self.bind}')
+            mpirun_cmd.append(f'--bind-to {self.bind}')
 
         if self.map: 
-            mpirun.append(f'--map-by {self.map}') 
+            mpirun_cmd.append(f'--map-by {self.map}') 
 
         if self.verbose: 
-            mpirun.append(f'--report-bindings')
+            mpirun_cmd.append(f'--report-bindings')
 
         if self.sharp:
-            mpirun.append('-mca coll_hcoll_enable 1')
-            mpirun.append(f'-x HCOLL_ENABLE_SHARP={self.sharp}') 
-            mpirun.append(f'-x SHARP_COLL_ENABLE_SAT=1')
-            mpirun.append(f'-x SHARP_COLL_LOG_LEVEL=3')
+            mpirun_cmd.append('-mca coll_hcoll_enable 1')
+            mpirun_cmd.append(f'-x HCOLL_ENABLE_SHARP={self.sharp}') 
+            mpirun_cmd.append(f'-x SHARP_COLL_ENABLE_SAT=1')
+            mpirun_cmd.append(f'-x SHARP_COLL_LOG_LEVEL=3')
 
         # ucx is somewhat buggy
         if self.ucx: 
-            mpirun.append(f'--mca pml ucx')
-            mpirun.append(f'-x UCX_TLS={",".join(self.ucx)}')
+            mpirun_cmd.append(f'--mca pml ucx')
+            mpirun_cmd.append(f'-x UCX_TLS={",".join(self.ucx)}')
 
         if self.hca: 
-            mpirun.append(f'-x UCX_NET_DEVICES={",".join(self.hca)}')
+            mpirun_cmd.append(f'-x UCX_NET_DEVICES={",".join(self.hca)}')
 
-        return " ".join(mpirun)
+        return " ".join(mpirun_cmd)

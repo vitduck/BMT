@@ -30,14 +30,14 @@ class Bmt:
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    def __init__(self, name, prefix='./', count=1, nnodes=0, ntasks=0, omp=0, ngpus=0, mpi=None):
+    def __init__(self, prefix='./', count=1, nnodes=0, ntasks=0, omp=1, ngpus=0, mpi=None):
         # sys info
         self.nodelist = slurm_nodelist()
 
         self.host     = lscpu(self.nodelist[0])
         self.device   = {} 
 
-        self.name     = name
+        self.name     = ''
         self.prefix   = os.path.abspath(prefix)
         self.count    = count
 
@@ -174,11 +174,11 @@ class Bmt:
         if redirect: 
             syscmd(self.runcmd, self.output) 
         else: 
-            syscmd(self.runcmd)
+            syscmd(self.runcmd) 
 
         self.parse()
 
-        time.sleep(10)
+        time.sleep(5)
     
     def parse(self):  
         pass

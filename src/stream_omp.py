@@ -9,8 +9,9 @@ from bmt import Bmt
 
 class StreamOmp(Bmt):
     def __init__ (self, size=40000000, ntimes=100, affinity='spread', **kwargs):
-        super().__init__('STREAM', **kwargs)
-
+        super().__init__(**kwargs)
+        
+        self.name     = 'STREAM'
         self.src      = ['https://www.cs.virginia.edu/stream/FTP/Code/stream.c']
         self.kernel   = ['Copy', 'Scale', 'Add', 'Triad']
         self.header   = ['Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
@@ -72,7 +73,7 @@ class StreamOmp(Bmt):
             super().run(1)
 
     def parse(self):
-        key = ",".join(map(str, [self.affinity, self.omp]))
+        key = ",".join(map(str, [self.omp, self.affinity]))
 
         with open(self.output, 'r') as output_fh:
             for line in output_fh:

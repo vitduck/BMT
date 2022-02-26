@@ -8,7 +8,7 @@ from bmt import Bmt
 
 class Hpcnv(Bmt):
     def __init__(self, sif='', **kwargs):
-        super().__init__('NGC', **kwargs)
+        super().__init__(**kwargs)
         
         self.wrapper = ''
         self.sif     = os.path.abspath(sif) 

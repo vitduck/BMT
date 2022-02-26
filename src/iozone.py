@@ -10,8 +10,9 @@ from bmt   import Bmt
 
 class Iozone(Bmt):
     def __init__(self, size='64M', record='1M', threads=4, **kwargs): 
-        super().__init__('IOZONE', **kwargs)
+        super().__init__(**kwargs)
 
+        self.name      = 'IOZONE'
         self.src       = ['http://www.iozone.org/src/current/iozone3_491.tgz']
         self.bin       = os.path.join(self.bindir,'iozone') 
         self.header    = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']

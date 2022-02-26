@@ -12,8 +12,9 @@ from bmt        import Bmt
 
 class StreamCuda(Bmt):
     def __init__(self, arch='', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
-        super().__init__('STREAM/CUDA', **kwargs)
+        super().__init__(**kwargs)
  
+        self.name   = 'STREAM/CUDA'
         self.src    = [ 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/Stream.h', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/main.cpp', 
