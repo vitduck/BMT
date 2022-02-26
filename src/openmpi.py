@@ -11,6 +11,9 @@ class OpenMPI(Mpi):
         self.map   = map
         self.hca   = hca
         self.sharp = sharp
+        self.mca   = { }
+        self.env   = { 
+            'OMP_NUM_THREADS' : self.omp }  
 
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:
@@ -18,35 +21,45 @@ class OpenMPI(Mpi):
                 fh.write(f'{host} slots={self.ntasks}\n')
 
     def mpirun(self): 
-        nprocs = self.nnodes * self.ntasks 
-
         mpirun_cmd = [
             'mpirun', 
                 '--allow-run-as-root', 
-               f'--np {nprocs}',
+               f'--np {self.nnodes * self.ntasks}', 
                f'--hostfile {self.hostfile}' ]
 
         if self.bind: 
             mpirun_cmd.append(f'--bind-to {self.bind}')
 
+        # process mapping 
         if self.map: 
             mpirun_cmd.append(f'--map-by {self.map}') 
 
+        # show report to stderr
         if self.verbose: 
             mpirun_cmd.append(f'--report-bindings')
 
+        # sharp
         if self.sharp:
-            mpirun_cmd.append('-mca coll_hcoll_enable 1')
-            mpirun_cmd.append(f'-x HCOLL_ENABLE_SHARP={self.sharp}') 
-            mpirun_cmd.append(f'-x SHARP_COLL_ENABLE_SAT=1')
-            mpirun_cmd.append(f'-x SHARP_COLL_LOG_LEVEL=3')
+            self.mca['coll_hcoll_enable'    ]  = 1 
+            self.env['HCOLL_ENABLE_SHARP'   ]  = self.sharp 
+            self.env['SHARP_COLL_ENABLE_SAT']  = 1
+            self.env['SHARP_COLL_LOG_LEVEL' ]  = 4
 
         # ucx is somewhat buggy
         if self.ucx: 
-            mpirun_cmd.append(f'--mca pml ucx')
-            mpirun_cmd.append(f'-x UCX_TLS={",".join(self.ucx)}')
+            self.mca['pml'    ] = 'ucx'
+            self.env['UCX_TLS'] = ",".join(self.ucx)
 
+        # number of ib devices 
         if self.hca: 
-            mpirun_cmd.append(f'-x UCX_NET_DEVICES={",".join(self.hca)}')
+            self.env['UCX_NET_DEVICES'] = ",".join(self.hca)
+
+        # iterate over mca hash  
+        for key in self.mca: 
+            mpirun_cmd.append(f'--mca {key} {self.mca[key]}') 
+
+        # iterate over env hash 
+        for var in self.env: 
+            mpirun_cmd.append(f'-x {var}={self.env[var]}') 
 
         return " ".join(mpirun_cmd)
