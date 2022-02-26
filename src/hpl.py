@@ -10,7 +10,7 @@ from cpu  import cpu_memory
 from bmt  import Bmt
 
 class Hpl(Bmt): 
-    def __init__(self, size=[], blocksize=[240], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=0, **kwargs):
+    def __init__(self, size=[], blocksize=[240], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=[], **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'HPL'
@@ -194,12 +194,12 @@ class Hpl(Bmt):
             #  qgrid.pop()
 
     def _matrix_size(self):
-        # cpu memory in kb 
-        
         # memory is given in GB 
         if self.memory:  
-            self.memory = int(self.memory.replace('GB','')) 
-            self.size   = [10000*int(sqrt(self.nnodes*self.memory*1000**3/8)/10000)]
+            for memory in self.memory: 
+                memory = int(memory.replace('GB','')) 
+
+                self.size.append(10000*int(sqrt(self.nnodes*memory*1000**3/8)/10000))
         # system memory is given in KB (/proc/meminfo)
         else: 
             self.size = [10000*int(sqrt(0.90*self.nnodes*cpu_memory(self.nodelist[0])*1000/8)/10000)]
@@ -246,7 +246,7 @@ class Hpl(Bmt):
         opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--memory'   , type=str             , metavar='', help=argparse.SUPPRESS)
+        opt.add_argument(      '--memory'   , type=str  , nargs='*', metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--nnodes'   , type=int             , metavar='', help=argparse.SUPPRESS)
         opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
 
