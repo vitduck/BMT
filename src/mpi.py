@@ -5,7 +5,7 @@ class Mpi:
         self.nodelist = nodelist
         self.nnodes   = nnodes
         self.ntasks   = ntasks 
-        self.omp      = omp
+        self._omp     = omp
         self.hostfile = hostfile
         self.verbose  = verbose
     

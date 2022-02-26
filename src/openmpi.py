@@ -13,7 +13,16 @@ class OpenMPI(Mpi):
         self.sharp = sharp
         self.mca   = { }
         self.env   = { 
-            'OMP_NUM_THREADS' : self.omp }  
+            'OMP_NUM_THREADS' : self._omp }  
+
+    @property 
+    def omp(self): 
+        return self._omp 
+
+    @omp.setter 
+    def omp(self, number_of_threads): 
+        self._omp = number_of_threads 
+        self.env['OMP_NUM_THREADS'] = number_of_threads 
 
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:
