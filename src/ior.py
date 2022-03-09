@@ -4,29 +4,41 @@ import os
 import re
 import argparse
 
-from glob  import glob
-from utils import sync
-from bmt   import Bmt
+from glob    import glob
+from utils   import sync
+from bmt_mpi import BmtMpi
 
-class Ior(Bmt):
+class Ior(BmtMpi):
     def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
         super().__init__(**kwargs)
         
         self.name     = 'IOR'
-        self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
         self.bin      = os.path.join(self.bindir, 'ior')
-        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
+        
         self.transfer = transfer
-
         self.block    = block 
         self.segment  = segment
         self.ltrsize  = ltrsize
         self.ltrcount = ltrcount
 
-        self.getopt()
+        self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
+
+        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
+
+        # cmdline options 
+        self.parser.usage        = '%(prog)s -b 16M -t 1M -s 16'
+        self.parser.description  = 'IOR Benchmark'
         
-    def build(self): 
+        self.option.description += (
+            '    --transfer       transfer size\n'
+            '    --block          block size\n'
+            '    --segment        segment count\n'
+            '    --ltrsize        lustre stripe size\n' 
+            '    --ltrcount       lustre stripe count\n' )
+
         self.check_prerequisite('openmpi', '3')
+
+    def build(self): 
 
         if os.path.exists(self.bin):
             return
@@ -45,9 +57,8 @@ class Ior(Bmt):
         super().build()
 
     def run(self): 
-        self.check_prerequisite('openmpi', '3')
+        os.chdir(self.outdir)
 
-        self.mkoutdir()
         self.mpi.write_hostfile() 
 
         self.runcmd = (
@@ -56,13 +67,13 @@ class Ior(Bmt):
            f'-t {self.transfer} ' 
            f'-b {self.block} ' 
            f'-s {self.segment} '
-           f'-w '  # write benchmark
-           f'-r '  # read benchmark
-           f'-k '  # do not remove files
-           f'-z '  # random access to file 
-           f'-e '  # fsync upon write close
-           f'-F '  # N-to-N 
-           f'-C ') # reorderTasks
+            '-w '                 # write benchmark
+            '-r '                 # read benchmark
+            '-k '                 # do not remove files
+            '-z '                 # random access to file 
+            '-e '                 # fsync upon write close
+            '-F '                 # N-to-N 
+            '-C ' )               # reorderTasks
         
         # lustre directives 
         directive = [] 
@@ -73,27 +84,24 @@ class Ior(Bmt):
 
         if directive: 
             self.runcmd += f'-O "{",".join(directive)}"'
-  
+        
+        # flush cache 
         sync(self.nodelist)
         
         self.output = (
             'ior-'
-           f'n{self.nnodes}-'
-           f'p{self.ntasks}-'
+           f'n{self.mpi.node}-'
+           f'p{self.mpi.task}-'
            f't{self.transfer}-'
            f'b{self.block}-'
-           f's{self.segment}.out')
+           f's{self.segment}.out' )
 
-        for i in range(1, self.count+1): 
-            if self.count > 1: 
-                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
-
-            super().run(1) 
+        super().run(1) 
             
-            self.clean() 
+        self.clean() 
 
     def parse(self): 
-        key   = ",".join(map(str, [self.nnodes, self.ntasks, self.transfer, self.block, self.segment]))
+        key   = ",".join(map(str, [self.mpi.node, self.mpi.task, self.transfer, self.block, self.segment]))
 
         write = [] 
         read  = [] 
@@ -133,35 +141,10 @@ class Ior(Bmt):
             os.remove(io_file)
 
     def getopt(self): 
-        parser=argparse.ArgumentParser(
-            usage           = '%(prog)s -b 16M -t 1M -s 16',
-            description     = 'IOR Benchmark', 
-            formatter_class = argparse.RawDescriptionHelpFormatter, 
-            add_help        = False)
-
-        opt = parser.add_argument_group(
-            title       = 'Optional arguments',
-            description = (
-                '-h, --help           show this help message and exit\n'
-                '-v, --version        show program\'s version number and exit\n'
-                '-t, --transfer       transfer size\n'
-                '-b, --block          block size\n'
-                '-s, --segment        segment count\n'
-                '    --ltrsize        lustre stripe size\n' 
-                '    --ltrcount       lustre stripe count\n'
-                '    --nnodes         number of nodes\n'
-                '    --ntasks          number of mpi tasks per node\n' ))
-
-        # options for stream setup
-        opt.add_argument('-h', '--help'     , action='help'        , help=argparse.SUPPRESS)
-        opt.add_argument('-v', '--version'  , action='version', 
-                                 version='%(prog)s '+self.version  , help=argparse.SUPPRESS)
-        opt.add_argument('-t', '--transfer' , type=str, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument('-b', '--block'    , type=str, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument('-s', '--segment'  , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ltrsize'  , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ltrcount' , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nnodes'   , type=int, metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ntasks'   , type=int, metavar='' , help=argparse.SUPPRESS)
+        self.option.add_argument('--transfer' , type=str, metavar='' , help=argparse.SUPPRESS)
+        self.option.add_argument('--block'    , type=str, metavar='' , help=argparse.SUPPRESS)
+        self.option.add_argument('--segment'  , type=int, metavar='' , help=argparse.SUPPRESS)
+        self.option.add_argument('--ltrsize'  , type=int, metavar='' , help=argparse.SUPPRESS)
+        self.option.add_argument('--ltrcount' , type=int, metavar='' , help=argparse.SUPPRESS)
         
-        self.args = vars(parser.parse_args())
+        super().getopt() 

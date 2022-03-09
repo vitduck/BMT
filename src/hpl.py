@@ -3,23 +3,24 @@
 import os
 import re
 import argparse
+import shutil
 
-from math import sqrt
-from env  import module_list
-from cpu  import cpu_memory
-from bmt  import Bmt
+from math    import sqrt
+from cpu     import cpu_memory
+from bmt_mpi import BmtMpi
 
-class Hpl(Bmt): 
-    def __init__(self, size=[], blocksize=[240], pgrid=[], qgrid=[], pmap=0, threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], bcast=[3], memory=[], **kwargs):
+class Hpl(BmtMpi): 
+    def __init__(
+        self, size=[], blocksize=[], pgrid=[], qgrid=[], pmap=0, bcast=[3],  
+        threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], 
+        memory=[], **kwargs ):
+
         super().__init__(**kwargs)
 
         self.name      = 'HPL'
         self.bin       = os.path.join(self.bindir,'xhpl') 
-        self.input     = 'HPL.dat'
-        self.output    = ''
-        self.header    = ['Node', 'Ntask', 'Ngpu', 'Thread', 'N', 'NB', 'P', 'Q', 'BCAST', 'RFACT', 'NDIV', 'PFACT', 'NBMIN', 'Status', 'Perf(Tflops)', 'Time(s)']
-        
-        self.size      = size
+
+        self.size      = size 
         self.blocksize = blocksize 
         self.pmap      = pmap 
         self.pgrid     = pgrid 
@@ -30,41 +31,45 @@ class Hpl(Bmt):
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
+        self.memory    = memory
 
+        self.input     = 'HPL.dat'
+        self.output    = ''
+        self.gpu       = '-'
+
+        self.header    = [
+            'Node', 'Task', 'GPU', 'OMP', 
+            'N', 'NB', 'P', 'Q', 'BCAST', 
+            'RFACT', 'NDIV', 'PFACT', 'NBMIN', 
+            'Status', 'Perf(Tflops)', 'Time(s)' ]
+        
+        # cpu-specific parameters 
         self.depth     = [1]  
         self.swap      = 1 
         self.swap_thr  = 64 
         self.l1        = 0 
         self.u         = 0 
-
-        self.ngpus     = 0 
-        self.memory    = memory
-        self._auto     = False
-
-        self.getopt()
-
-        # set matrix size
-        if not self.size: 
-            self._auto = True
-            self._matrix_size() 
-
-        # mpi grid 
-        if not self.pgrid and not self.qgrid:
-            self._mpi_grid() 
- 
-    # recalcuate MPI grid and matrix size
-    @Bmt.nnodes.setter
-    def nnodes(self, number_of_nodes): 
-        super(Hpl, Hpl).nnodes.__set__(self, number_of_nodes)
         
-        self._mpi_grid() 
+        # cmdline options 
+        self.parser.usage        = '%(prog)s -s 40000 -b 256 --omp 4'
+        self.parser.description  = 'HPL Benchmark'
 
-        if self._auto and not self.args['size']:
-            self._matrix_size()
+        self.option.description += ( 
+            '    --omp            number of OMP threads\n' 
+            '-s, --size           list of problem size\n'
+            '-b, --blocksize      list of block size\n'
+            '-p, --pgrid          MPI pgrid\n'
+            '-q, --qgrid          MPI qgrid\n'
+            '    --pmap           MPI processes mapping\n'
+            '    --bcast          MPI broadcasting algorithms\n'
+            '    --threshold      Validation threshold\n'
+            '    --pfact          list of PFACT variants\n'
+            '    --nbmin          list of NBMIN\n'
+            '    --ndiv           list of NDIV\n'
+            '    --rfact          list of RFACT variants\n'
+            '    --memory         memory usage (GB)\n' )
 
     def write_input(self):
-        #  self.input = f'HPL-n{self.nnodes}-g{self.ntasks}-t{self.omp}.dat'
-
         with open(self.input, 'w') as fh:
             fh.write(f'HPL input\n')
             fh.write(f'BMT\n')
@@ -112,7 +117,7 @@ class Hpl(Bmt):
             fh.write(f'{len(self.depth):<20} number of lookahead depth\n')
             fh.write(f'{" ".join(str(s) for s in self.depth):<20} DEPTHs (>=0)\n')
 
-            # swapping ( ignored by HPL-NVIDIA)
+            # swapping (ignored by HPL-NVIDIA)
             fh.write(f'{self.swap:<20} SWAP (0=bin-exch,1=long,2=mix)\n')
             fh.write(f'{self.swap_thr:<20} swapping threshold \n')
 
@@ -126,15 +131,26 @@ class Hpl(Bmt):
             # memory alignment
             fh.write(f'{"8":<20} memory alignment in double (> 0)\n')
 
+        # back up input file
+        shutil.copy(self.input, f'HPL-n{self.mpi.node}-g{self.mpi.task}-t{self.mpi.omp}.dat')
+
     def run(self): 
-        self.mkoutdir() 
+        # default matrix size
+        if not self.size: 
+            self.opt_matrix_size() 
+
+        # default HPL grid 
+        if not self.pgrid or self.qgrid:
+            self.opt_mpi_grid() 
+
+        os.chdir(self.outdir)
 
         self.write_input()
         self.mpi.write_hostfile()
         
-        self.output = f'HPL-n{self.nnodes}-g{self.ntasks}-t{self.omp}.out'
+        self.output = f'HPL-n{self.mpi.node}-g{self.mpi.task}-t{self.mpi.omp}.out'
         self.runcmd = f'{self.mpi.mpirun()} {self.bin}'
-
+        
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
@@ -160,22 +176,23 @@ class Hpl(Bmt):
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.nnodes, self.ntasks, self.ngpus, self.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.gpu, self.mpi.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    
+                    # hash initialization
+                    if not self.result[key]['gflops']: 
+                        self.result[key]['gflops'] = [] 
+                        self.result[key]['time']   = [] 
 
-                    if not self.result[key]['flops']: 
-                        self.result[key]['flops'] = [] 
-                        self.result[key]['time']  = [] 
-
-                    self.result[key]['flops'].append(float(gflops)/1000) 
+                    self.result[key]['gflops'].append(float(gflops)/1000) 
                     self.result[key]['time' ].append( float(time)) 
 
                 line = output_fh.readline()
 
-    def _mpi_grid(self): 
+    def opt_mpi_grid(self): 
         self.pgrid = [] 
         self.qgrid = []
 
-        tot_mpi_ranks  = self.nnodes * self.ntasks
+        tot_mpi_ranks  = self.mpi.node * self.mpi.task
 
         for i in range(1, tot_mpi_ranks + 1):
             if tot_mpi_ranks % i == 0:
@@ -193,61 +210,30 @@ class Hpl(Bmt):
             #  pgrid.pop()
             #  qgrid.pop()
 
-    def _matrix_size(self):
-        # memory is given in GB 
+    def opt_matrix_size(self):
+        self.size = [] 
+
+        # user defined memory given in GB 
         if self.memory:  
             for memory in self.memory: 
-                memory = int(memory.replace('GB','')) 
-
-                self.size.append(10000*int(sqrt(self.nnodes*memory*1000**3/8)/10000))
-        # system memory is given in KB (/proc/meminfo)
+                self.size.append(10000*int(sqrt(self.mpi.node*memory*1000**3/8)/10000))
+        # system memory is given in KB (cf. /proc/meminfo)
         else: 
-            self.size = [10000*int(sqrt(0.90*self.nnodes*cpu_memory(self.nodelist[0])*1000/8)/10000)]
+            self.size.append(10000*int(sqrt(0.90*self.mpi.node*cpu_memory(self.nodelist[0])*1000/8)/10000))
 
     def getopt(self):
-        parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -s 40000 -b 256 --omp 4',
-            description     = 'HPL Benchmark',
-            formatter_class = argparse.RawDescriptionHelpFormatter,
-            add_help        = False )
+        self.option.add_argument('-s', '--size'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument('-b', '--blocksize', type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument('-p', '--pgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument('-q', '--qgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--pmap'     , type=int             , metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--threshold', type=float           , metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--pfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--memory'   , type=float, nargs='*', metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
 
-        # options for problem setup
-        opt = parser.add_argument_group(
-            title       = 'optional arugments',
-            description = (
-                '-h, --help             show this help message and exit\n'
-                '-v, --version          show program\'s version number and exit\n'
-                '-s, --size             list of problem size\n'
-                '-b, --blocksize        list of block size\n'
-                '-p, --pgrid            MPI pgrid\n'
-                '-q, --qgrid            MPI qgrid\n'
-                '    --pmap             MPI processes mapping\n'
-                '    --bcast            MPI broadcasting algorithms\n'
-                '    --threshold        Validation threshold\n'
-                '    --pfact            list of PFACT variants\n'
-                '    --nbmin            list of NBMIN\n'
-                '    --ndiv             list of NDIV\n'
-                '    --rfact            list of RFACT variants\n'
-                '    --memory           memory usage (GB)\n'
-                '    --nnodes           number of nodes\n'
-                '    --omp              number of omp threads\n' ))
-
-        opt.add_argument('-h', '--help'     , action='help'                    , help=argparse.SUPPRESS)
-        opt.add_argument('-v', '--version'  , action='version', 
-                                  version='%(prog)s '+ self.version            , help=argparse.SUPPRESS)
-        opt.add_argument('-s', '--size'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-b', '--blocksize', type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-p', '--pgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-q', '--qgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--pmap'     , type=int             , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--threshold', type=float           , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--pfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--memory'   , type=str  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--nnodes'   , type=int             , metavar='', help=argparse.SUPPRESS)
-        opt.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
-
-        self.args = vars(parser.parse_args())
+        super().getopt() 

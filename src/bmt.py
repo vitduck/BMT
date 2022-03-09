@@ -6,9 +6,10 @@ import sys
 import time
 import inspect
 import logging
-import packaging.version
+import argparse
 import datetime
 import prerequisite
+import packaging.version
 
 from tabulate    import tabulate
 from statistics  import mean
@@ -22,106 +23,69 @@ from ssh         import ssh_cmd
 from slurm       import slurm_nodelist
 
 class Bmt: 
-    version = '0.8'
+    version = '0.9'
     
-    # initialize root logger 
+    # initialize the root logger 
     logging.basicConfig( 
         stream  = sys.stderr,
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '# %(message)s')
 
-    def __init__(self, prefix='./', count=1, nnodes=0, ntasks=0, omp=1, ngpus=0, mpi=None):
-        # sys info
+    def __init__(self, count=1, prefix='./'):
+        # BMT type  
+        self.name     = ''
+
+        # Parse SLUM_NODELIST 
         self.nodelist = slurm_nodelist()
 
+        # CPU and GPU
         self.host     = lscpu(self.nodelist[0])
         self.device   = {} 
 
-        self.name     = ''
-        self.prefix   = os.path.abspath(prefix)
+        # Number of repeted runs 
         self.count    = count
 
-        self._nnodes  = nnodes or len(self.nodelist)
-        self._ntasks  = ntasks or self.host['CPUs']
-        self._ngpus   = ngpus  
-        self._omp     = omp
-        self._args    = {} 
-
-        self.mpi      = mpi
-        
+        # Directory setup
+        self.prefix   = os.path.abspath(prefix)
         self.bin      = ''
-        self.input    = ''
-        self.output   = ''
-        self.hostfile = 'hostfile'
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
         self.bindir   = os.path.join(self.prefix, 'bin')
         self.builddir = os.path.join(self.prefix, 'build')
         self.outdir   = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
 
+        # Required files 
+        self.input    = ''
+        self.output   = ''
+        self.hostfile = 'hostfile'
+
+        # Build instructions 
         self.src       = []
         self.buildcmd  = []
+
+        # Run command 
         self.runcmd    = ''
 
+        # Result summation   
         self.header    = []
         self.table     = [] 
         self.result    = autovivification() 
 
-        # Propagate parameters to mpi
-        if mpi:
-            self.mpi.nodelist = self.nodelist
-            self.mpi.nnodes   = self._nnodes 
-            self.mpi.ntasks   = self._ntasks 
-            self.mpi.omp      = self._omp
+        # Command line arguments 
+        self._args      = {} 
 
-        os.makedirs(self.builddir, exist_ok=True) 
-        os.makedirs(self.bindir  , exist_ok=True) 
+        self.parser     = argparse.ArgumentParser(
+            formatter_class = argparse.RawDescriptionHelpFormatter,
+            add_help        = False )
 
-    # trigger: number of nodes 
-    @property 
-    def nnodes(self): 
-        return self._nnodes 
+        self.option = self.parser.add_argument_group(
+            title       = 'Optional arguments',
+            description = (
+                '-h, --help           show this help message and exit\n'
+                '-v, --version        show program\'s version number and exit\n' )) 
 
-    @nnodes.setter
-    def nnodes(self, number_of_nodes): 
-        self._nnodes = number_of_nodes 
+        # Create output directory  
+        os.makedirs(self.outdir, exist_ok=True) 
 
-        if self.mpi: 
-            self.mpi.nnodes = number_of_nodes 
-
-    # trigger: number of tasks 
-    @property 
-    def ntasks(self): 
-        return self._ntasks 
-
-    @ntasks.setter
-    def ntasks(self, number_of_tasks): 
-        self._ntasks = number_of_tasks 
-
-        if self.mpi: 
-            self.mpi.ntasks = number_of_tasks
-
-    # trigger: number of omp threads 
-    @property 
-    def omp(self): 
-        return self._omp 
-
-    @omp.setter
-    def omp(self, number_of_threads): 
-        self._omp = number_of_threads 
-
-        if self.mpi: 
-            self.mpi.omp = number_of_threads 
-
-    # trigger: default number of gpus 
-    @property 
-    def ngpus(self): 
-        return self._ngpus
-
-    @ngpus.setter
-    def ngpus(self, number_of_gpus): 
-        self._ngpus = number_of_gpus
-        
-    # override attributes with cmd line arguments
     @property 
     def args(self): 
         return self._args 
@@ -151,6 +115,8 @@ class Bmt:
 
     # download src 
     def download(self): 
+        os.makedirs(self.builddir, exist_ok=True) 
+
         for url in self.src: 
             file_name = url.split('/')[-1]
             file_path = '/'.join([self.builddir, file_name])
@@ -160,13 +126,11 @@ class Bmt:
 
     # build 
     def build(self):
+        os.makedirs(self.bindir  , exist_ok=True) 
+
         for cmd in self.buildcmd: 
             syscmd(cmd)
-
-    def mkoutdir(self):  
-        os.makedirs(self.outdir, exist_ok=True) 
-        os.chdir(self.outdir)
-
+    
     def run(self, redirect=0):
         logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
        
@@ -186,15 +150,15 @@ class Bmt:
     def info(self): 
         cpu_info(self.host)
 
-        if self.ngpus: 
+        if self.device:
             gpu_info(self.device)
 
         module_list()
 
-    def summary(self, sort=0, order='>'): 
+    def summary(self): 
         sys_info = self.host['Model'] 
 
-        if self.ngpus: 
+        if self.device:
             sys_info += ' / ' + self.device['0'][0]
 
         print(f'\n>> {self.name}: {sys_info}')
@@ -205,7 +169,7 @@ class Bmt:
 
             for perf in self.result[key]: 
                 row.append(self._cell_format(self.result[key][perf])) 
-
+            
             self.table.append(row)
 
         # sort data 
@@ -215,14 +179,20 @@ class Bmt:
             #  else:
                 #  self.result =  sorted(self.result, key=lambda x : float(x[-1]))
 
-        print(tabulate(self.table, self.header, tablefmt='grid', stralign='center', numalign='center'))
+        print(tabulate(self.table, self.header, tablefmt='pretty', stralign='center', numalign='center'))
+
+    def getopt(self): 
+        self.option.add_argument('-h', '--help',     action='help', help=argparse.SUPPRESS )
+        self.option.add_argument('-v', '--version' , action='version', version='%(prog)s ' + self.version, help=argparse.SUPPRESS )
+
+        self.args = vars(self.parser.parse_args())
 
     def _cell_format(self, cell):  
         average   = mean(cell)
         formatted = '' 
 
         if self.count > 1: 
-            formatted = "\n".join(list(map("{:.2f}".format, cell))+[f'<{average:.2f}>'])
+            formatted = "\n".join(list(map("{:.2f}".format, cell)) + [f'-<{average:.2f}>-'])
         else:
             formatted = f'{cell[0]:.2f}'
 
