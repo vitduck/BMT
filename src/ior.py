@@ -22,8 +22,8 @@ class Ior(BmtMpi):
         self.ltrcount = ltrcount
 
         self.src      = ['https://github.com/hpc/ior/releases/download/3.3.0/ior-3.3.0.tar.gz -O {self.builddir}/ior-3.3.0.tar.gz']
-
-        self.header   = ['Node', 'Ntask', 'Transfer', 'Block', 'Segment', 'Size', 'Write(MB/s)', 'Read(MB/s)', 'Write(Ops)', 'Read(Ops)']
+        
+        self.header   = ['node', 'ntask', 'transfer', 'block', 'segment', 'size', 'write(MB/s)', 'read(MB/s)', 'write(OPS)', 'read(OPS)']
 
         # cmdline options 
         self.parser.usage        = '%(prog)s -b 16M -t 1M -s 16'
@@ -36,14 +36,13 @@ class Ior(BmtMpi):
             '    --ltrsize        lustre stripe size\n' 
             '    --ltrcount       lustre stripe count\n' )
 
-        self.check_prerequisite('openmpi', '3')
-
     def build(self): 
-
         if os.path.exists(self.bin):
             return
+        
+        self.check_prerequisite('openmpi', '3')
 
-        self.buildcmd += [
+        self.buildcmd = [
            f'cd {self.builddir}; tar xf ior-3.3.0.tar.gz', 
           (f'cd {self.builddir}/ior-3.3.0;' 
             './configure '
@@ -52,8 +51,8 @@ class Ior(BmtMpi):
                f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include '
                f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib;' 
             'make -j 8;' 
-            'make install')]
-        
+            'make install' )]
+
         super().build()
 
     def run(self): 

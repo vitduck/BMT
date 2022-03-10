@@ -19,7 +19,7 @@ class StreamOmp(Bmt):
 
         self.src      = ['https://www.cs.virginia.edu/stream/FTP/Code/stream.c']
 
-        self.header   = ['Size', 'Ntimes', 'Thread', 'Affinity', 'Copy(GB/s)', 'Scale(GB/s)', 'Add(GB/s)', 'Triad(GB/s)']
+        self.header   = ['size', 'ntimes', 'thread', 'affinity', 'copy(GB/s)', 'scale(GB/s)', 'add(GB/s)', 'triad(GB/s)']
 
         # intel icc
         if os.environ.get('CC') == 'icc':  

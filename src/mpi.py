@@ -1,11 +1,14 @@
 #!/usr/bin/env python3 
 
 class Mpi: 
-    def __init__(self, nodelist=[], node=0, task=0, omp=0, hostfile='hostfile', verbose=0):
+    def __init__(self, nodelist=[], node=0, task=1, bind=None, map=None, omp=0, hostfile='hostfile', verbose=0):
         self.nodelist = nodelist
         self.node     = node
         self.task     = task 
+        self.bind     = bind 
+        self.map      = map 
         self._omp     = omp
+
         self.hostfile = hostfile
         self.verbose  = verbose
         self.env      = {} 

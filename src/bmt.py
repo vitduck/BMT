@@ -83,8 +83,10 @@ class Bmt:
                 '-h, --help           show this help message and exit\n'
                 '-v, --version        show program\'s version number and exit\n' )) 
 
-        # Create output directory  
-        os.makedirs(self.outdir, exist_ok=True) 
+        # Create directories
+        os.makedirs(self.builddir, exist_ok=True) 
+        os.makedirs(self.bindir,   exist_ok=True) 
+        os.makedirs(self.outdir,   exist_ok=True) 
 
     @property 
     def args(self): 
@@ -115,19 +117,15 @@ class Bmt:
 
     # download src 
     def download(self): 
-        os.makedirs(self.builddir, exist_ok=True) 
-
         for url in self.src: 
             file_name = url.split('/')[-1]
-            file_path = '/'.join([self.builddir, file_name])
+            file_path = os.path.join(self.builddir, file_name)
 
             if not os.path.exists(file_path): 
                 syscmd(f'wget {url} -O {file_path}')
 
     # build 
     def build(self):
-        os.makedirs(self.bindir  , exist_ok=True) 
-
         for cmd in self.buildcmd: 
             syscmd(cmd)
     

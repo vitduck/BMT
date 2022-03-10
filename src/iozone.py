@@ -14,17 +14,17 @@ class Iozone(Bmt):
     def __init__(self, size='64M', record='1M', node=0, thread=1, **kwargs): 
         super().__init__(**kwargs)
 
-        self.name   = 'IOZONE'
-        self.bin    = os.path.join(self.bindir,'iozone') 
+        self.name     = 'IOZONE'
+        self.bin      = os.path.join(self.bindir,'iozone') 
 
-        self.size   = size
-        self.record = record
-        self.node   = node or len(self.nodelist)
-        self.thread = thread
+        self.size     = size
+        self.record   = record
+        self.node     = node or len(self.nodelist)
+        self.thread   = thread
 
-        self.src    = ['http://www.iozone.org/src/current/iozone3_491.tgz']
+        self.src      = ['http://www.iozone.org/src/current/iozone3_491.tgz']
 
-        self.header = ['Node', 'Thread', 'Size', 'Record', 'Write(MB/s)', 'Read(MB/s)', 'R_Write(OPS)', 'R_Read(OPS)']
+        self.header = ['node', 'thread', 'size', 'record', 'write(MB/s)', 'read(MB/s)', 'r_write(OPS)', 'r_read(OPS)']
  
         # cmdline options
         self.parser.usage        = '%(prog)s -s 1G -r 1M -t 8'
@@ -40,10 +40,10 @@ class Iozone(Bmt):
         if os.path.exists(self.bin):
             return 
 
-        self.buildcmd += [
+        self.buildcmd = [
            f'cd {self.builddir}; tar xf iozone3_491.tgz', 
            f'cd {self.builddir}/iozone3_491/src/current; make linux', 
-           f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}']
+           f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}' ]
 
         super().build() 
 

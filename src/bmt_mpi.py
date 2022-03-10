@@ -15,14 +15,11 @@ class BmtMpi(Bmt):
         if not self.mpi.node: 
             self.mpi.node = len(self.nodelist)
 
-        # set default number of task 
-        if not self.mpi.task: 
-            self.mpi.task = self.host['CPUs']
-
         # cmdline options
         self.option.description += (
             '    --node           number of nodes\n'
-            '    --task           number of MPI tasks per node\n' )
+            '    --task           number of MPI tasks per node\n' 
+            '    --omp            number of OMP threads\n' )
 
     @Bmt.args.setter 
     def args(self, args): 
@@ -39,5 +36,6 @@ class BmtMpi(Bmt):
     def getopt(self): 
         self.option.add_argument('--node', type=int, metavar='', help=argparse.SUPPRESS)
         self.option.add_argument('--task', type=int, metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument('--omp' , type=int, metavar='', help=argparse.SUPPRESS)
 
         super().getopt() 

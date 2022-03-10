@@ -38,10 +38,10 @@ class Hpl(BmtMpi):
         self.gpu       = '-'
 
         self.header    = [
-            'Node', 'Task', 'GPU', 'OMP', 
-            'N', 'NB', 'P', 'Q', 'BCAST', 
-            'RFACT', 'NDIV', 'PFACT', 'NBMIN', 
-            'Status', 'Perf(Tflops)', 'Time(s)' ]
+            'node', 'task', 'gpu', 'omp', 
+            'n', 'nb', 'p', 'q', 'bcast', 
+            'rfact', 'ndiv', 'pfact', 'nbmin', 
+            'status', 'perf(TFLOPS)', 'time(s)' ]
         
         # cpu-specific parameters 
         self.depth     = [1]  
@@ -55,7 +55,6 @@ class Hpl(BmtMpi):
         self.parser.description  = 'HPL Benchmark'
 
         self.option.description += ( 
-            '    --omp            number of OMP threads\n' 
             '-s, --size           list of problem size\n'
             '-b, --blocksize      list of block size\n'
             '-p, --pgrid          MPI pgrid\n'
@@ -148,8 +147,8 @@ class Hpl(BmtMpi):
         self.write_input()
         self.mpi.write_hostfile()
         
-        self.output = f'HPL-n{self.mpi.node}-g{self.mpi.task}-t{self.mpi.omp}.out'
         self.runcmd = f'{self.mpi.mpirun()} {self.bin}'
+        self.output = f'HPL-n{self.mpi.node}-g{self.mpi.task}-t{self.mpi.omp}.out'
         
         for i in range(1, self.count+1): 
             if self.count > 1: 
@@ -234,6 +233,5 @@ class Hpl(BmtMpi):
         self.option.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         self.option.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
         self.option.add_argument(      '--memory'   , type=float, nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--omp'      , type=int             , metavar='', help=argparse.SUPPRESS)
 
         super().getopt() 

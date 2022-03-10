@@ -12,6 +12,11 @@ class HplGpu(Hpl):
     def __init__(self, gpu=0, sif='', **kwargs):
         super().__init__(**kwargs)
 
+        self.check_prerequisite('openmpi'    , '4'     )
+        self.check_prerequisite('connectx'   , '4'     )
+        self.check_prerequisite('nvidia'     , '450.36')
+        self.check_prerequisite('singularity', '3.4.1' )
+
         self.name     = 'HPL/NGC' 
 
         self.device   = nvidia_smi(self.nodelist[0])
@@ -27,13 +32,9 @@ class HplGpu(Hpl):
         # cmd options 
         self.option.description += (
             '    --gpu            number of GPUs\n' )
-        
-        self.check_prerequisite('openmpi'    , '4'     )
-        self.check_prerequisite('connectx'   , '4'     )
-        self.check_prerequisite('nvidia'     , '450.36')
-        self.check_prerequisite('singularity', '3.4.1' )
 
     def run(self):
+
         self.bin = self.singularity() 
 
         super().run()

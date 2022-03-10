@@ -4,7 +4,7 @@ import os
 import re
 import argparse
 
-from hpl_ngc import HplGpu
+from hpl_gpu import HplGpu
 from gpu     import nvidia_smi, gpu_affinity, gpu_memory
 from math    import sqrt
 
@@ -16,10 +16,10 @@ class HplAiGpu(HplGpu):
     
         # NVIDIA-HPL-AI header
         self.header   = [
-            'Node', 'Task', 'GPU', 'OMP', 
-            'N', 'NB', 'P', 'Q', 'BCAST', 
-            'RFACT', 'NDIV', 'PFACT', 'NBMIN', 
-            'Status', 'Perf(Tflops)', 'Perf_IRS(Tflops)','Time(s)' ]
+            'node', 'task', 'gpu', 'omp', 
+            'n', 'nb', 'p', 'q', 'bcast', 
+            'rfact', 'ndiv', 'pfact', 'nbmin', 
+            'status', 'perf(TFLOPS)', 'perf_irs(TFLOPS)','time(s)' ]
    
     def singularity(self): 
         return super().singularity() + '--xhpl-ai' 

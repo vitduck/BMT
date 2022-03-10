@@ -29,7 +29,7 @@ class StreamCuda(Bmt):
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.h',
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu']
 
-        self.header = ['Arch', 'Size', 'Ntimes', 'Copy(GB/s)', 'Mul(GB/s)', 'Add(GB/s)', 'Triad(GB/s)', 'Dot(GB/s)']
+        self.header = ['arch', 'size', 'ntimes', 'copy(GB/s)', 'mul(GB/s)', 'add(GB/s)', 'triad(GB/s)', 'dot(GB/s)']
 
         # cmdline options  
         self.parser.usage        = '%(prog)s --arch sm_70'
@@ -41,11 +41,12 @@ class StreamCuda(Bmt):
             '    --size           size of matrix\n'
             '    --ntimes         run each kernel n times\n' )
 
-        self.check_prerequisite('cuda', '10.1')
 
     def build(self): 
+        self.check_prerequisite('cuda', '10.1')
+
         if not self.arch: 
-            runtime, cuda_cc = device_query(self.nodelist[0])
+            runtime, cuda_cc = device_query(self.nodelist[0], self.builddir)
             self.arch        = f'sm_{cuda_cc}'
 
         self.buildcmd += [

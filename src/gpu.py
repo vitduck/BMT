@@ -4,6 +4,7 @@ import os
 import logging
 import re
 
+from env   import get_module
 from ssh   import ssh_cmd 
 from utils import syscmd
 
@@ -41,15 +42,28 @@ def gpu_affinity(node):
 
     return affinity
 
-def device_query(node): 
-    homedir = os.environ['HOME']
+def device_query(node, builddir='./'): 
+    # requirement to build deviceQuery
+    sample_url = [ 
+        'https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Common/helper_cuda.h',  
+        'https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Common/helper_string.h', 
+        'https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Samples/1_Utilities/deviceQuery/deviceQuery.cpp' ]
+    
+    # download cuda samples 
+    for url in sample_url:
+        file_name = url.split('/')[-1]
+        file_path = os.path.join(builddir, file_name)
+        
+        if not os.path.exists(file_path):
+            syscmd(f'wget {url} -O {file_path}')
+    
+    # build deviceQuerry on host
+    syscmd(f'builtin cd {builddir}; nvcc -I. deviceQuery.cpp -o deviceQuery')
 
-    syscmd(f'wget https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Common/helper_cuda.h -O {homedir}/helper_cuda.h')
-    syscmd(f'wget https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Common/helper_string.h -O {homedir}/helper_string.h')
-    syscmd(f'wget https://raw.githubusercontent.com/NVIDIA/cuda-samples/master/Samples/1_Utilities/deviceQuery/deviceQuery.cpp -O {homedir}/deviceQuery.cpp')
-    syscmd(f'builtin cd; nvcc -I. deviceQuery.cpp -o deviceQuery')
-
-    query = syscmd(f'{ssh_cmd} {node} ./deviceQuery')
+    # execute deviceQuerry in remote host 
+    query = syscmd(
+       f'{ssh_cmd} {node} '
+       f'"cd {builddir}; module load {" ".join(get_module())}; ./deviceQuery"' ) 
 
     for line in query.splitlines():
         if re.search('\/ Runtime Version', line): 
@@ -60,7 +74,7 @@ def device_query(node):
             break
 
     # clean up 
-    for file in ['deviceQuery.cpp', 'helper_cuda.h', 'helper_string.h', 'deviceQuery']:
-        os.remove(f'{homedir}/{file}')
+    #  for file in ['deviceQuery.cpp', 'helper_cuda.h', 'helper_string.h', 'deviceQuery']:
+        #  os.remove(f'{homedir}/{file}')
 
     return runtime, cuda_cc

@@ -18,3 +18,6 @@ def module_unload(module=[]):
 def module_load(module=[]):
     cmd = subprocess.run(['modulecmd', 'python', 'load'] + module, stdout=subprocess.PIPE).stdout.decode('utf-8')
     exec(cmd)
+
+def get_module(): 
+    return os.environ["LOADEDMODULES"].split(os.pathsep)

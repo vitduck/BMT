@@ -5,158 +5,90 @@ import re
 import logging
 import argparse
 
-from env import module_list
-from gpu import device_query
-from bmt import Bmt
+from qe      import Qe
+from bmt_mpi import BmtMpi
+from gpu     import nvidia_smi, device_query, gpu_affinity
 
-class Qe(Bmt):
-    def __init__(self, input='Ausurf_512.in', npool=1, ntg=1, ndiag=1, nimage=1, neb=False, **kwargs): 
-        super().__init__('QE', **kwargs)
+class QeGpu(Qe):
+    def __init__(self, gpu=0, sif='', **kwargs): 
+        super().__init__(**kwargs)
 
-        self.bin    = 'pw.x'
-        self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-7.0/q-e-qe-7.0.tar.gz']
+        self.name   = 'QE/GPU' 
+        self.device = nvidia_smi(self.nodelist[0])
 
-        self.header = ['Node', 'Ngpu', 'Ntask', 'Thread', 'Npool', 'Nimage', 'Time(s)']
+        self.gpu    = gpu
+        self.sif    = sif
 
-        self.input  = os.path.abspath(input)
-        self.npool  = npool
-        self.ntg    = ntg
-        self.ndiag  = ndiag
-        self.nimage = nimage
-        self.neb    = neb
-
-        self.getopt() 
-
-        # default ntasks 
-        if not self.ntasks: 
-            self.ntasks = self.ngpus
+        if sif: 
+            self.name = 'QE/NGC'
+            self.sif  = os.path.abspath(sif)
         
-        if self.neb: 
-            self.name = self.name + '/NEB'
-            self.bin  = self.bin.replace('pw.x', 'neb.x')
-        
+        # default number of GPUs
+        if not self.gpu: 
+            self.gpu      = len(self.device.keys()) 
+            self.mpi.task = self.gpu
+
+        # cmd options 
+        self.option.description += (
+            '    --gpu            number of GPUs\n' )
+
     def build(self): 
         if os.path.exists(self.bin):
             return
+        
+        self.check_prerequisite('hpc_sdk', '21.5')
 
-        # gpu build         
-        if self.gpu:
-            runtime, cuda_cc = device_query(self.nodelist[0])
+        # determine cuda_cc and runtime 
+        runtime, cuda_cc = device_query(self.nodelist[0], self.builddir)
 
-            self.check_prerequisite('hpc_sdk', '21.5')
-       
-            self.buildcmd += [
-               f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
-              (f'cd {self.builddir}/q-e-qe-7.0/;' 
+        self.buildcmd += [
+           f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
+          (f'cd {self.builddir}/q-e-qe-7.0/;' 
                f'./configure '
-                   f'--prefix={os.path.abspath(self.prefix)} '
-                   f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
-                   f'--with-cuda-cc={cuda_cc} '
-                   f'--with-cuda-runtime={runtime} '
-                    '--enable-openmp; '
+               f'--prefix={os.path.abspath(self.prefix)} '
+               f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
+               f'--with-cuda-cc={cuda_cc} '
+               f'--with-cuda-runtime={runtime} '
+                '--enable-openmp; '
                 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
-                'make -j 16 pw; ' 
-                'make -j 16 neb; '
-                'make install')]
-        # cpu build 
-        else: 
-            self.buildcmd += [
-               f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
-              (f'cd {self.builddir}/q-e-qe-7.0/;' 
-               f'./configure '
-                   f'--prefix={os.path.abspath(self.prefix)} '
-                    '--with-scalapack=intel '
-                    '--enable-openmp; '
-                'make -j 16 pw; ' 
-                'make -j 16 neb; '
-                'make install')]
+            'make -j 16 pw; ' 
+            'make -j 16 neb; '
+            'make install' )]
 
-        super().build() 
+        super(BmtMpi, self).build() 
 
     def run(self): 
-        self.mkoutdir()
-        self.write_hostfile()
+        # bug in PGI fortran  
+        self.mpi.env['NO_STOP_MESSAGE'] = 1
 
-        os.environ['NO_STOP_MESSAGE']      = 'yes'
-        os.environ['OMP_NUM_THREADS']      = str(self.omp)
-        os.environ['ESPRESSO_PSEUDO']      = os.path.dirname(self.input)
-        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.ngpus)])
+        # gpu selection
+        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.gpu)]) 
+
+        # numaclt affinity option string
+        affinity = []  
         
-        self.output = (
-           f'{os.path.splitext(os.path.basename(self.input))[0]}-'
-           f'n{self.nodes}_'
-           f'g{self.ngpus}_'
-           f'p{self.ntasks}_'
-           f't{self.omp}_'
-           f'k{self.npool}_'
-           f'i{self.nimage}.out')
+        for i in  gpu_affinity(self.nodelist[0])[0:self.gpu]: 
+            affinity += (list(str(i)*int(self.mpi.task/self.gpu)))
+        
+        # numactl binding 
+        numactl_cmd = (
+            'numactl '
+               f'--cpunodebind={",".join(affinity)} '
+               f'--membind={",".join(affinity)} ' )
 
-        # pass CUDA_VISIBLE_DEVICES to remote host
-        self.runcmd = ( 
-            'mpirun '
-            '--allow-run-as-root '
-           f'-x CUDA_VISIBLE_DEVICES ' 
-           f'-x NO_STOP_MESSAGE '
-           f'--hostfile {self.hostfile} ')
-
-        # NVIDIA NGC
+        # singularity run 
         if self.sif: 
-            self.check_prerequisite('nvidia'     , '450')
-            self.check_prerequisite('openmpi'    , '3'  )
-            self.check_prerequisite('singularity', '3.1')
+            self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
 
-            self.runcmd += (
-                f'singularity run --nv {os.path.abspath(self.sif)} '
-                f'pw.x -input {self.input} -npool {self.npool}' )
+            self.bin = numactl_cmd + f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
         else: 
             self.check_prerequisite('hpc_sdk', '21.5')
-            self.runcmd += f'{self.bin} -input {self.input} -npool {self.npool} -nimage {self.nimage}'
-        
-        super().run(1) 
+            
+            self.bin = numactl_cmd + self.bin
 
-    def parse(self): 
-        with open(self.output, 'r') as fh:
-            regex = re.compile('(?:PWSCF|NEB)\s+\:.*CPU\s*(?:(.+?)m)?\s*(.+?)s')
-
-            for line in fh:
-                result = regex.search(line)
-                if result:
-                    minute, second = result.groups()
-                    if not minute: 
-                        minute = 0.0
-                    exit
-
-        self.result.append([self.nodes, self.ngpus, self.ntasks, self.omp, self.npool, self.nimage, 60*float(minute)+float(second)])
+        super().run()
 
     def getopt(self): 
-        parser = argparse.ArgumentParser(
-            usage           = '%(prog)s -i Si.in',
-            description     = 'QE Benchmark',
-            formatter_class = argparse.RawDescriptionHelpFormatter,
-            add_help        = False)
-
-        opt = parser.add_argument_group(
-            title       = 'Optional arguments',
-            description = (
-                '-h, --help           show this help message and exit\n'
-                '-v, --version        show program\'s version number and exit\n'
-                '    --npool          k-points parallelization\n'
-                '    --nimage         image parallelization\n'
-                '    --neb            nudge elastic band calculation\n'
-                '    --nodes          number of node\n'
-                '    --ngpus          number of gpus per node\n'            
-                '    --ntasks         number of MPI tasks per node\n'
-                '    --omp            number of OpenMP thread\n' ))
-
-        opt.add_argument('-h', '--help'   , action='help'                   , help=argparse.SUPPRESS)
-        opt.add_argument('-v', '--version', action='version', 
-                                  version='%(prog)s '+self.version          , help=argparse.SUPPRESS)
-        opt.add_argument(      '--npool'  , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nimage' , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--neb'    , action='store_true'             , help=argparse.SUPPRESS)
-        opt.add_argument(      '--nodes'  , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ngpus'  , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--ntasks' , type=int           , metavar='' , help=argparse.SUPPRESS)
-        opt.add_argument(      '--omp'    , type=int           , metavar='' , help=argparse.SUPPRESS)
-
-        self.args = vars(parser.parse_args())
+        self.option.add_argument('--gpu', type=int, metavar='' , help=argparse.SUPPRESS)
+       
+        super().getopt() 
