@@ -130,7 +130,8 @@ class Bmt:
             syscmd(cmd)
     
     def run(self, redirect=0):
-        logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
+        #logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
+        logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
        
         # redirect output to file 
         if redirect: 

@@ -19,6 +19,10 @@ class QeGpu(Qe):
         self.gpu    = gpu
         self.sif    = sif
 
+        # For GPU version  
+        self.ntg    = 1 
+        self.ndiag  = 1
+
         if sif: 
             self.name = 'QE/NGC'
             self.sif  = os.path.abspath(sif)
@@ -49,6 +53,7 @@ class QeGpu(Qe):
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
+                '--with-scalapack=no '
                 '--enable-openmp; '
                 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
             'make -j 16 pw; ' 
@@ -58,7 +63,7 @@ class QeGpu(Qe):
         super(BmtMpi, self).build() 
 
     def run(self): 
-        # bug in PGI fortran  
+        # Fortran 2003 standard regarding STOP
         self.mpi.env['NO_STOP_MESSAGE'] = 1
 
         # gpu selection
@@ -78,14 +83,18 @@ class QeGpu(Qe):
 
         # singularity run 
         if self.sif: 
+            self.check_prerequisite('nvidia'     , '450')
+            self.check_prerequisite('openmpi'    , '3'  )
+            self.check_prerequisite('singularity', '3.1')
+            
             self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
 
             self.bin = numactl_cmd + f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
         else: 
             self.check_prerequisite('hpc_sdk', '21.5')
             
-            self.bin = numactl_cmd + self.bin
-
+            self.bin = numactl_cmd + os.path.join(self.bindir, 'pw.x')
+        
         super().run()
 
     def getopt(self): 

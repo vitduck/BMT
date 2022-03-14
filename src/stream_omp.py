@@ -62,12 +62,12 @@ class StreamOmp(Bmt):
         os.chdir(self.outdir)
 
         self.runcmd = (
-           f'{ssh_cmd} {self.nodelist[0]} ' # ssh to remote host 
-           f'"builtin cd {self.outdir}; '                        # cd to caller dir 
-           f'module load {self.module}; '                        # for intel compiler
-            'OMP_PLACES=threads '                                # thread placement 
-           f'OMP_PROC_BIND={self.affinity} '                     # thread affinity
-           f'OMP_NUM_THREADS={str(self.omp)} '                   # thread number 
+           f'{ssh_cmd} {self.nodelist[0]} '      # ssh to remote host 
+           f'"builtin cd {self.outdir}; '        # cd to caller dir 
+           f'module load {self.module}; '        # for intel compiler
+            'OMP_PLACES=threads '                # thread placement 
+           f'OMP_PROC_BIND={self.affinity} '     # thread affinity
+           f'OMP_NUM_THREADS={str(self.omp)} '   # thread number 
            f'{self.bin}"')            
 
         self.output = f'stream-{self.module}-{self.affinity}-omp_{self.omp}.out'

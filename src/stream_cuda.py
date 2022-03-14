@@ -41,7 +41,6 @@ class StreamCuda(Bmt):
             '    --size           size of matrix\n'
             '    --ntimes         run each kernel n times\n' )
 
-
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
 

@@ -77,11 +77,16 @@ class Qe(BmtMpi):
             f'{self.mpi.mpirun()} ' 
                f'{self.bin} ' 
                    f'-input {self.input} '
+                   f'-nimage {self.nimage}' 
                    f'-npool {self.npool} '
-                   f'-pd true '
-                   f'-ntg {self.ntg} '
-                   f'-ndiag {self.ndiag} '
-                   f'-nimage {self.nimage}' )
+                   f'-ndiag {self.ndiag} ' )
+
+        # Pencil decomposition 
+        # This is an undocmmented option for CPU
+        if self.ntg > 1: 
+            self.runcmd += ( 
+                 '-pd true '
+                f'-ntg {self.ntg}' )
         
         self.output = (
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
@@ -89,10 +94,10 @@ class Qe(BmtMpi):
                f'g{self.gpu}_'
                f't{self.mpi.task}_'
                f'o{self.mpi.omp}_'
+               f'ni{self.nimage}_' 
                f'nk{self.npool}_'
                f'nt{self.ntg}_'
-               f'nd{self.ndiag}_'
-               f'ni{self.nimage}.out' )
+               f'nd{self.ndiag}.out' )
 
         for i in range(1, self.count+1): 
             if self.count > 1: 
@@ -120,7 +125,6 @@ class Qe(BmtMpi):
 
         if not self.result[key]['time']: 
             self.result[key]['time'] = [] 
-
 
         self.result[key]['time'].append(60*float(minute)+float(second))
 
