@@ -13,7 +13,6 @@ class Qe(BmtMpi):
 
         self.name   = 'QE'
         self.bin    = os.path.join(self.bindir, 'pw.x')
-        self.gpu    = 0 
 
         self.input  = os.path.abspath(input)
         self.npool  = npool
@@ -24,7 +23,7 @@ class Qe(BmtMpi):
 
         self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-7.0/q-e-qe-7.0.tar.gz']
 
-        self.header = ['input', 'node', 'task', 'gpu', 'omp', 'npool', 'ntg', 'ndiag', 'nimage', 'time(s)']
+        self.header = ['input', 'node', 'task', 'omp', 'gpu', 'npool', 'ntg', 'ndiag', 'nimage', 'time(s)']
         
         # cmdline option
         self.parser.usage        = '%(prog)s -i Si.in'
@@ -74,30 +73,32 @@ class Qe(BmtMpi):
             #  self.bin  = os.path.join(self.bindir, 'neb.x')
 
         self.runcmd = (
-            f'{self.mpi.mpirun()} ' 
+            f'{self.mpi.run()} '  
                f'{self.bin} ' 
-                   f'-input {self.input} '
-                   f'-nimage {self.nimage}' 
-                   f'-npool {self.npool} '
-                   f'-ndiag {self.ndiag} ' )
+                   f'-input  {self.input} ' 
+                   f'-nimage {self.nimage} '
+                   f'-npool  {self.npool} ' 
+                   f'-ndiag  {self.ndiag} ' )
 
         # Pencil decomposition 
-        # This is an undocmmented option for CPU
+        # This is an undocmmented option
         if self.ntg > 1: 
-            self.runcmd += ( 
-                 '-pd true '
+            self.runcmd += (
+                f'-pd true '
                 f'-ntg {self.ntg}' )
         
-        self.output = (
+        self.output = ( 
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
-               f'n{self.mpi.node}_'
-               f'g{self.gpu}_'
-               f't{self.mpi.task}_'
-               f'o{self.mpi.omp}_'
-               f'ni{self.nimage}_' 
-               f'nk{self.npool}_'
-               f'nt{self.ntg}_'
-               f'nd{self.ndiag}.out' )
+                f'n{self.mpi.node}-'
+                f't{self.mpi.task}-' 
+                f'o{self.mpi.omp}-'
+                f'ni{self.nimage}-' 
+                f'nk{self.npool}-'
+                f'nt{self.ntg}-'
+                f'nd{self.ndiag}.out' )
+
+        if self.mpi.gpu: 
+            self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
 
         for i in range(1, self.count+1): 
             if self.count > 1: 
@@ -108,7 +109,7 @@ class Qe(BmtMpi):
     def parse(self): 
         key = ",".join(map(str, [
             os.path.basename(self.input), 
-            self.mpi.node, self.mpi.task, self.gpu, self.mpi.omp, 
+            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu,
             self.npool, self.ntg, self.ndiag, self.nimage ]))
 
         with open(self.output, 'r') as fh:

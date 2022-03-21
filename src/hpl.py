@@ -35,10 +35,9 @@ class Hpl(BmtMpi):
 
         self.input     = 'HPL.dat'
         self.output    = ''
-        self.gpu       = '-'
 
         self.header    = [
-            'node', 'task', 'gpu', 'omp', 
+            'node', 'task', 'omp', 'gpu', 
             'n', 'nb', 'p', 'q', 'bcast', 
             'rfact', 'ndiv', 'pfact', 'nbmin', 
             'status', 'perf(TFLOPS)', 'time(s)' ]
@@ -147,9 +146,12 @@ class Hpl(BmtMpi):
         self.write_input()
         self.mpi.write_hostfile()
         
-        self.runcmd = f'{self.mpi.mpirun()} {self.bin}'
-        self.output = f'HPL-n{self.mpi.node}-g{self.mpi.task}-t{self.mpi.omp}.out'
+        self.runcmd = f'{self.mpi.run()} {self.bin}'
+        self.output = f'HPL-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}.out'
         
+        if self.mpi.gpu:
+            self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
+
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
@@ -175,7 +177,7 @@ class Hpl(BmtMpi):
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.gpu, self.mpi.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
                     
                     # hash initialization
                     if not self.result[key]['gflops']: 

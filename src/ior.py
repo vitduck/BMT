@@ -61,7 +61,7 @@ class Ior(BmtMpi):
         self.mpi.write_hostfile() 
 
         self.runcmd = (
-           f'{self.mpi.mpirun()} '
+           f'{self.mpi.run()} '
            f'{self.bin} '
            f'-t {self.transfer} ' 
            f'-b {self.block} ' 

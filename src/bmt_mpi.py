@@ -19,7 +19,8 @@ class BmtMpi(Bmt):
         self.option.description += (
             '    --node           number of nodes\n'
             '    --task           number of MPI tasks per node\n' 
-            '    --omp            number of OMP threads\n' )
+            '    --omp            number of OMP threads\n'
+            '    --gpu            number of GPUs\n' )
 
     @Bmt.args.setter 
     def args(self, args): 
@@ -28,7 +29,7 @@ class BmtMpi(Bmt):
         for opt in args:   
             if args[opt]: 
                 # Pass attributes to MPI role
-                if opt == 'node' or opt == 'task' or opt == 'omp': 
+                if opt == 'node' or opt == 'task' or opt == 'omp' or opt == 'gpu': 
                     setattr(self.mpi, opt, args[opt]) 
                 else: 
                     setattr(self, opt, args[opt]) 
@@ -37,5 +38,6 @@ class BmtMpi(Bmt):
         self.option.add_argument('--node', type=int, metavar='', help=argparse.SUPPRESS)
         self.option.add_argument('--task', type=int, metavar='', help=argparse.SUPPRESS)
         self.option.add_argument('--omp' , type=int, metavar='', help=argparse.SUPPRESS)
+        self.option.add_argument('--gpu' , type=int, metavar='', help=argparse.SUPPRESS)
 
         super().getopt() 

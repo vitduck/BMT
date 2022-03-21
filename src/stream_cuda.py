@@ -71,7 +71,7 @@ class StreamCuda(Bmt):
            f'-s {str(self.size)} '
            f'-n {str(self.ntimes)}"' )
 
-        self.output = 'stream-cuda.out'
+        self.output = f'stream-cuda-{self.arch}.out'
 
         super().run(1) 
 

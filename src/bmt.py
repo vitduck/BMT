@@ -122,7 +122,7 @@ class Bmt:
             file_path = os.path.join(self.builddir, file_name)
 
             if not os.path.exists(file_path): 
-                syscmd(f'wget {url} -O {file_path}')
+                syscmd(f'wget --no-check-certificate {url} -O {file_path}')
 
     # build 
     def build(self):

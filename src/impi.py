@@ -26,4 +26,4 @@ class IMPI(Mpi):
         for var in self.env: 
             cmd.append(f'-genv {var} {self.env[var]}') 
 
-        return " ".join(cmd)
+        return cmd

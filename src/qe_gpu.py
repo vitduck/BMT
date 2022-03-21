@@ -10,13 +10,12 @@ from bmt_mpi import BmtMpi
 from gpu     import nvidia_smi, device_query, gpu_affinity
 
 class QeGpu(Qe):
-    def __init__(self, gpu=0, sif='', **kwargs): 
+    def __init__(self, sif='', **kwargs): 
         super().__init__(**kwargs)
 
         self.name   = 'QE/GPU' 
         self.device = nvidia_smi(self.nodelist[0])
 
-        self.gpu    = gpu
         self.sif    = sif
 
         # For GPU version  
@@ -28,13 +27,9 @@ class QeGpu(Qe):
             self.sif  = os.path.abspath(sif)
         
         # default number of GPUs
-        if not self.gpu: 
-            self.gpu      = len(self.device.keys()) 
-            self.mpi.task = self.gpu
-
-        # cmd options 
-        self.option.description += (
-            '    --gpu            number of GPUs\n' )
+        if not self.mpi.gpu: 
+            self.mpi.gpu  = len(self.device.keys()) 
+            self.mpi.task = self.mpi.gpu
 
     def build(self): 
         if os.path.exists(self.bin):
@@ -67,19 +62,7 @@ class QeGpu(Qe):
         self.mpi.env['NO_STOP_MESSAGE'] = 1
 
         # gpu selection
-        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.gpu)]) 
-
-        # numaclt affinity option string
-        affinity = []  
-        
-        for i in  gpu_affinity(self.nodelist[0])[0:self.gpu]: 
-            affinity += (list(str(i)*int(self.mpi.task/self.gpu)))
-        
-        # numactl binding 
-        numactl_cmd = (
-            'numactl '
-               f'--cpunodebind={",".join(affinity)} '
-               f'--membind={",".join(affinity)} ' )
+        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.mpi.gpu)]) 
 
         # singularity run 
         if self.sif: 
@@ -87,17 +70,11 @@ class QeGpu(Qe):
             self.check_prerequisite('openmpi'    , '3'  )
             self.check_prerequisite('singularity', '3.1')
             
+            # bug
             self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
 
-            self.bin = numactl_cmd + f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
+            self.bin = f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
         else: 
             self.check_prerequisite('hpc_sdk', '21.5')
-            
-            self.bin = numactl_cmd + os.path.join(self.bindir, 'pw.x')
         
         super().run()
-
-    def getopt(self): 
-        self.option.add_argument('--gpu', type=int, metavar='' , help=argparse.SUPPRESS)
-       
-        super().getopt() 

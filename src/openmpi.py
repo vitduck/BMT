@@ -60,4 +60,4 @@ class OpenMPI(Mpi):
         for var in self.env: 
             cmd.append(f'-x {var}={self.env[var]}') 
 
-        return " ".join(cmd)
+        return cmd
