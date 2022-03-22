@@ -19,7 +19,7 @@ class HplGpu(Hpl):
 
         self.name     = 'HPL/NGC' 
 
-        self.device   = nvidia_smi(self.nodelist[0])
+        self.device   = nvidia_smi()
         self.sif      = os.path.abspath(sif)
 
         # default number of GPUs
@@ -44,7 +44,7 @@ class HplGpu(Hpl):
                     'hpl.sh ' 
                        f'--dat {self.input} '
                        f'--cpu-cores-per-rank {self.mpi.omp} '  
-                       f'--cpu-affinity {":".join(gpu_affinity(self.nodelist[0])[0:self.mpi.gpu])} '
+                       f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
                        f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])} ' )
 
     def opt_matrix_size(self):

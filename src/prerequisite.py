@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 cmd = { 
-    'nvidia'      : 'ssh nvidia-smi', 
-    'connectx'    : 'ssh /usr/sbin/lspci',
+    'nvidia'      : 'nvidia-smi', 
+    'connectx'    : 'lspci',
     'hpc_sdk'     : 'nvfortran --version', 
     'gcc'         : 'gcc --version', 
     'pgi'         : 'pgcc --version', 

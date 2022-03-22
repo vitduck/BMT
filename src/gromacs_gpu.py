@@ -6,8 +6,7 @@ import logging
 import argparse
 
 from gromacs import Gromacs
-from gpu     import nvidia_smi, device_query, gpu_affinity
-from ssh     import ssh_cmd
+from gpu     import nvidia_smi, gpu_affinity
 from env     import get_module
 
 class GromacsGpu(Gromacs):
@@ -15,7 +14,7 @@ class GromacsGpu(Gromacs):
         super().__init__(**kwargs)
 
         self.name    = 'GROMACS/GPU'
-        self.device  = nvidia_smi(self.nodelist[0])
+        self.device  = nvidia_smi()
         self.sif     = sif 
  
         if self.sif:
@@ -44,7 +43,8 @@ class GromacsGpu(Gromacs):
 
             self._pme     = 'gpu'
             self._npme    = 1 
-
+            
+            # experimental GPUDirect
             os.environ['GMX_GPU_DD_COMM']              = 'true'
             os.environ['GMX_GPU_PME_PP_COMMS']         = 'true'
             os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
@@ -55,13 +55,7 @@ class GromacsGpu(Gromacs):
         cmd = [ super().mdrun() ]
 
         # thread-MPI requires -ntmpi to be set explicitly
-        if self.sif: 
+        if self.sif or self.gpudirect: 
             cmd.append(f'-ntmpi {self.mpi.task}')
 
-        if self.gpudirect: 
-            cmd.append(f'-nstlist 400')
-
-        # gpu indices
-        #  cmd.append(f'-gpu_id {"".join([str(i) for i in range(0, self.mpi.gpu)])}')
-        
         return " ".join(cmd)

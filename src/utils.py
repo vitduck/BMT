@@ -7,8 +7,6 @@ import logging
 import subprocess
 import collections 
 
-from ssh import ssh_cmd
-
 # emulate perl vivificaiton
 def autovivification(): 
     return collections.defaultdict(autovivification)
@@ -17,7 +15,7 @@ def autovivification():
 def sync(nodelist=[]): 
     if os.getuid() == 0:
         for node in nodelist: 
-            syscmd(f'{ssh_cmd} {node} "sync; echo 1 > /proc/sys/vm/drop_caches"')
+            syscmd('sync; echo 1 > /proc/sys/vm/drop_caches')
     else:
         logging.warning(f'{"Warning":7} : Cannot flush cache without root privileges!')
 

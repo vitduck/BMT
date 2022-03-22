@@ -53,7 +53,7 @@ class Mpi:
         cmd      = [] 
         affinity = []  
 
-        for i in  gpu_affinity(self.nodelist[0])[0:self.gpu]: 
+        for i in gpu_affinity()[0:self.gpu]: 
             affinity += (list(str(i)*int(self.task/self.gpu)))
 
         cmd += [

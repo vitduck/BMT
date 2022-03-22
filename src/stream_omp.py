@@ -5,7 +5,6 @@ import re
 import logging
 import argparse
 
-from ssh import ssh_cmd
 from bmt import Bmt
 
 class StreamOmp(Bmt):
@@ -24,13 +23,11 @@ class StreamOmp(Bmt):
         # intel icc
         if os.environ.get('CC') == 'icc':  
             self.name    += 'STREAM/ICC'
-            self.module   = 'intel'
             self.cc       = 'icc'
             self.cflags   = '-qopenmp'
             self.bin      = os.path.join(self.bindir,'stream_icc') 
         else: 
             self.name     = 'STREAM'
-            self.module   = 'gcc'
             self.cc       = 'gcc'
             self.cflags   = '-fopenmp'
             self.bin      = os.path.join(self.bindir,'stream_gcc')
@@ -61,16 +58,12 @@ class StreamOmp(Bmt):
     def run(self): 
         os.chdir(self.outdir)
 
-        self.runcmd = (
-           f'{ssh_cmd} {self.nodelist[0]} '      # ssh to remote host 
-           f'"builtin cd {self.outdir}; '        # cd to caller dir 
-           f'module load {self.module}; '        # for intel compiler
-            'OMP_PLACES=threads '                # thread placement 
-           f'OMP_PROC_BIND={self.affinity} '     # thread affinity
-           f'OMP_NUM_THREADS={str(self.omp)} '   # thread number 
-           f'{self.bin}"')            
+        os.environ['OMP_PLACES']      = 'threads'
+        os.environ['OMP_PROC_BIND']   = self.affinity
+        os.environ['OMP_NUM_THREADS'] = str(self.omp)
 
-        self.output = f'stream-{self.module}-{self.affinity}-omp_{self.omp}.out'
+        self.runcmd = f'{self.bin}'
+        self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
 
         super().run(1)
 

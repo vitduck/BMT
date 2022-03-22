@@ -4,7 +4,6 @@ import os
 import re
 import argparse
 
-from ssh import ssh_cmd
 from env import module_list
 from gpu import device_query, nvidia_smi, gpu_info
 from bmt import Bmt
@@ -16,7 +15,7 @@ class StreamCuda(Bmt):
         self.name   = 'STREAM/CUDA'
         self.bin    = os.path.join(self.bindir,'stream_cuda') 
 
-        self.device = nvidia_smi(self.nodelist[0])
+        self.device = nvidia_smi()
 
         self.arch   = arch 
         self.mem    = mem 
@@ -45,7 +44,7 @@ class StreamCuda(Bmt):
         self.check_prerequisite('cuda', '10.1')
 
         if not self.arch: 
-            runtime, cuda_cc = device_query(self.nodelist[0], self.builddir)
+            runtime, cuda_cc = device_query(self.builddir)
             self.arch        = f'sm_{cuda_cc}'
 
         self.buildcmd += [
@@ -65,11 +64,9 @@ class StreamCuda(Bmt):
         os.chdir(self.outdir)
     
         self.runcmd = ( 
-           f'{ssh_cmd} {self.nodelist[0]} '          # ssh to remote host 
-           f'"builtin cd {self.outdir}; '            # cd to caller dir
            f'{self.bin} ' 
            f'-s {str(self.size)} '
-           f'-n {str(self.ntimes)}"' )
+           f'-n {str(self.ntimes)}' )
 
         self.output = f'stream-cuda-{self.arch}.out'
 

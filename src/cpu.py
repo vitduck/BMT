@@ -5,13 +5,12 @@ import logging
 import os
 import sys
 
-from ssh   import ssh_cmd
 from utils import syscmd
 
-def lscpu(node): 
+def lscpu(): 
     host  = {} 
     numa  = []
-    lscpu = syscmd(f'{ssh_cmd} {node} lscpu')
+    lscpu = syscmd(f'lscpu')
 
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 
@@ -47,7 +46,7 @@ def cpu_info(host):
 
     logging.info(f'{"AVXs":<7} : {host["AVXs"]}')
 
-def cpu_memory(host): 
-    mem_kb = syscmd(f'{ssh_cmd} {host} grep MemTotal /proc/meminfo').split()[1]*1
+def cpu_memory():
+    mem_kb = syscmd(f'grep MemTotal /proc/meminfo').split()[1]*1
 
     return int(mem_kb)

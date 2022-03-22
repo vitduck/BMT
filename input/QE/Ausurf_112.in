@@ -13,7 +13,7 @@
     celldm(3)   = 1.569966 
     nat         = 112
     ntyp        = 1
-    ecutwfc     = 30.0
+    ecutwfc     = 25.0
     occupations = 'smearing'
     smearing    = 'marzari-vanderbilt'
     degauss     = 0.05
@@ -22,7 +22,7 @@
 &ELECTRONS
     diagonalization  = 'david'
     conv_thr         = 1.0D-8
-    electron_maxstep = 40
+    electron_maxstep = 10
 /
 
 ATOMIC_SPECIES
@@ -108,7 +108,7 @@ AU       33.678001       41.424000        2.391000
 AU       33.678001       36.355999        2.391000
 AU       36.605999       41.424000        2.391000
 AU       36.605999       36.355999        2.391000
-AU       39.535000       41.424000       2.391000
+AU       39.535000       41.424000        2.391000
 AU       39.535000       36.355999        2.391000
 AU       42.464001       41.424000        2.391000
 AU       42.464001       36.355999        2.391000

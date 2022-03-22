@@ -14,7 +14,7 @@ class QeGpu(Qe):
         super().__init__(**kwargs)
 
         self.name   = 'QE/GPU' 
-        self.device = nvidia_smi(self.nodelist[0])
+        self.device = nvidia_smi()
 
         self.sif    = sif
 
@@ -38,7 +38,7 @@ class QeGpu(Qe):
         self.check_prerequisite('hpc_sdk', '21.5')
 
         # determine cuda_cc and runtime 
-        runtime, cuda_cc = device_query(self.nodelist[0], self.builddir)
+        runtime, cuda_cc = device_query(self.builddir)
 
         self.buildcmd += [
            f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',

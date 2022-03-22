@@ -19,7 +19,6 @@ from cpu         import lscpu, cpu_info
 from gpu         import gpu_info
 from env         import module_list
 from utils       import syscmd, autovivification
-from ssh         import ssh_cmd
 from slurm       import slurm_nodelist
 
 class Bmt: 
@@ -39,7 +38,7 @@ class Bmt:
         self.nodelist = slurm_nodelist()
 
         # CPU and GPU
-        self.host     = lscpu(self.nodelist[0])
+        self.host     = lscpu()
         self.device   = {} 
 
         # Number of repeted runs 
@@ -106,8 +105,7 @@ class Bmt:
     
     # check for minimum software/hardware requirements 
     def check_prerequisite(self, module, min_ver):  
-        # insert hostname after ssh 
-        cmd     = prerequisite.cmd[module].replace('ssh', f'{ssh_cmd} {self.nodelist[0]}')
+        cmd     = prerequisite.cmd[module]
         regex   = prerequisite.regex[module]
         version = re.search(regex, syscmd(cmd)).group(1)
                 

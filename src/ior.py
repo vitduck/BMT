@@ -62,17 +62,17 @@ class Ior(BmtMpi):
 
         self.runcmd = (
            f'{self.mpi.run()} '
-           f'{self.bin} '
-           f'-t {self.transfer} ' 
-           f'-b {self.block} ' 
-           f'-s {self.segment} '
-            '-w '                 # write benchmark
-            '-r '                 # read benchmark
-            '-k '                 # do not remove files
-            '-z '                 # random access to file 
-            '-e '                 # fsync upon write close
-            '-F '                 # N-to-N 
-            '-C ' )               # reorderTasks
+               f'{self.bin} '
+               f'-t {self.transfer} ' 
+               f'-b {self.block} ' 
+               f'-s {self.segment} '
+                '-w '                 # write benchmark
+                '-r '                 # read benchmark
+                '-k '                 # do not remove files
+                '-z '                 # random access to file 
+                '-e '                 # fsync upon write close
+                '-F '                 # N-to-N 
+                '-C ' )               # reorderTasks
         
         # lustre directives 
         directive = [] 

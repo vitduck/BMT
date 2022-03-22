@@ -7,7 +7,6 @@ import argparse
 from glob  import glob 
 from utils import sync
 
-from ssh import ssh_cmd
 from bmt import Bmt
 
 class Iozone(Bmt):
@@ -59,7 +58,7 @@ class Iozone(Bmt):
         self.write_hostfile() 
 
         # cluster mode 
-        os.environ['RSH'] = ssh_cmd 
+        os.environ['RSH'] = 'ssh -oStrictHostKeyChecking=no'
 
         option = (
            f'-s {self.size} '                    # file size per threads 
