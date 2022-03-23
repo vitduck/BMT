@@ -8,7 +8,7 @@ import argparse
 from bmt_mpi import BmtMpi
 
 class Gromacs(BmtMpi):
-    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, tunepme=False, gpudirect=False, **kwargs):
+    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'GROMACS'
@@ -21,6 +21,7 @@ class Gromacs(BmtMpi):
         self.input     = os.path.abspath(input)
         self.nsteps    = nsteps
         self.resetstep = resetstep
+        self.pin       = pin
         self.nstlist   = nstlist
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
@@ -148,7 +149,7 @@ class Gromacs(BmtMpi):
                f'-npme {self._npme}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
-               f'-pin off' ]
+               f'-pin {self.pin}' ]
         
         if self.tunepme == False: 
             cmd.append('-notunepme')

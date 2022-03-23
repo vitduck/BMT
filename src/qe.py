@@ -63,7 +63,6 @@ class Qe(BmtMpi):
 
         self.mpi.write_hostfile()
 
-        self.mpi.env['OMP_NUM_THREADS'] = self.mpi.omp
         self.mpi.env['ESPRESSO_TMPDIR'] = self.outdir
         self.mpi.env['ESPRESSO_PSEUDO'] = os.path.dirname(self.input)
 

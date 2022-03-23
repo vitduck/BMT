@@ -16,12 +16,15 @@ class GromacsGpu(Gromacs):
         self.name    = 'GROMACS/GPU'
         self.device  = nvidia_smi()
         self.sif     = sif 
- 
-        if self.sif:
+        
+        if self.gpudirect: 
+            self.name += '/GPUDIRECT'
+            self.bin   = os.path.join(self.bindir, 'gmx')
+        elif self.sif:
             self.name += '/NGC'
             self.sif   = os.path.abspath(sif)
-            self.bin  = f'singularity run --nv {self.sif} gmx'
-
+            self.bin   = f'singularity run --nv {self.sif} gmx'
+        
         # mdrun private (GPU)
         self._bonded = 'gpu'
         self._nb     = 'gpu'
@@ -35,17 +38,14 @@ class GromacsGpu(Gromacs):
 
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
-            self.name     = self.name + '/GPUDIRECT'
-            self.bin      = os.path.join(self.bindir, 'gmx')
-
             self.mpi.node = 1 
             self.mpi.task = self.mpi.gpu
-
+            
             self._pme     = 'gpu'
             self._npme    = 1 
             
             # experimental GPUDirect
-            os.environ['GMX_GPU_DD_COMM']              = 'true'
+            os.environ['GMX_GPU_DD_COMMS']             = 'true'
             os.environ['GMX_GPU_PME_PP_COMMS']         = 'true'
             os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
         
