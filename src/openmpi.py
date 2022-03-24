@@ -9,7 +9,8 @@ class OpenMPI(Mpi):
         self.ucx   = ucx 
         self.hca   = hca
         self.sharp = sharp
-        self.mca   = {'pml' : '^ucx'}
+        self.mca   = {
+            'pml' : '^ucx' }
 
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:

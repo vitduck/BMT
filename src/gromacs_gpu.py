@@ -31,15 +31,15 @@ class GromacsGpu(Gromacs):
         
         # default number of GPUs
         if not self.mpi.gpu: 
-            self.mpi.gpu = len(self.device.keys())
+            self.mpi.gpu  = len(self.mpi.cuda_devs)
 
     def run(self): 
-        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.mpi.gpu)])
+        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
             self.mpi.node = 1 
-            self.mpi.task = self.mpi.gpu
+            self.mpi.task = len(self.mpi.gpu)
             
             self._pme     = 'gpu'
             self._npme    = 1 

@@ -30,10 +30,8 @@ def gpu_affinity():
     for line in topology.splitlines():
         if re.search('^GPU\d+', line): 
             numa = line.split()[-1]
-            if re.search('^\d+$', numa): 
-                affinity.append(numa) 
-            else: 
-                affinity.append('0') 
+            
+            affinity.append(numa) 
 
     return affinity
 

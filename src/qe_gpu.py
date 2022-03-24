@@ -28,7 +28,7 @@ class QeGpu(Qe):
         
         # default number of GPUs
         if not self.mpi.gpu: 
-            self.mpi.gpu  = len(self.device.keys()) 
+            self.mpi.gpu  = len(self.mpi.cuda_devs)
             self.mpi.task = self.mpi.gpu
 
     def build(self): 
@@ -39,18 +39,19 @@ class QeGpu(Qe):
 
         # determine cuda_cc and runtime 
         runtime, cuda_cc = device_query(self.builddir)
-
+        
+        # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
+        # 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
         self.buildcmd += [
-           f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
-          (f'cd {self.builddir}/q-e-qe-7.0/;' 
+           f'cd {self.builddir}; tar xf q-e-qe-6.8.tar.gz',
+          (f'cd {self.builddir}/q-e-qe-6.8/;' 
                f'./configure '
                f'--prefix={os.path.abspath(self.prefix)} '
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
-                '--with-scalapack=no '
-                '--enable-openmp; '
-                'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
+                '--with-scalapack=no; '
+                'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc; '
             'make -j 16 pw; ' 
             'make -j 16 neb; '
             'make install' )]
@@ -62,7 +63,7 @@ class QeGpu(Qe):
         self.mpi.env['NO_STOP_MESSAGE'] = 1
 
         # gpu selection
-        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in range(0, self.mpi.gpu)]) 
+        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
         # singularity run 
         if self.sif: 

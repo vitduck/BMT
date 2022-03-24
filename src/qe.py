@@ -21,7 +21,7 @@ class Qe(BmtMpi):
         self.nimage = nimage
         self.neb    = neb
 
-        self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-7.0/q-e-qe-7.0.tar.gz']
+        self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-6.8/q-e-qe-6.8.tar.gz'] 
 
         self.header = ['input', 'node', 'task', 'omp', 'gpu', 'npool', 'ntg', 'ndiag', 'nimage', 'time(s)']
         
@@ -46,8 +46,8 @@ class Qe(BmtMpi):
             scalapack = 'intel'
         
         self.buildcmd += [
-            f'cd {self.builddir}; tar xf q-e-qe-7.0.tar.gz',
-           (f'cd {self.builddir}/q-e-qe-7.0/;' 
+            f'cd {self.builddir}; tar xf q-e-qe-6.8.tar.gz',
+           (f'cd {self.builddir}/q-e-qe-6.8/;' 
                f'./configure '
                    f'--prefix={os.path.abspath(self.prefix)} '
                    f'--with-scalapack={scalapack} '
@@ -62,7 +62,9 @@ class Qe(BmtMpi):
         os.chdir(self.outdir)
 
         self.mpi.write_hostfile()
-
+        
+        # Fortran 2003 standard regarding STOP (PGI)
+        self.mpi.env['NO_STOP_MESSAGE'] = 1
         self.mpi.env['ESPRESSO_TMPDIR'] = self.outdir
         self.mpi.env['ESPRESSO_PSEUDO'] = os.path.dirname(self.input)
 

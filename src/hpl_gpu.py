@@ -24,7 +24,7 @@ class HplGpu(Hpl):
 
         # default number of GPUs
         if not self.mpi.gpu: 
-            self.mpi.gpu  = len(self.device.keys()) 
+            self.mpi.gpu  = len(self.mpi.cuda_devs)
             self.mpi.task = self.mpi.gpu
 
         # NVIDIA-HPL required parameters 
