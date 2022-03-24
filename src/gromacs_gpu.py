@@ -29,6 +29,10 @@ class GromacsGpu(Gromacs):
         self._bonded = 'gpu'
         self._nb     = 'gpu'
         
+        # default cuda visible devices
+        if not self.mpi.cuda_devs: 
+            self.mpi.cuda_devs = list(range(0, len(self.device.keys())))
+
         # default number of GPUs
         if not self.mpi.gpu: 
             self.mpi.gpu  = len(self.mpi.cuda_devs)

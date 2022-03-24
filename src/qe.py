@@ -64,6 +64,7 @@ class Qe(BmtMpi):
         self.mpi.write_hostfile()
         
         # Fortran 2003 standard regarding STOP (PGI)
+        # Unfortunately this no longer works with NVIDIA_HPC_SDK
         self.mpi.env['NO_STOP_MESSAGE'] = 1
         self.mpi.env['ESPRESSO_TMPDIR'] = self.outdir
         self.mpi.env['ESPRESSO_PSEUDO'] = os.path.dirname(self.input)

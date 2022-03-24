@@ -21,8 +21,8 @@ class Mpi:
         self.env       = {} 
         self.cuda_devs = []
 
-        if os.environ['CUDA_VISIBLE_DEVICES']: 
-            self.cuda_devs = os.environ['CUDA_VISIBLE_DEVICES'].split(',')
+        if 'CUDA_VISIBLE_DEVICES' in os.environ: 
+            cuda_devs = os.environ['CUDA_VISIBLE_DEVICES'].split(',')
 
         if omp: 
             self.env['OMP_NUM_THREADS'] = omp

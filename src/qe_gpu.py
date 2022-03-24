@@ -25,6 +25,10 @@ class QeGpu(Qe):
         if sif: 
             self.name = 'QE/NGC'
             self.sif  = os.path.abspath(sif)
+
+        # default cuda visible devices
+        if not self.mpi.cuda_devs: 
+            self.mpi.cuda_devs = list(range(0, len(self.device.keys())))
         
         # default number of GPUs
         if not self.mpi.gpu: 
