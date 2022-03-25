@@ -23,7 +23,7 @@ class Qe(BmtMpi):
 
         self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-6.8/q-e-qe-6.8.tar.gz'] 
 
-        self.header = ['input', 'node', 'task', 'omp', 'gpu', 'npool', 'ntg', 'ndiag', 'nimage', 'time(s)']
+        self.header = ['input', 'node', 'task', 'omp', 'gpu', 'nimage', 'npool', 'ntg', 'ndiag', 'time(s)']
         
         # cmdline option
         self.parser.usage        = '%(prog)s -i Si.in'
@@ -112,7 +112,7 @@ class Qe(BmtMpi):
         key = ",".join(map(str, [
             os.path.basename(self.input), 
             self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu,
-            self.npool, self.ntg, self.ndiag, self.nimage ]))
+            self.nimage, self.npool, self.ntg, self.ndiag ]))
 
         with open(self.output, 'r') as fh:
             regex = re.compile('(?:PWSCF|NEB)\s+\:.*CPU\s*(?:(.+?)m)?\s*(.+?)s')

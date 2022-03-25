@@ -45,6 +45,10 @@ class Mpi:
 
         # srun
         if self.slurm:
+            # export MPI environmental variables
+            for key in self.env: 
+                os.environ[key] = self.env[key] 
+
             cmd += self.srun() 
         else:
             cmd += self.mpirun()

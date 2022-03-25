@@ -34,9 +34,9 @@ def syscmd(cmd, output=None):
             if output:
                 with open(output, "w") as output_fh:
                     output_fh.write(f'{e.stdout.decode("utf-8").rstrip()}')
-            else:
-                logging.error(f'{e.stderr.decode("utf-8").rstrip()}')
-                sys.exit()
+        else:
+            logging.error(f'{e.stderr.decode("utf-8").rstrip()}')
+            sys.exit()
     else: 
         if output: 
             with open(output, "w") as output_fh:

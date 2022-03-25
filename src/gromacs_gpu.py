@@ -43,7 +43,7 @@ class GromacsGpu(Gromacs):
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
             self.mpi.node = 1 
-            self.mpi.task = len(self.mpi.gpu)
+            self.mpi.task = self.mpi.gpu
             
             self._pme     = 'gpu'
             self._npme    = 1 

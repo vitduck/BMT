@@ -30,7 +30,10 @@ class OpenMPI(Mpi):
 
         # process mapping 
         if self.map: 
-            cmd.append(f'--map-by {self.map}') 
+            if self.omp: 
+                cmd.append(f'--map-by {self.map}:PE={self.omp}') 
+            else:
+                cmd.append(f'--map-by {self.map}') 
         
         # show report to stderr
         if self.verbose: 
