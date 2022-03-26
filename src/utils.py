@@ -23,23 +23,22 @@ def sync(nodelist=[]):
 def syscmd(cmd, output=None):
     logging.debug(cmd)
 
-    pout = '' 
+    pipe = subprocess.run(cmd, shell=True, text=True, capture_output=True)
 
-    try: 
-        pout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('utf-8').rstrip()
-    except subprocess.CalledProcessError as e:
-        # Work around required for QE/6.8
-        # https://forums.developer.nvidia.com/t/unusual-behavior/136392/2
-        if e.returncode == 2:
-            if output:
-                with open(output, "w") as output_fh:
-                    output_fh.write(f'{e.stdout.decode("utf-8").rstrip()}')
-        else:
-            logging.error(f'{e.stderr.decode("utf-8").rstrip()}')
-            sys.exit()
-    else: 
-        if output: 
+    # Work around required for QE/6.8
+    # https://forums.developer.nvidia.com/t/unusual-behavior/136392/2
+    if pipe.returncode == 0 or pipe.returncode == 2:
+        if output:
             with open(output, "w") as output_fh:
-                output_fh.write(pout)
+                # openmpi  --report-bindings
+                if pipe.stderr: 
+                    for line in pipe.stderr.splitlines():
+                        if re.search('^\[.+?\] MCW', line): 
+                            logging.error(line)
+                    
+                output_fh.write(pipe.stdout)
         else: 
-            return pout
+            return pipe.stdout
+    else: 
+        logging.error(pipe.stderr)
+        sys.exit()

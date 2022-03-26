@@ -42,7 +42,7 @@ class Gromacs(BmtMpi):
 
         self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
 
-        self.header    = ['input', 'node', 'task', 'omp', 'gpu', 'perf(ns/day)', 'time(s)']
+        self.header    = ['input', 'node', 'task', 'omp', 'gpu', 'nstlist', 'perf(ns/day)', 'time(s)']
 
         # cmdline option
         self.parser.usage        = '%(prog)s -i stmv.tpr --nsteps 4000'
@@ -102,7 +102,8 @@ class Gromacs(BmtMpi):
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
                f'n{self.mpi.node}-'
                f't{self.mpi.task}-' 
-               f'o{self.mpi.omp}.log' )
+               f'o{self.mpi.omp}-'
+               f'l{self.nstlist}.log' )
 
         if self.mpi.gpu:
             self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
@@ -119,7 +120,7 @@ class Gromacs(BmtMpi):
             os.remove('ener.edr')
 
     def parse(self):
-        key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.gpu]))
+        key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.gpu, self.nstlist]))
 
         with open(self.output, 'r') as fh:
             for line in fh:
@@ -161,7 +162,7 @@ class Gromacs(BmtMpi):
     def parse(self):
         key = ",".join(map(str, [
             os.path.basename(self.input), 
-            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu ]))
+            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, self.nstlist ]))
 
         with open('md.log', 'r') as fh:
             for line in fh:
