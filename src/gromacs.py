@@ -93,10 +93,12 @@ class Gromacs(BmtMpi):
 
         self.mpi.write_hostfile()
 
+        # GROMACS print output to stderr 
         self.runcmd = (
            f'{self.mpi.run()} '
                f'{self.bin} ' 
-               f'{self.mdrun()} ' )
+               f'{self.mdrun()} '  
+                '1>&2' )
 
         self.output = (
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'

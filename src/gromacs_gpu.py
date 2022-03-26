@@ -44,6 +44,7 @@ class GromacsGpu(Gromacs):
         if self.gpudirect: 
             self.mpi.node = 1 
             self.mpi.task = self.mpi.gpu
+            self.mpi.omp  = 0 
             
             self._pme     = 'gpu'
 
