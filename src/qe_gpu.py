@@ -54,6 +54,7 @@ class QeGpu(Qe):
                f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
+                '--enable-openmp '
                 '--with-scalapack=no; '
                 'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc; '
             'make -j 16 pw; ' 

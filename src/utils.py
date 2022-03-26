@@ -26,7 +26,7 @@ def syscmd(cmd, output=None):
     pout = '' 
 
     try: 
-        pout = subprocess.check_output(cmd, stderr=subprocess.PIPE, shell=True).decode('utf-8').rstrip()
+        pout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode('utf-8').rstrip()
     except subprocess.CalledProcessError as e:
         # Work around required for QE/6.8
         # https://forums.developer.nvidia.com/t/unusual-behavior/136392/2

@@ -3,12 +3,14 @@
 from mpi import Mpi
 
 class OpenMPI(Mpi): 
-    def __init__(self, ucx=[], hca=[], sharp=0, verbose=0, **kwargs): 
+    def __init__(self, ucx=[], hca=[], sharp=0, verbose=False, **kwargs): 
         super().__init__(**kwargs) 
 
-        self.ucx   = ucx 
-        self.hca   = hca
-        self.sharp = sharp
+        self.ucx     = ucx 
+        self.hca     = hca
+        self.sharp   = sharp
+        self.verbose = verbose
+
         self.mca   = {
             'pml' : '^ucx' }
 

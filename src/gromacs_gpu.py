@@ -46,7 +46,9 @@ class GromacsGpu(Gromacs):
             self.mpi.task = self.mpi.gpu
             
             self._pme     = 'gpu'
-            self._npme    = 1 
+
+            if self.mpi.gpu > 1: 
+                self._npme    = 1 
             
             # experimental GPUDirect
             os.environ['GMX_GPU_DD_COMMS']             = 'true'
