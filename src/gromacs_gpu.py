@@ -44,8 +44,13 @@ class GromacsGpu(Gromacs):
 
         super().build()
 
+    def mdrun(self): 
+        gpu_id = "".join([str(i) for i in range(0, self.mpi.gpu)]) 
+
+        return super().mdrun() + f' -gpu_id {gpu_id}'
+
     def run(self): 
-        self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
+        #  self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
         # single rank for PME only 
         if self.pme == 'gpu' and self.mpi.node * self.mpi.gpu > 1:
@@ -54,7 +59,7 @@ class GromacsGpu(Gromacs):
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
             self.mpi.node = 1 
-            self.mpi.task = self.mpi.gpu
+            #  self.mpi.task = self.mpi.gpu
             
             # experimental GPUDirect
             os.environ['GMX_GPU_DD_COMMS']             = 'true'
