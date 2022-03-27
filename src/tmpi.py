@@ -2,7 +2,7 @@
 
 from mpi import Mpi
 
-class tMpi(Mpi): 
+class tMPI(Mpi): 
     def run(self): 
         cmd = [] 
 

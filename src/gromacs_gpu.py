@@ -16,11 +16,13 @@ class GromacsGpu(Gromacs):
         self.name    = 'GROMACS/GPU'
         self.device  = nvidia_smi()
         self.sif     = sif 
+        self.gmx_gpu = 'CUDA'
         
         if self.gpudirect: 
             self.name += '/GPUDIRECT'
             self.bin   = os.path.join(self.bindir, 'gmx')
-        elif self.sif:
+
+        if self.sif:
             self.name += '/NGC'
             self.sif   = os.path.abspath(sif)
             self.bin   = f'singularity run --nv {self.sif} gmx'
@@ -37,19 +39,22 @@ class GromacsGpu(Gromacs):
         if not self.mpi.gpu: 
             self.mpi.gpu  = len(self.mpi.cuda_devs)
 
+    def build(self): 
+        self.check_prerequisite('cuda', '10.0')
+
+        super().build()
+
     def run(self): 
         self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
+
+        # single rank for PME only 
+        if self.pme == 'gpu' and self.mpi.node * self.mpi.gpu > 1:
+            self._npme = 1 
 
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
             self.mpi.node = 1 
             self.mpi.task = self.mpi.gpu
-            self.mpi.omp  = 0 
-            
-            self._pme     = 'gpu'
-
-            if self.mpi.gpu > 1: 
-                self._npme    = 1 
             
             # experimental GPUDirect
             os.environ['GMX_GPU_DD_COMMS']             = 'true'
@@ -57,12 +62,3 @@ class GromacsGpu(Gromacs):
             os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
         
         super().run()
-
-    def mdrun(self): 
-        cmd = [ super().mdrun() ]
-
-        # thread-MPI requires -ntmpi to be set explicitly
-        if self.sif or self.gpudirect: 
-            cmd.append(f'-ntmpi {self.mpi.task}')
-
-        return " ".join(cmd)

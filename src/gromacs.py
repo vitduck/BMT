@@ -8,28 +8,34 @@ import argparse
 from bmt_mpi import BmtMpi
 
 class Gromacs(BmtMpi):
-    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', tunepme=False, gpudirect=False, **kwargs):
+    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='cpu', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'GROMACS'
         
-        if gpudirect: 
-            self.bin   = os.path.join(self.bindir, 'gmx')
+        if type(self.mpi).__name__ == 'tMPI': 
+            self.bin     = os.path.join(self.bindir, 'gmx')
+            self.gmx_mpi = 'OFF'
+            self.gmx_tmpi= 'ONN'
         else:
             self.bin   = os.path.join(self.bindir, 'gmx_mpi')
+            self.gmx_mpi = 'ON'
+            self.gmx_tmpi= 'OFF'
 
         self.input     = os.path.abspath(input)
         self.nsteps    = nsteps
         self.resetstep = resetstep
         self.pin       = pin
         self.nstlist   = nstlist
+        self.pme       = pme
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
+
+        self.gmx_gpu   = 'OFF'
 
         # mdrun private 
         self._nb       = 'cpu'
         self._bonded   = 'cpu'
-        self._pme      = 'cpu'
         self._npme     = -1
 
         # reset step count if tunepme is turned on 
@@ -60,14 +66,10 @@ class Gromacs(BmtMpi):
         
         self.check_prerequisite('cmake'  , '3.16.3')
         self.check_prerequisite('gcc'    , '7.2'   )
-        self.check_prerequisite('cuda'   , '10.0'  )
 
-        # thread MPI 
-        if self.gpudirect: 
-            CMAKE_MPI = '-DGMX_THREAD_MPI=ON'
-        else: 
-            self.check_prerequisite('openmpi', '3.0'   )
-            CMAKE_MPI = '-DGMX_MPI=ON'
+        # MPI
+        if type(self.mpi).__name__ != 'tMPI': 
+            self.check_prerequisite('openmpi', '3.0')
         
         self.buildcmd += [  
             f'cd {self.builddir}; tar xf gromacs-2021.3.tar.gz', 
@@ -76,9 +78,10 @@ class Gromacs(BmtMpi):
                 'cd build;'
                 'cmake .. '  
                    f'-DCMAKE_INSTALL_PREFIX={self.prefix} '
-                   f'{CMAKE_MPI} '
+                   f'-DGMX_THREAD_MPI={self.gmx_tmpi} '
+                   f'-DGMX_MPI={self.gmx_mpi} '
+                   f'-DGMX_GPU={self.gmx_gpu} ' 
                     '-DGMX_OPENMP=ON ' 
-                    '-DGMX_GPU=CUDA ' 
                     '-DGMX_SIMD=AVX2_256 '
                     '-DGMX_DOUBLE=OFF '
                     '-DGMX_FFT_LIBRARY=fftw3 '
@@ -97,8 +100,7 @@ class Gromacs(BmtMpi):
         self.runcmd = (
            f'{self.mpi.run()} '
                f'{self.bin} ' 
-               f'{self.mdrun()} '  
-                '1>&2' )
+               f'{self.mdrun()} ' ) 
 
         self.output = (
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
@@ -114,7 +116,7 @@ class Gromacs(BmtMpi):
             if self.count > 1: 
                 self.output = re.sub('log(\.\d+)?', f'log.{i}', self.output)
                 
-            super().run() 
+            super().run(1) 
 
             os.rename('md.log', self.output)
 
@@ -146,9 +148,9 @@ class Gromacs(BmtMpi):
                f'-s {self.input}', 
                f'-nsteps {str(self.nsteps)}', 
                f'-resetstep {self.resetstep}', 
+               f'-pme {self.pme}', 
                f'-nb {self._nb}', 
                f'-bonded {self._bonded}', 
-               f'-pme {self._pme}', 
                f'-npme {self._npme}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
@@ -158,6 +160,9 @@ class Gromacs(BmtMpi):
             cmd.append('-notunepme')
         else:
             cmd.append('-tunepme')
+
+        if type(self.mpi).__name__ == 'tMPI': 
+            cmd.append(f'-ntmpi {self.mpi.task}')
 
         return " ".join(cmd)
 

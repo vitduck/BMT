@@ -28,16 +28,20 @@ def syscmd(cmd, output=None):
     # Work around required for QE/6.8
     # https://forums.developer.nvidia.com/t/unusual-behavior/136392/2
     if pipe.returncode == 0 or pipe.returncode == 2:
-        # debug message 
-        if pipe.stderr: 
-            for line in pipe.stderr.splitlines():
-                if re.search('^\[.+?\]', line): 
-                    logging.error(line)
+        # debug message: --report-bindings (stderr) 
+        for line in pipe.stderr.splitlines():
+            if re.search('^\[.+?\]', line): 
+                logging.error(line)
 
         # redirect to file 
         if output:
             with open(output, "w") as output_fh:
-                output_fh.write(pipe.stdout)
+                for line in pipe.stdout.splitlines():
+                    # debug message: SHARP_COLL_LOG_LEVEL=3 (stdout)
+                    if re.search('^\[.+?\]', line): 
+                        logging.error(line)
+                    else: 
+                        output_fh.write(f'{line}\n')
         else: 
             return pipe.stdout
     else: 
