@@ -12,7 +12,8 @@ class OpenMPI(Mpi):
         self.verbose = verbose
 
         self.mca   = {
-            'pml' : '^ucx' }
+            'pml'               : '^ucx', 
+            'coll_hcoll_enable' : 0 }
 
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:
@@ -51,8 +52,9 @@ class OpenMPI(Mpi):
 
         # ucx is somewhat buggy and disabled by default
         if self.ucx: 
-            self.mca['pml'    ] = 'ucx'
-            self.env['UCX_TLS'] = ",".join(self.ucx)
+            self.mca['pml'               ] = 'ucx'
+            self.mca['coll_hcoll_enable' ] = 1
+            self.env['UCX_TLS']            = ",".join(self.ucx)
 
         # number of ib devices 
         if self.hca: 

@@ -53,7 +53,7 @@ class GromacsGpu(Gromacs):
         #  self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
         # single rank for PME only 
-        if self.pme == 'gpu' and self.mpi.node * self.mpi.gpu > 1:
+        if self.pme == 'gpu' and self.mpi.node * self.mpi.task > 1:
             self._npme = 1 
 
         # Experimental support for GPUDirect implementation

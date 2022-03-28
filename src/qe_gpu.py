@@ -10,21 +10,22 @@ from bmt_mpi import BmtMpi
 from gpu     import nvidia_smi, device_query, gpu_affinity
 
 class QeGpu(Qe):
-    def __init__(self, sif='', **kwargs): 
+    def __init__(self, gpudirect=False, sif='', **kwargs): 
         super().__init__(**kwargs)
 
-        self.name   = 'QE/GPU' 
-        self.device = nvidia_smi()
+        self.name      = 'QE/GPU' 
+        self.device    = nvidia_smi()
 
-        self.sif    = sif
+        self.gpudirect = gpudirect
+        self.sif       = sif
 
         # For GPU version  
-        self.ntg    = 1 
-        self.ndiag  = 1
+        self.ntg       = 1 
+        self.ndiag     = 1
 
         if sif: 
-            self.name = 'QE/NGC'
-            self.sif  = os.path.abspath(sif)
+            self.name  = 'QE/NGC'
+            self.sif   = os.path.abspath(sif)
 
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
@@ -43,9 +44,16 @@ class QeGpu(Qe):
 
         # determine cuda_cc and runtime 
         runtime, cuda_cc = device_query(self.builddir)
-        
+
+        # make.inc patch 
+        patch = ( 
+            'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc;' ) 
+
+        # __GPU_MPI 
+        if self.gpudirect: 
+            patch += 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc;'
+
         # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
-        # 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc; '
         self.buildcmd += [
            f'cd {self.builddir}; tar xf q-e-qe-6.8.tar.gz',
           (f'cd {self.builddir}/q-e-qe-6.8/;' 
@@ -56,7 +64,7 @@ class QeGpu(Qe):
                f'--with-cuda-runtime={runtime} '
                 '--enable-openmp '
                 '--with-scalapack=no; '
-                'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc; '
+               f'{patch}'
             'make -j 16 pw; ' 
             'make -j 16 neb; '
             'make install' )]

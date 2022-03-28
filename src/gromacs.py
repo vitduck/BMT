@@ -16,7 +16,7 @@ class Gromacs(BmtMpi):
         if type(self.mpi).__name__ == 'tMPI': 
             self.bin     = os.path.join(self.bindir, 'gmx')
             self.gmx_mpi = 'OFF'
-            self.gmx_tmpi= 'ONN'
+            self.gmx_tmpi= 'ON'
         else:
             self.bin   = os.path.join(self.bindir, 'gmx_mpi')
             self.gmx_mpi = 'ON'
