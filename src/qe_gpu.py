@@ -23,6 +23,11 @@ class QeGpu(Qe):
         self.ntg       = 1 
         self.ndiag     = 1
 
+        # disable UCX and HCOLL together to avoid hang spinlock 
+        if gpudirect: 
+            self.mpi.ucx   = [] 
+            self.mpi.sharp = False
+
         if sif: 
             self.name  = 'QE/NGC'
             self.sif   = os.path.abspath(sif)

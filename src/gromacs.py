@@ -8,7 +8,7 @@ import argparse
 from bmt_mpi import BmtMpi
 
 class Gromacs(BmtMpi):
-    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='cpu', tunepme=False, gpudirect=False, **kwargs):
+    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='cpu', update='cpu', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'GROMACS'
@@ -28,6 +28,7 @@ class Gromacs(BmtMpi):
         self.pin       = pin
         self.nstlist   = nstlist
         self.pme       = pme
+        self.update    = update
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
 
@@ -152,6 +153,7 @@ class Gromacs(BmtMpi):
                f'-nb {self._nb}', 
                f'-bonded {self._bonded}', 
                f'-npme {self._npme}', 
+               f'-update {self.update}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
                f'-pin {self.pin}' ]
