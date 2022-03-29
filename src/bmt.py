@@ -28,7 +28,7 @@ class Bmt:
     logging.basicConfig( 
         stream  = sys.stderr,
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
-        format  = '# %(message)s')
+        format  = '[%(levelname)-5s] %(message)s')
 
     def __init__(self, count=1, prefix='./'):
         # BMT type  

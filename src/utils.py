@@ -21,7 +21,7 @@ def sync(nodelist=[]):
 
 # wrapper for system commands 
 def syscmd(cmd, output=None):
-    logging.debug(cmd)
+    logging.debug(cmd.lstrip())
 
     pipe = subprocess.run(cmd, shell=True, text=True, capture_output=True)
 
@@ -31,7 +31,7 @@ def syscmd(cmd, output=None):
         # debug message: --report-bindings (stderr) 
         for line in pipe.stderr.splitlines():
             if re.search('^\[.+?\]', line): 
-                logging.error(line)
+                logging.info(line)
 
         # redirect to file 
         if output:
@@ -39,7 +39,7 @@ def syscmd(cmd, output=None):
                 for line in pipe.stdout.splitlines():
                     # debug message: SHARP_COLL_LOG_LEVEL=3 (stdout)
                     if re.search('^\[.+?\]', line): 
-                        logging.error(line)
+                        logging.info(line)
                     else: 
                         output_fh.write(f'{line}\n')
         else: 
