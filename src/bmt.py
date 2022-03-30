@@ -133,11 +133,11 @@ class Bmt:
        
         # redirect output to file 
         if redirect: 
-            syscmd(self.runcmd, self.output) 
+            syscmd(self.runcmd, self.output)
+
+            self.parse()
         else: 
             syscmd(self.runcmd) 
-
-        self.parse()
 
         time.sleep(5)
     
@@ -185,6 +185,11 @@ class Bmt:
         self.args = vars(self.parser.parse_args())
 
     def _cell_format(self, cell):  
+        # crash test
+        for item in cell: 
+            if item == '-': 
+                return '-' 
+
         average   = mean(cell)
         formatted = '' 
 

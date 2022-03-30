@@ -122,7 +122,8 @@ class Gromacs(BmtMpi):
             os.rename('md.log', self.output)
 
             # clean redundant files
-            os.remove('ener.edr')
+            if os.path.exists('ener.edr'): 
+                os.remove('ener.edr')
 
     def parse(self):
         key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.gpu, self.nstlist]))
@@ -169,10 +170,13 @@ class Gromacs(BmtMpi):
         return " ".join(cmd)
 
     def parse(self):
+        perf = '-'
+        time = '-'
+
         key = ",".join(map(str, [
             os.path.basename(self.input), 
             self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, self.nstlist ]))
-
+         
         with open('md.log', 'r') as fh:
             for line in fh:
                 if re.search('Performance:', line):
@@ -183,7 +187,7 @@ class Gromacs(BmtMpi):
         if not self.result[key]['perf']: 
             self.result[key]['perf'] = [] 
             self.result[key]['time'] = [] 
-
+        
         self.result[key]['perf'].append(perf) 
         self.result[key]['time'].append(time) 
 

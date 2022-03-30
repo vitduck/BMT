@@ -25,25 +25,31 @@ def syscmd(cmd, output=None):
 
     pipe = subprocess.run(cmd, shell=True, text=True, capture_output=True)
 
-    # Work around required for QE/6.8
-    # https://forums.developer.nvidia.com/t/unusual-behavior/136392/2
-    if pipe.returncode == 0 or pipe.returncode == 2:
-        # debug message: --report-bindings (stderr) 
+    # redirect output to file
+    if output:
+        # generic debug message: --report-bindings (to stderr) 
         for line in pipe.stderr.splitlines():
             if re.search('^\[.+?\]', line): 
                 logging.info(line)
 
-        # redirect to file 
-        if output:
-            with open(output, "w") as output_fh:
-                for line in pipe.stdout.splitlines():
-                    # debug message: SHARP_COLL_LOG_LEVEL=3 (stdout)
-                    if re.search('^\[.+?\]', line): 
-                        logging.info(line)
-                    else: 
-                        output_fh.write(f'{line}\n')
+        with open(output, "w") as output_fh:
+            for line in pipe.stdout.splitlines():
+                #  debug message: SHARP_COLL_LOG_LEVEL=3 (to stdout)
+                if re.search('^\[.+?\]', line): 
+                    logging.info(line)
+                else: 
+                    output_fh.write(f'{line}\n')
+        
+        # GROMACS: tunepme fails -> exit code 1 (fatal) 
+        # QE 6.8: STOP message   -> exit code 2 (non fatal)
+        # QE 7.0: No issues
+        if pipe.returncode == 0 or pipe.returncode == 2:
+            return 0
+
+        logging.error(pipe.stderr)
+    else: 
+        if pipe.returncode != 0: 
+            logging.error(pipe.stderr)
+            sys.exit()
         else: 
             return pipe.stdout
-    else: 
-        logging.error(pipe.stderr)
-        sys.exit()

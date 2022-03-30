@@ -109,7 +109,9 @@ class Qe(BmtMpi):
             super().run(1) 
 
     def parse(self): 
-        key = ",".join(map(str, [
+        time = '-' 
+
+        key  = ",".join(map(str, [
             os.path.basename(self.input), 
             self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu,
             self.nimage, self.npool, self.ntg, self.ndiag ]))
@@ -124,12 +126,13 @@ class Qe(BmtMpi):
                     minute, second = result.groups()
                     if not minute: 
                         minute = 0.0
-                    exit
+                    
+                    time = 60*float(minute)+float(second)
 
         if not self.result[key]['time']: 
             self.result[key]['time'] = [] 
 
-        self.result[key]['time'].append(60*float(minute)+float(second))
+        self.result[key]['time'].append(time)
 
     def getopt(self): 
         self.option.add_argument('--npool' , type=int           , metavar='' , help=argparse.SUPPRESS)
