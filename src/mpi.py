@@ -25,7 +25,7 @@ class Mpi:
             cuda_devs = os.environ['CUDA_VISIBLE_DEVICES'].split(',')
 
         if omp: 
-            self.env['OMP_NUM_THREADS'] = omp
+            self.env['OMP_NUM_THREADS'] = str(omp)
 
     @property 
     def omp(self): 
@@ -77,7 +77,8 @@ class Mpi:
     def srun(self): 
         cmd = [ 
             'srun',
-               f'-n {self.node*self.task}' ]
+               f'-n {self.node*self.task}',
+                '--mpi=pmi2' ]
            
         if self.bind: 
             cmd.append(f'--cpu-bind={self.bind}')

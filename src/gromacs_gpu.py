@@ -39,6 +39,10 @@ class GromacsGpu(Gromacs):
         if not self.mpi.gpu: 
             self.mpi.gpu  = len(self.mpi.cuda_devs)
 
+        # cmdline options
+        self.option.description += (
+            '    --gpudirect      enable experimental GPUDirect\n' )
+
     def build(self): 
         self.check_prerequisite('cuda', '10.0')
 
@@ -50,9 +54,7 @@ class GromacsGpu(Gromacs):
         return super().mdrun() + f' -gpu_id {gpu_id}'
 
     def run(self): 
-        #  self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
-
-        # single rank for PME only 
+        # single rank for PME kernel offloading to GPU
         if self.pme == 'gpu': 
             if self.mpi.node * self.mpi.task == 1: 
                 self._npme = -1 
@@ -62,11 +64,19 @@ class GromacsGpu(Gromacs):
         # Experimental support for GPUDirect implementation
         if self.gpudirect: 
             self.mpi.node = 1 
-            #  self.mpi.task = self.mpi.gpu
             
             # experimental GPUDirect
             os.environ['GMX_GPU_DD_COMMS']             = 'true'
             os.environ['GMX_GPU_PME_PP_COMMS']         = 'true'
             os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
+
+            logging.debug('GMX_GPU_DD_COMMS=true')
+            logging.debug('GMX_GPU_PME_PP_COMMS=true')
+            logging.debug('GMX_FORCE_UPDATE_DEFAULT_GPU=true')
         
         super().run()
+
+    def getopt(self): 
+        self.option.add_argument('--gpudirect', action='store_true'  , help=argparse.SUPPRESS)
+
+        super().getopt()

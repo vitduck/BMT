@@ -8,12 +8,12 @@ import argparse
 from bmt_mpi import BmtMpi
 
 class Gromacs(BmtMpi):
-    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='cpu', update='cpu', tunepme=False, gpudirect=False, **kwargs):
+    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='auto', update='auto', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
         self.name      = 'GROMACS'
         
-        if type(self.mpi).__name__ == 'tMPI': 
+        if self.mpi.name == 'tMPI': 
             self.bin     = os.path.join(self.bindir, 'gmx')
             self.gmx_mpi = 'OFF'
             self.gmx_tmpi= 'ON'
@@ -49,17 +49,16 @@ class Gromacs(BmtMpi):
 
         self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
 
-        self.header    = ['input', 'node', 'task', 'omp', 'gpu', 'nstlist', 'perf(ns/day)', 'time(s)']
+        self.header    = ['input', 'node', 'task', 'omp', 'gpu', 'nstlist', 'pme', 'update', 'mpi', 'gpudirect', 'perf(ns/day)', 'time(s)']
 
-        # cmdline option
+        # cmdline options
         self.parser.usage        = '%(prog)s -i stmv.tpr --nsteps 4000'
         self.parser.description  = 'GROMACS Benchmark'
 
         self.option.description += (
             '    --input          input file\n'
             '    --nsteps         number of md steps\n'
-            '    --resetstep      start performance measurement\n'
-            '    --gpudirect      enable experimental GPUDirect\n' )
+            '    --resetstep      start performance measurement\n' )
 
     def build(self): 
         if os.path.exists(self.bin):
@@ -69,7 +68,7 @@ class Gromacs(BmtMpi):
         self.check_prerequisite('gcc'    , '7.2'   )
 
         # MPI
-        if type(self.mpi).__name__ != 'tMPI': 
+        if self.mpi.name == 'tMPI': 
             self.check_prerequisite('openmpi', '3.0')
         
         self.buildcmd += [  
@@ -124,24 +123,7 @@ class Gromacs(BmtMpi):
             # clean redundant files
             if os.path.exists('ener.edr'): 
                 os.remove('ener.edr')
-
-    def parse(self):
-        key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.gpu, self.nstlist]))
-
-        with open(self.output, 'r') as fh:
-            for line in fh:
-                if re.search('Performance:', line):
-                    perf = float(line.split()[1])
-                if re.search('Time:', line):
-                    time = float(line.split()[2])
-
-        if not self.result[key]['perf']: 
-            self.result[key]['perf'] = [] 
-            self.result[key]['time'] = [] 
-
-        self.result[key]['perf'].append(perf) 
-        self.result[key]['time'].append(time) 
-
+   
     def mdrun(self): 
         # gromacs MPI crashes unless thread is explicitly set to 1
         cmd = [
@@ -151,10 +133,10 @@ class Gromacs(BmtMpi):
                f'-nsteps {str(self.nsteps)}', 
                f'-resetstep {self.resetstep}', 
                f'-pme {self.pme}', 
+               f'-update {self.update}', 
                f'-nb {self._nb}', 
                f'-bonded {self._bonded}', 
                f'-npme {self._npme}', 
-               f'-update {self.update}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
                f'-pin {self.pin}' ]
@@ -164,7 +146,7 @@ class Gromacs(BmtMpi):
         else:
             cmd.append('-tunepme')
 
-        if type(self.mpi).__name__ == 'tMPI': 
+        if self.mpi.name == 'tMPI': 
             cmd.append(f'-ntmpi {self.mpi.task}')
 
         return " ".join(cmd)
@@ -175,7 +157,7 @@ class Gromacs(BmtMpi):
 
         key = ",".join(map(str, [
             os.path.basename(self.input), 
-            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, self.nstlist ]))
+            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, self.nstlist, self.pme, self.update, self.mpi.name, self.gpudirect ]))
          
         with open('md.log', 'r') as fh:
             for line in fh:
@@ -195,6 +177,5 @@ class Gromacs(BmtMpi):
         self.option.add_argument('--input'    , type=str, metavar='' , help=argparse.SUPPRESS)
         self.option.add_argument('--nsteps'   , type=int, metavar='' , help=argparse.SUPPRESS)
         self.option.add_argument('--resetstep', type=int, metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--gpudirect', action='store_true'  , help=argparse.SUPPRESS)
        
         super().getopt()

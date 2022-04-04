@@ -3,6 +3,11 @@
 from mpi import Mpi
 
 class IMPI(Mpi): 
+    def __init__(self, **kwargs): 
+        super().__init__(**kwargs) 
+
+        self.name   = 'IMPI'
+
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:
             for host in self.nodelist[0:self.node]:

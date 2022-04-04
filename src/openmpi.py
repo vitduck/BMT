@@ -3,17 +3,15 @@
 from mpi import Mpi
 
 class OpenMPI(Mpi): 
-    def __init__(self, ucx=[], hca=[], sharp=0, verbose=False, **kwargs): 
+    def __init__(self, ucx=None, hca=[], sharp=0, verbose=False, **kwargs): 
         super().__init__(**kwargs) 
 
+        self.name    = 'OpenMPI'
         self.ucx     = ucx 
         self.hca     = hca
         self.sharp   = sharp
         self.verbose = verbose
-
-        self.mca   = {
-            'pml'               : '^ucx', 
-            'coll_hcoll_enable' : 0 }
+        self.mca   = {} 
 
     def write_hostfile(self):
         with open(self.hostfile, 'w') as fh:
@@ -38,9 +36,19 @@ class OpenMPI(Mpi):
             else:
                 cmd.append(f'--map-by {self.map}') 
         
-        # show report to stderr
-        if self.verbose: 
-            cmd.append(f'--report-bindings')
+        # ucx is somewhat buggy and disabled by default
+        if self.ucx is None:
+            self.mca['pml']               = '^ucx'
+            self.mca['coll_hcoll_enable'] = 0
+        else:
+            #  self.mca['btl'] = '^uct'
+            if len(self.ucx): 
+                self.mca['pml']     = 'ucx'
+                self.env['UCX_TLS'] = ",".join(self.ucx)
+        
+        # number of ib devices 
+        if self.hca: 
+            self.env['UCX_NET_DEVICES'] = ",".join(self.hca)
 
         # sharp
         if self.sharp:
@@ -50,15 +58,11 @@ class OpenMPI(Mpi):
             self.env['SHARP_COLL_ENABLE_SAT'] = 1
             self.env['SHARP_COLL_LOG_LEVEL' ] = 3
 
-        # ucx is somewhat buggy and disabled by default
-        if self.ucx: 
-            self.mca['pml'               ] = 'ucx'
-            self.mca['coll_hcoll_enable' ] = 1
-            self.env['UCX_TLS']            = ",".join(self.ucx)
+        # show report to stderr
+        if self.verbose: 
+            cmd.append(f'--report-bindings')
 
-        # number of ib devices 
-        if self.hca: 
-            self.env['UCX_NET_DEVICES'] = ",".join(self.hca)
+            self.env['UCX_LOG_LEVEL']='info' 
 
         # iterate over mca hash  
         for key in self.mca: 
