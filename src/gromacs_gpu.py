@@ -54,6 +54,22 @@ class GromacsGpu(Gromacs):
         return super().mdrun() + f' -gpu_id {gpu_id}'
 
     def run(self): 
+        # Experimental support for GPUDirect implementation
+        if self.gpudirect: 
+            self.mpi.node = 1 
+
+            self.pme    = 'gpu' 
+            self.update = 'gpu'
+            
+            # experimental GPUDirect
+            os.environ['GMX_GPU_DD_COMMS']             = 'true'
+            os.environ['GMX_GPU_PME_PP_COMMS']         = 'true'
+            os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
+
+            logging.debug('export GMX_GPU_DD_COMMS=true')
+            logging.debug('export GMX_GPU_PME_PP_COMMS=true')
+            logging.debug('export GMX_FORCE_UPDATE_DEFAULT_GPU=true')
+        
         # single rank for PME kernel offloading to GPU
         if self.pme == 'gpu': 
             if self.mpi.node * self.mpi.task == 1: 
@@ -61,19 +77,6 @@ class GromacsGpu(Gromacs):
             else:
                 self._npme = 1 
 
-        # Experimental support for GPUDirect implementation
-        if self.gpudirect: 
-            self.mpi.node = 1 
-            
-            # experimental GPUDirect
-            os.environ['GMX_GPU_DD_COMMS']             = 'true'
-            os.environ['GMX_GPU_PME_PP_COMMS']         = 'true'
-            os.environ['GMX_FORCE_UPDATE_DEFAULT_GPU'] = 'true'
-
-            logging.debug('GMX_GPU_DD_COMMS=true')
-            logging.debug('GMX_GPU_PME_PP_COMMS=true')
-            logging.debug('GMX_FORCE_UPDATE_DEFAULT_GPU=true')
-        
         super().run()
 
     def getopt(self): 

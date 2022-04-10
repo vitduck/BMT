@@ -30,7 +30,7 @@ class Bmt:
         level   = os.environ.get('LOGLEVEL', 'INFO').upper(), 
         format  = '[%(levelname)-5s] %(message)s')
 
-    def __init__(self, count=1, prefix='./'):
+    def __init__(self, count=1, prefix='./', outdir=None):
         # BMT type  
         self.name     = ''
 
@@ -44,13 +44,18 @@ class Bmt:
         # Number of repeted runs 
         self.count    = count
 
-        # Directory setup
+        # Build directory setup
         self.prefix   = os.path.abspath(prefix)
         self.bin      = ''
         self.rootdir  = os.path.dirname(inspect.stack()[-1][1])
         self.bindir   = os.path.join(self.prefix, 'bin')
         self.builddir = os.path.join(self.prefix, 'build')
-        self.outdir   = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
+
+        # Output directory 
+        if outdir:
+            self.outdir = '/'.join([os.path.abspath(outdir), datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S")])
+        else: 
+            self.outdir = os.path.join(self.prefix, 'output', datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S"))
 
         # Required files 
         self.input    = ''

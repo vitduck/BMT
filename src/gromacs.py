@@ -11,8 +11,6 @@ class Gromacs(BmtMpi):
     def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='auto', update='auto', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
-        self.name      = 'GROMACS'
-        
         if self.mpi.name == 'tMPI': 
             self.bin     = os.path.join(self.bindir, 'gmx')
             self.gmx_mpi = 'OFF'
@@ -22,6 +20,7 @@ class Gromacs(BmtMpi):
             self.gmx_mpi = 'ON'
             self.gmx_tmpi= 'OFF'
 
+        self.name      = 'GROMACS'
         self.input     = os.path.abspath(input)
         self.nsteps    = nsteps
         self.resetstep = resetstep
@@ -31,7 +30,6 @@ class Gromacs(BmtMpi):
         self.update    = update
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
-
         self.gmx_gpu   = 'OFF'
 
         # mdrun private 
@@ -68,9 +66,9 @@ class Gromacs(BmtMpi):
         self.check_prerequisite('gcc'    , '7.2'   )
 
         # MPI
-        if self.mpi.name == 'tMPI': 
+        if self.mpi.name == 'OpenMPI': 
             self.check_prerequisite('openmpi', '3.0')
-        
+
         self.buildcmd += [  
             f'cd {self.builddir}; tar xf gromacs-2021.3.tar.gz', 
            (f'cd {self.builddir}/gromacs-2021.3;'
@@ -82,7 +80,7 @@ class Gromacs(BmtMpi):
                    f'-DGMX_MPI={self.gmx_mpi} '
                    f'-DGMX_GPU={self.gmx_gpu} ' 
                     '-DGMX_OPENMP=ON ' 
-                    '-DGMX_SIMD=AVX2_256 '
+                    '-DGMX_SIMD=AUTO '
                     '-DGMX_DOUBLE=OFF '
                     '-DGMX_FFT_LIBRARY=fftw3 '
                     '-DGMX_BUILD_OWN_FFTW=ON; '
@@ -148,6 +146,8 @@ class Gromacs(BmtMpi):
 
         if self.mpi.name == 'tMPI': 
             cmd.append(f'-ntmpi {self.mpi.task}')
+        else: 
+            self.check_prerequisite('openmpi', '3.0')
 
         return " ".join(cmd)
 
@@ -155,16 +155,29 @@ class Gromacs(BmtMpi):
         perf = '-'
         time = '-'
 
-        key = ",".join(map(str, [
-            os.path.basename(self.input), 
-            self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, self.nstlist, self.pme, self.update, self.mpi.name, self.gpudirect ]))
-         
         with open('md.log', 'r') as fh:
             for line in fh:
-                if re.search('Performance:', line):
+                nstlist_regex = re.search('^Changing nstlist from \d+ to (\d+)', line)
+                omp_regex     = re.search('^Using (\d+) OpenMP threads?', line) 
+                perf_regex    = re.search('Performance:', line)
+                time_regex    = re.search('Time:', line) 
+
+                if omp_regex: 
+                    omp = omp_regex.group(1)
+
+                if nstlist_regex:
+                    nstlist = nstlist_regex.group(1)
+
+                if perf_regex:
                     perf = float(line.split()[1])
-                if re.search('Time:', line):
+
+                if time_regex:
                     time = float(line.split()[2])
+            
+        key = ",".join(map(str, [
+            os.path.basename(self.input), 
+            self.mpi.node, self.mpi.task, omp, self.mpi.gpu, 
+            nstlist, self.pme, self.update, self.mpi.name, self.gpudirect ]))
 
         if not self.result[key]['perf']: 
             self.result[key]['perf'] = [] 

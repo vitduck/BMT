@@ -60,9 +60,11 @@ class OpenMPI(Mpi):
 
         # show report to stderr
         if self.verbose: 
-            cmd.append(f'--report-bindings')
+            if self.bind or self.map: 
+                cmd.append(f'--report-bindings')
 
-            self.env['UCX_LOG_LEVEL']='info' 
+            if self.ucx is not None: 
+                self.env['UCX_LOG_LEVEL']='info' 
 
         # iterate over mca hash  
         for key in self.mca: 

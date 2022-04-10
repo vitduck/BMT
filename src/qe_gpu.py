@@ -25,7 +25,7 @@ class QeGpu(Qe):
 
         # disable UCX and HCOLL together to avoid hang spinlock 
         if gpudirect: 
-            self.mpi.ucx   = [] 
+            self.mpi.ucx   = None
             self.mpi.sharp = False
 
         if sif: 
