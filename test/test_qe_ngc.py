@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-from qe import Qe
+from qe_gpu  import QeGpu
+from openmpi import OpenMPI
 
-qe = Qe(
+qe = QeGpu(
     prefix = '../run/QE', 
-    input  = '../input/QE/Si_512.in', 
-    sif    = '../image/qe-6.8.sif' )
+    input  = '../input/QE/Ausurf_112.in', 
+    sif    = '../image/qe-6.8.sif', 
+    mpi    = OpenMPI() )
 
 qe.info()
 qe.run()

@@ -10,7 +10,7 @@ from utils import sync
 from bmt import Bmt
 
 class Iozone(Bmt):
-    def __init__(self, size='64M', record='1M', node=0, thread=1, **kwargs): 
+    def __init__(self, size='64M', record='1M', node=0, thread=8, **kwargs): 
         super().__init__(**kwargs)
 
         self.name     = 'IOZONE'

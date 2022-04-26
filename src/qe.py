@@ -28,7 +28,6 @@ class Qe(BmtMpi):
         # cmdline option
         self.parser.usage        = '%(prog)s -i Si.in'
         self.parser.description  = 'QE Benchmark'
-
         self.option.description += (
             '    --npool          k-points parallelization\n'
             '    --ntg            planewave parallelization\n'

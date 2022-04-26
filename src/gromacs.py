@@ -34,7 +34,7 @@ class Gromacs(BmtMpi):
 
         # mdrun private 
         self._nb       = 'cpu'
-        self._bonded   = 'cpu'
+        self._bonded   = 'auto'
         self._npme     = -1
 
         # reset step count if tunepme is turned on 
@@ -52,7 +52,6 @@ class Gromacs(BmtMpi):
         # cmdline options
         self.parser.usage        = '%(prog)s -i stmv.tpr --nsteps 4000'
         self.parser.description  = 'GROMACS Benchmark'
-
         self.option.description += (
             '    --input          input file\n'
             '    --nsteps         number of md steps\n'

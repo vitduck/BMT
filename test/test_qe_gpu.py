@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from qe import Qe
+from qe_gpu import QeGpu
+from openmpi import OpenMPI
 
 qe = Qe(
     prefix = '../run/QE',

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3 
 
-from hpl_ai import Hpl_Ai
+from hpl_ai_gpu import HplAiGpu
+from openmpi    import OpenMPI
 
-hpl = Hpl_Ai(
+hpl = HplAiGpu(
     prefix    = '../run/HPL',
     sif       = '../image/hpc-benchmarks:21.4-hpl.sif',
-    blocksize = [1024] )
+    blocksize = [288], 
+    memory    = ['90%'],
+    mpi       = OpenMPI( 
+        bind  = 'none',
+        omp   = 4 )) 
 
 hpl.info()
 hpl.run() 

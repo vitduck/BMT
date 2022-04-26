@@ -19,7 +19,6 @@ class GromacsGpu(Gromacs):
         self.gmx_gpu = 'CUDA'
         
         # mdrun private (GPU)
-        self._bonded = 'gpu'
         self._nb     = 'gpu'
 
         # experimental features 
@@ -47,8 +46,8 @@ class GromacsGpu(Gromacs):
 
         if self.sif:
             self.name += '/NGC'
-            self.bin   = f'singularity run --nv {self.sif} gmx'
             self.sif   = os.path.abspath(sif)
+            self.bin   = f'singularity run --nv {self.sif} gmx'
                 
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
@@ -63,9 +62,11 @@ class GromacsGpu(Gromacs):
             '    --gpudirect      enable experimental GPUDirect\n' )
 
     def info(self): 
+        super().info() 
+
         for env in os.environ: 
             if re.search('GMX', env): 
-                logging.info(f'export {env} = {self.environ[env]}')
+                logging.info(f'export {env} = {os.environ[env]}')
 
     def build(self): 
         self.check_prerequisite('cuda', '10.0')

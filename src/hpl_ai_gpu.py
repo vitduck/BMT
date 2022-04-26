@@ -43,7 +43,7 @@ class HplAiGpu(HplGpu):
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.gpu, self.mpi.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.gpu, self.mpi.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
                     
                     # hash initialization
                     if not self.result[key]['gflops_half']: 

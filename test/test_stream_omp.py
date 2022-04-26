@@ -7,9 +7,10 @@ stream = StreamOmp(
     prefix = '../run/STREAM/OMP' )
 
 threads = [1, 2]
-ncores  = int(stream.cpu['CPUs'])
+ncores  = int(stream.host['CPUs'])
 
 stream.info() 
+stream.download()
 stream.build()
 
 for i in range(1, int(ncores/4)+1, 1): 
@@ -17,9 +18,9 @@ for i in range(1, int(ncores/4)+1, 1):
 
 # scan affinity/thread 
 for affinity in ['close', 'spread']: 
-    for thread in threads: 
+    for omp in threads: 
         stream.affinity = affinity
-        stream.thread   = thread 
+        stream.omp      = omp
 
         stream.run() 
 

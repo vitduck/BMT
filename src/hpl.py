@@ -56,7 +56,6 @@ class Hpl(BmtMpi):
         # cmdline options 
         self.parser.usage        = '%(prog)s -s 40000 -b 256 --omp 4'
         self.parser.description  = 'HPL Benchmark'
-
         self.option.description += ( 
             '-s, --size           list of problem size\n'
             '-b, --blocksize      list of block size\n'

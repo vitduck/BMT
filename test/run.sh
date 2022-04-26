@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-#SBATCH --partition=cas_v100_2
+#SBATCH --partition=maintenance
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=40
+#SBATCH --ntasks-per-node=32
 #SBATCH --gres=gpu:2
 #SBATCH --job-name=test
 #SBATCH --comment=python
-#SBATCH --error=cas_v100_2.time
-#SBATCH --output=cas_v100_2.out
-#SBATCH --time=08:00:00
+#SBATCH --error=%j.stderr
+#SBATCH --output=%j.stdout
+#SBATCH --time=8:00:00
 
 module purge 
 module load python/3.9.5
