@@ -4,6 +4,7 @@ import os
 import re
 import argparse
 import shutil
+import logging 
 
 from math    import sqrt
 from cpu     import cpu_memory
@@ -31,7 +32,10 @@ class Hpl(BmtMpi):
         self.ndiv      = ndiv 
         self.rfact     = rfact 
         self.bcast     = bcast 
-        self.memory    = memory
+
+        # use 90% memory by default 
+        # note that this may cause problem with cgroups 
+        self.memory    = memory or [0.9*self._total_memory()]
 
         self.input     = 'HPL.dat'
         self.output    = ''
@@ -66,6 +70,14 @@ class Hpl(BmtMpi):
             '    --ndiv           list of NDIV\n'
             '    --rfact          list of RFACT variants\n'
             '    --memory         memory usage (GB)\n' )
+
+    def info(self): 
+        super().info() 
+        
+        # AMD BLIS
+        for env in self.mpi.env: 
+            if re.search('BLIS', env): 
+                logging.info(f'export {env} = {self.mpi.env[env]}')
 
     def write_input(self):
         with open(self.input, 'w') as fh:
@@ -138,7 +150,7 @@ class Hpl(BmtMpi):
             self.opt_matrix_size() 
 
         # default HPL grid 
-        if not self.pgrid or self.qgrid:
+        if not self.pgrid or not self.qgrid:
             self.opt_mpi_grid() 
 
         os.chdir(self.outdir)
@@ -151,7 +163,7 @@ class Hpl(BmtMpi):
         
         if self.mpi.gpu:
             self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
-
+        
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
@@ -214,13 +226,20 @@ class Hpl(BmtMpi):
     def opt_matrix_size(self):
         self.size = [] 
 
-        # user defined memory given in GB 
-        if self.memory:  
-            for memory in self.memory: 
-                self.size.append(10000*int(sqrt(self.mpi.node*memory*1000**3/8)/10000))
-        # system memory is given in KB (cf. /proc/meminfo)
-        else: 
-            self.size.append(10000*int(sqrt(0.90*self.mpi.node*cpu_memory(self.nodelist[0])*1000/8)/10000))
+        for memory in self.memory: 
+            gigabyte_regex = re.search('(\d+)GB', str(memory))
+            percent_regex  = re.search('(\d+)%' , str(memory))
+            
+            # convert GB -> byte 
+            if gigabyte_regex:  
+                memory = self._scale()*int(gigabyte_regex.group(1))*1000**3
+
+            # convert % total memory -> byte
+            if percent_regex: 
+                memory = self._total_memory()*int(percent_regex.group(1))/100
+            
+            # round matrix size to nearest 10000 
+            self.size.append(10000*int(sqrt(memory/8)/10000))
 
     def getopt(self):
         self.option.add_argument('-s', '--size'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
@@ -237,3 +256,10 @@ class Hpl(BmtMpi):
         self.option.add_argument(      '--memory'   , type=float, nargs='*', metavar='', help=argparse.SUPPRESS)
 
         super().getopt() 
+
+    def _scale(self): 
+        return self.mpi.node
+
+    # total memory in Byte
+    def _total_memory(self): 
+        return self._scale()*cpu_memory()*1000

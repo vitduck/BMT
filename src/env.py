@@ -22,3 +22,6 @@ def module_load(module=[]):
 
 def get_module(): 
     return os.environ["LOADEDMODULES"].split(os.pathsep)
+
+def prepend_path(name, path): 
+    os.environ[name] = path + ":" + os.environ[name]

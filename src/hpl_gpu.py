@@ -9,18 +9,16 @@ from gpu  import nvidia_smi, gpu_affinity, gpu_memory
 from math import sqrt
 
 class HplGpu(Hpl): 
-    def __init__(self, sif='', **kwargs):
+    def __init__(self, sif=None, **kwargs):
         super().__init__(**kwargs)
 
-        self.check_prerequisite('openmpi'    , '4'     )
-        self.check_prerequisite('connectx'   , '4'     )
-        self.check_prerequisite('nvidia'     , '450.36')
-        self.check_prerequisite('singularity', '3.4.1' )
-
-        self.name     = 'HPL/NGC' 
-
+        self.name     = 'HPL/GPU' 
         self.device   = nvidia_smi()
-        self.sif      = os.path.abspath(sif)
+        self.sif      = sif
+
+        if self.sif:
+            self.name += '/NGC'
+            self.sif   = os.path.abspath(sif)
 
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
@@ -35,29 +33,34 @@ class HplGpu(Hpl):
         self.l1       = 1
         
     def run(self):
+        self.check_prerequisite('openmpi'    , '4'     )
+        self.check_prerequisite('connectx'   , '4'     )
+        self.check_prerequisite('nvidia'     , '450.36')
 
-        self.bin = self.singularity() 
+        if self.sif:
+            self.check_prerequisite('singularity', '3.4.1' )
+
+            self.bin   = f'singularity run --nv {self.sif} hpl.sh '
+        else: 
+            self.bin   = os.path.join(self.bindir, 'hpl.sh ')
+
+        # wrapper options
+        self.bin += ( 
+            f'--dat {self.input} '
+            f'--cpu-cores-per-rank {self.mpi.omp} '  
+            f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
+            f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
+            f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])} ' )
+
+        # ucx transport (2021.4) 
+        if self.mpi.ucx: 
+            self.bin += ( 
+                f'--ucx-tls {",".join(self.mpi.ucx)}' )
 
         super().run()
+
+    def _scale(self): 
+        return self.mpi.node*self.mpi.gpu
     
-    def singularity(self): 
-        return ( 
-            'singularity '
-                'run '
-                   f'--nv {self.sif} '
-                    'hpl.sh ' 
-                       f'--dat {self.input} '
-                       f'--cpu-cores-per-rank {self.mpi.omp} '  
-                       f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
-                       f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])} ' )
-
-    def opt_matrix_size(self):
-        self.size = []
-
-        # user defined memory given in GB
-        if self.memory:  
-            for memory in self.memory: 
-                self.size.append(10000*int(sqrt(self.mpi.node*self.mpi.gpu*memory*1000**3/8)/10000))
-        # gpu memory from nvidia-smi(unit MiB)
-        else: 
-            self.size.append(10000*int(sqrt(0.90*self.mpi.node*self.mpi.gpu*gpu_memory(self.nodelist[0])*1024**2/8)/10000))
+    def _total_memory(self): 
+        return self._scale()*gpu_memory()*1024**2

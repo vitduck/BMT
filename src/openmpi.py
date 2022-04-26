@@ -56,7 +56,7 @@ class OpenMPI(Mpi):
 
             self.env['HCOLL_ENABLE_SHARP'   ] = self.sharp 
             self.env['SHARP_COLL_ENABLE_SAT'] = 1
-            self.env['SHARP_COLL_LOG_LEVEL' ] = 3
+            self.env['SHARP_COLL_LOG_LEVEL' ] = 4
 
         # show report to stderr
         if self.verbose: 
