@@ -21,8 +21,8 @@ class HplAiGpu(HplGpu):
             'rfact', 'ndiv', 'pfact', 'nbmin', 
             'status', 'perf(TFLOPS)', 'perf_irs(TFLOPS)','time(s)' ]
    
-    def singularity(self): 
-        return super().singularity() + '--xhpl-ai' 
+    def hpl_opt(self): 
+        return super().hpl_opt() + '--xhpl-ai'
 
     def parse(self): 
         with open(self.output, 'r') as output_fh:

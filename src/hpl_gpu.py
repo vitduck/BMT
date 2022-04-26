@@ -45,7 +45,12 @@ class HplGpu(Hpl):
             self.bin   = os.path.join(self.bindir, 'hpl.sh ')
 
         # wrapper options
-        self.bin += ( 
+        self.bin += self.hpl_opt()
+
+        super().run()
+
+    def hpl_opt(self): 
+        opts = (
             f'--dat {self.input} '
             f'--cpu-cores-per-rank {self.mpi.omp} '  
             f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
@@ -54,10 +59,10 @@ class HplGpu(Hpl):
 
         # ucx transport (2021.4) 
         if self.mpi.ucx: 
-            self.bin += ( 
-                f'--ucx-tls {",".join(self.mpi.ucx)}' )
+            opts += ( 
+                f'--ucx-tls {",".join(self.mpi.ucx)} ' )
 
-        super().run()
+        return opts 
 
     def _scale(self): 
         return self.mpi.node*self.mpi.gpu
