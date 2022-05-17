@@ -5,32 +5,31 @@ import re
 import logging
 import argparse
 
-from qe      import Qe
-from bmt_mpi import BmtMpi
-from gpu     import nvidia_smi, device_query, gpu_affinity
+from qe import Qe
+from gpu import nvidia_smi, device_query, gpu_affinity
 
 class QeGpu(Qe):
-    def __init__(self, gpudirect=False, sif='', **kwargs): 
+    def __init__(self, cuda_aware=False, sif='', **kwargs): 
         super().__init__(**kwargs)
 
-        self.name      = 'QE/GPU' 
-        self.device    = nvidia_smi()
+        self.name     = 'QE (GPU)' 
+        self.device   = nvidia_smi()
 
-        self.gpudirect = gpudirect
-        self.sif       = sif
+        self.cuda_aware = cuda_aware
+        self.sif        = sif
 
         # For GPU version  
-        self.ntg       = 1 
-        self.ndiag     = 1
+        self.ntg      = 1 
+        self.ndiag    = 1
 
         # disable UCX and HCOLL together to avoid hang spinlock 
-        if gpudirect: 
+        if cuda_aware:
             self.mpi.ucx   = None
             self.mpi.sharp = False
 
         if sif: 
-            self.name  = 'QE/NGC'
-            self.sif   = os.path.abspath(sif)
+            self.name = 'QE (NGC)'
+            self.sif  = os.path.abspath(sif)
 
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
@@ -41,12 +40,12 @@ class QeGpu(Qe):
             self.mpi.gpu  = len(self.mpi.cuda_devs)
             self.mpi.task = self.mpi.gpu
 
+        self.parser.description = 'QE Benchmark (GPU)'
+
     def build(self): 
         if os.path.exists(self.bin):
             return
         
-        self.check_prerequisite('hpc_sdk', '21.5')
-
         # determine cuda_cc and runtime 
         runtime, cuda_cc = device_query(self.builddir)
 
@@ -55,7 +54,7 @@ class QeGpu(Qe):
             'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc;' ) 
 
         # __GPU_MPI 
-        if self.gpudirect: 
+        if self.cuda_aware: 
             patch += 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc;'
 
         # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
@@ -93,7 +92,10 @@ class QeGpu(Qe):
             self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
 
             self.bin = f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
-        else: 
-            self.check_prerequisite('hpc_sdk', '21.5')
         
         super().run()
+
+    def add_argument(self): 
+        super().add_argument() 
+        
+        self.parser.add_argument('--gpu', type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')

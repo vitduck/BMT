@@ -15,17 +15,14 @@ class BmtMpi(Bmt):
         if not self.mpi.node: 
             self.mpi.node = len(self.nodelist)
 
-        # cmdline options
-        self.option.description += (
-            '    --node           number of nodes\n'
-            '    --task           number of MPI tasks per node\n' 
-            '    --omp            number of OMP threads\n'
-            '    --gpu            number of GPUs\n' )
+    def getopt(self): 
+        self.parser.add_argument('--node', type=int, help='number of nodes (default: $SLUM_NNODES)')
+        self.parser.add_argument('--task', type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)') 
+        self.parser.add_argument('--omp' , type=int, help='number of OpenMP threads (default: 1)')
+        self.parser.add_argument('--gpu' , type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')
 
-    @Bmt.args.setter 
-    def args(self, args): 
-        self._args = args 
-
+        args = vars(self.parser.parse_args())
+        
         for opt in args:   
             if args[opt]: 
                 # Pass attributes to MPI role
@@ -33,11 +30,3 @@ class BmtMpi(Bmt):
                     setattr(self.mpi, opt, args[opt]) 
                 else: 
                     setattr(self, opt, args[opt]) 
-
-    def getopt(self): 
-        self.option.add_argument('--node', type=int, metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('--task', type=int, metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('--omp' , type=int, metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('--gpu' , type=int, metavar='', help=argparse.SUPPRESS)
-
-        super().getopt() 

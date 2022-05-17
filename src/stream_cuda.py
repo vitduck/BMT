@@ -12,7 +12,7 @@ class StreamCuda(Bmt):
     def __init__(self, arch='', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
         super().__init__(**kwargs)
         
-        self.name   = 'STREAM/CUDA'
+        self.name   = 'STREAM (CUDA)'
         self.bin    = os.path.join(self.bindir,'stream_cuda') 
 
         self.device = nvidia_smi()
@@ -30,16 +30,8 @@ class StreamCuda(Bmt):
 
         self.header = ['arch', 'size', 'ntimes', 'copy(GB/s)', 'mul(GB/s)', 'add(GB/s)', 'triad(GB/s)', 'dot(GB/s)']
 
-        # cmdline options  
-        self.parser.usage        = '%(prog)s --arch sm_70'
-        self.parser.description  = 'STREAM benchmark (CUDA)'
+        self.parser.description = 'STREAM benchmark (CUDA)'
     
-        self.option.description += (
-            '    --arch           targeting architecture\n'
-            '    --mem            memory mode\n'
-            '    --size           size of matrix\n'
-            '    --ntimes         run each kernel n times\n' )
-
     def build(self): 
         self.check_prerequisite('cuda', '10.1')
 
@@ -84,10 +76,10 @@ class StreamCuda(Bmt):
 
                         self.result[key][kernel].append(float(line.split()[1])/1000)
     
-    def getopt(self):
-        self.option.add_argument('--arch'  , type=str, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--mem'   , type=str, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--size'  , type=int, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--ntimes', type=int, metavar='', help=argparse.SUPPRESS )
+    def add_argument(self):
+        super().add_argument()
 
-        super().getopt() 
+        self.parser.add_argument('--arch'  , type=str, metavar='SM',help='targeting architecture (default: auto-detected)')
+        self.parser.add_argument('--mem'   , type=str, metavar='MODE',help='memory mode (default: MANAGED)')
+        self.parser.add_argument('--size'  , type=int, help='matrix size (default: 33554432)')
+        self.parser.add_argument('--ntimes', type=int, help='run each kernel n times (default: 100)')

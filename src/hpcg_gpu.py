@@ -4,15 +4,15 @@ import os
 import re
 import argparse
 
-from bmt_mpi import BmtMpi
-from gpu     import nvidia_smi, gpu_affinity
+from bmt import Bmt
+from gpu import nvidia_smi, gpu_affinity
 
-class HpcgGpu(BmtMpi): 
+class HpcgGpu(Bmt): 
     def __init__(self, grid=[256, 256, 256], time=60, sif='', **kwargs):
 
         super().__init__(**kwargs)
 
-        self.name   = 'HPCG/GPU'
+        self.name   = 'HPCG (GPU)'
         self.device = nvidia_smi()
         
         self.grid   = grid 
@@ -20,7 +20,7 @@ class HpcgGpu(BmtMpi):
         self.sif    = sif
 
         if self.sif:
-            self.name += '/NGC'
+            self.name  = 'HPCG (NGC)'
             self.sif   = os.path.abspath(sif)
             self.bin   = f'singularity run --nv {self.sif} hpcg.sh'
 
@@ -40,15 +40,8 @@ class HpcgGpu(BmtMpi):
             'node', 'task', 'omp', 'mpi', 'grid', 
             'SpMV(GFlops)', 'SymGS(GFlops)', 'total(GFlops)', 'final(GFlops)', 'time(s)' ]
 
-        self.parser.usage        = '%(prog)s -g 256 256 256 -t 60 --omp 8'
-        self.parser.description  = 'HPCG benchmark'
+        self.parser.description  = 'HPCG benchmark (GPU)'
 
-        self.option.description += ( 
-            '-h, --help           show this help message and exit\n'
-            '-v, --version        show program\'s version number and exit\n'
-            '-g, --grid           3-dimensional grid\n'
-            '-t, --time           targeted run time\n' )
-                
     def write_input(self):
         input_file = os.path.join(self.outdir, self.input)
 
@@ -129,8 +122,12 @@ class HpcgGpu(BmtMpi):
         print('Total: GPU performance')
         print('Final: GPU + CPU initialization overhead')
 
-    def getopt(self): 
-        opt.add_argument('-g', '--grid', type=int, nargs='*', metavar='', help=argparse.SUPPRESS)
-        opt.add_argument('-t', '--time', type=int           , metavar='', help=argparse.SUPPRESS)
+    def add_argument(self): 
+        super().add_argument()
 
-        super().getopt() 
+        self.parser.add_argument('--grid', type=int, nargs=3, metavar=('NX','NY','NZ'), help='3d grid (default: 256x256x256)')
+        self.parser.add_argument('--time', type=int, help='simulation time (default: 60s)')
+        self.parser.add_argument('--node', type=int, help='number of nodes (default: $SLUM_NNODES)')
+        self.parser.add_argument('--task', type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
+        self.parser.add_argument('--omp' , type=int, help='number of OpenMP threads (default: 1)')
+        self.parser.add_argument('--gpu' , type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')

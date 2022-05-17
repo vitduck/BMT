@@ -5,9 +5,9 @@ import re
 import logging
 import argparse
 
-from bmt_mpi import BmtMpi
+from bmt import Bmt
 
-class Qe(BmtMpi):
+class Qe(Bmt):
     def __init__(self, input='Ausurf_512.in', npool=1, ntg=1, ndiag=1, nimage=1, neb=False, **kwargs): 
         super().__init__(**kwargs)
 
@@ -25,15 +25,7 @@ class Qe(BmtMpi):
 
         self.header = ['input', 'node', 'task', 'omp', 'gpu', 'nimage', 'npool', 'ntg', 'ndiag', 'time(s)']
         
-        # cmdline option
-        self.parser.usage        = '%(prog)s -i Si.in'
-        self.parser.description  = 'QE Benchmark'
-        self.option.description += (
-            '    --npool          k-points parallelization\n'
-            '    --ntg            planewave parallelization\n'
-            '    --ndiag          linear algebra parallelization\n'
-            '    --nimage         image parallelization\n'
-            '    --neb            nudge elastic band calculation\n' )
+        self.parser.description = 'QE Benchmark'
 
     def build(self): 
         if os.path.exists(self.bin):
@@ -133,11 +125,14 @@ class Qe(BmtMpi):
 
         self.result[key]['time'].append(time)
 
-    def getopt(self): 
-        self.option.add_argument('--npool' , type=int           , metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--ntg'   , type=int           , metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--ndiag' , type=int           , metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--nimage', type=int           , metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--neb'   , action='store_true'             , help=argparse.SUPPRESS)
+    def add_argument(self): 
+        super().add_argument() 
         
-        super().getopt()
+        self.parser.add_argument('--neb'   , action='store_true' , help='NEB calculation (default: False)')
+        self.parser.add_argument('--npool' , type=int, help='k-points parallelization (default: 1)')
+        self.parser.add_argument('--ntg'   , type=int, help='planewave parallelization (default: 1)')
+        self.parser.add_argument('--ndiag' , type=int, help='linear algebra parallelization (default: 1)')
+        self.parser.add_argument('--nimage', type=int, help='NEB image parallelization (default: 1)')
+        self.parser.add_argument('--node'  , type=int, help='number of nodes (default: $SLUM_NNODES)')
+        self.parser.add_argument('--task'  , type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
+        self.parser.add_argument('--omp'   , type=int, help='number of OpenMP threads (default: 1)')

@@ -14,6 +14,7 @@ qe = Qe(
     count = 3 
 )
 
+qe.getopt()
 qe.info()
 qe.build()
 qe.run()

@@ -12,14 +12,17 @@ class HplAiGpu(HplGpu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.name   = 'HPL-AI/NGC'
+        self.name   = 'HPL-AI (NGC)'
     
         # NVIDIA-HPL-AI header
-        self.header   = [
+        self.header = [
             'node', 'task', 'gpu', 'omp', 
-            'n', 'nb', 'p', 'q', 'bcast', 
+            'n', 'nb', 
+            'p', 'q', 'bcast', 
             'rfact', 'ndiv', 'pfact', 'nbmin', 
-            'status', 'perf(TFLOPS)', 'perf_irs(TFLOPS)','time(s)' ]
+            'status', 'perf(TFLOPS)', 'perf_irs(TFLOPS)','time(s)']
+        
+        self.parser.description  = 'HPL-AI Benchmark (GPU)'
    
     def hpl_opt(self): 
         return super().hpl_opt() + '--xhpl-ai'

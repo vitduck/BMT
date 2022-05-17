@@ -21,26 +21,18 @@ class StreamOmp(Bmt):
         self.header   = ['size', 'ntimes', 'thread', 'affinity', 'copy(GB/s)', 'scale(GB/s)', 'add(GB/s)', 'triad(GB/s)']
 
         # intel icc
-        if os.environ.get('CC') == 'icc':  
-            self.name    += 'STREAM/ICC'
-            self.cc       = 'icc'
-            self.cflags   = '-qopenmp'
-            self.bin      = os.path.join(self.bindir,'stream_icc') 
+        if os.environ.get('CC') == 'icc':
+            self.name   = 'STREAM (OMP/ICC)'
+            self.cc     = 'icc'
+            self.cflags = '-qopenmp'
+            self.bin    = os.path.join(self.bindir,'stream_icc') 
         else: 
-            self.name     = 'STREAM'
-            self.cc       = 'gcc'
-            self.cflags   = '-fopenmp'
-            self.bin      = os.path.join(self.bindir,'stream_gcc')
+            self.name   = 'STREAM (OMP)'
+            self.cc     = 'gcc'
+            self.cflags = '-fopenmp'
+            self.bin    = os.path.join(self.bindir,'stream_gcc')
 
-        # cmdline options  
-        self.parser.usage        = '%(prog)s --afinity spread --omp 24'
-        self.parser.description  = 'STREAM Benchmark'
-
-        self.option.description += ( 
-            '    --size           size of matrix\n'
-            '    --ntimes         run each kernel n times\n'
-            '    --affinity       thread affinit (close|spread)\n'
-            '    --omp            number of OMP threads\n' )
+        self.parser.description = 'STREAM Benchmark'
 
     def build(self): 
         self.buildcmd += [
@@ -79,10 +71,10 @@ class StreamOmp(Bmt):
 
                         self.result[key][kernel].append(float(line.split()[1])/1000)
 
-    def getopt(self):
-        self.option.add_argument('--size'    , type=int, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--ntimes'  , type=int, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--affinity', type=str, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('--omp'     , type=int, metavar='', help=argparse.SUPPRESS )
+    def add_argument(self):
+        super().add_argument()
 
-        super().getopt() 
+        self.parser.add_argument('--size'    , type=int, help='size of matrix (default: 40000000)')
+        self.parser.add_argument('--ntimes'  , type=int, help='run each kernel n times (default: 100)')
+        self.parser.add_argument('--omp'     , type=int, metavar='OMP_NUM_THREADS', help='number of threads (default: 0)')
+        self.parser.add_argument('--affinity', type=str, metavar='OMP_PROC_BIND', help='thread affinity (default: spread)')

@@ -4,9 +4,9 @@ import sys
 import subprocess 
 
 from utils import syscmd
-from env   import module_load, module_unload
+from env import module_load, module_unload
 
-bmt  = { 
+bmt = { 
     'stream/omp' : { 
         'env' : [ 'gcc/4.8.5' ],  
         'cmd' : './test_stream_omp.py' }, 

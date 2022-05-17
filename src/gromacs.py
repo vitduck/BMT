@@ -5,9 +5,9 @@ import re
 import logging
 import argparse
 
-from bmt_mpi import BmtMpi
+from bmt import Bmt
 
-class Gromacs(BmtMpi):
+class Gromacs(Bmt):
     def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='auto', update='auto', tunepme=False, gpudirect=False, **kwargs):
         super().__init__(**kwargs)
 
@@ -16,7 +16,7 @@ class Gromacs(BmtMpi):
             self.gmx_mpi = 'OFF'
             self.gmx_tmpi= 'ON'
         else:
-            self.bin   = os.path.join(self.bindir, 'gmx_mpi')
+            self.bin = os.path.join(self.bindir, 'gmx_mpi')
             self.gmx_mpi = 'ON'
             self.gmx_tmpi= 'OFF'
 
@@ -31,11 +31,20 @@ class Gromacs(BmtMpi):
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
         self.gmx_gpu   = 'OFF'
+        
+        # for cpu
+        self.nb        = 'cpu'
+        self.bonded    = 'auto'
+        self.npme      = -1
 
-        # mdrun private 
-        self._nb       = 'cpu'
-        self._bonded   = 'auto'
-        self._npme     = -1
+        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
+
+        self.header    = [
+            'input', 'node', 'task', 'omp', 'gpu', 
+            'nstlist', 'pme', 'update', 
+            'mpi', 'gpudirect', 
+            'nsteps', 'resetsteps',
+            'perf(ns/day)', 'time(s)']
 
         # reset step count if tunepme is turned on 
         if self.tunepme and not self.resetstep: 
@@ -45,24 +54,14 @@ class Gromacs(BmtMpi):
         if not self.mpi.task:
             self.mpi.task = self.host['CPUs']
 
-        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
-
-        self.header    = ['input', 'node', 'task', 'omp', 'gpu', 'nstlist', 'pme', 'update', 'mpi', 'gpudirect', 'perf(ns/day)', 'time(s)']
-
-        # cmdline options
-        self.parser.usage        = '%(prog)s -i stmv.tpr --nsteps 4000'
         self.parser.description  = 'GROMACS Benchmark'
-        self.option.description += (
-            '    --input          input file\n'
-            '    --nsteps         number of md steps\n'
-            '    --resetstep      start performance measurement\n' )
 
     def build(self): 
         if os.path.exists(self.bin):
             return
         
-        self.check_prerequisite('cmake'  , '3.16.3')
-        self.check_prerequisite('gcc'    , '7.2'   )
+        self.check_prerequisite('cmake', '3.16.3')
+        self.check_prerequisite('gcc'  , '7.2'   )
 
         # MPI
         if self.mpi.name == 'OpenMPI': 
@@ -131,9 +130,9 @@ class Gromacs(BmtMpi):
                f'-resetstep {self.resetstep}', 
                f'-pme {self.pme}', 
                f'-update {self.update}', 
-               f'-nb {self._nb}', 
-               f'-bonded {self._bonded}', 
-               f'-npme {self._npme}', 
+               f'-nb {self.nb}', 
+               f'-bonded {self.bonded}', 
+               f'-npme {self.npme}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
                f'-pin {self.pin}' ]
@@ -176,7 +175,9 @@ class Gromacs(BmtMpi):
         key = ",".join(map(str, [
             os.path.basename(self.input), 
             self.mpi.node, self.mpi.task, omp, self.mpi.gpu, 
-            nstlist, self.pme, self.update, self.mpi.name, self.gpudirect ]))
+            nstlist, self.pme, self.update, 
+            self.mpi.name, self.gpudirect, 
+            self.nsteps, self.resetstep ]))
 
         if not self.result[key]['perf']: 
             self.result[key]['perf'] = [] 
@@ -185,9 +186,12 @@ class Gromacs(BmtMpi):
         self.result[key]['perf'].append(perf) 
         self.result[key]['time'].append(time) 
 
-    def getopt(self):
-        self.option.add_argument('--input'    , type=str, metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--nsteps'   , type=int, metavar='' , help=argparse.SUPPRESS)
-        self.option.add_argument('--resetstep', type=int, metavar='' , help=argparse.SUPPRESS)
-       
-        super().getopt()
+    def add_argument(self):
+        super().add_argument()
+
+        self.parser.add_argument('--input'    , type=str, help='input file (default: None)')
+        self.parser.add_argument('--nsteps'   , type=int, help='number of MD steps (default: 10000)')
+        self.parser.add_argument('--resetstep', type=int, help='number of MD step after which perf counter is reseted (default: 0)')
+        self.parser.add_argument('--node'     , type=int, help='number of nodes (default: $SLUM_NNODES)')
+        self.parser.add_argument('--task'     , type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
+        self.parser.add_argument('--omp'      , type=int, help='number of OpenMP threads (default: 1)')

@@ -13,23 +13,23 @@ class GromacsGpu(Gromacs):
     def __init__(self, sif='', **kwargs):
         super().__init__(**kwargs)
 
-        self.name    = 'GROMACS/GPU'
+        self.name    = 'GROMACS (GPU)'
         self.device  = nvidia_smi()
         self.sif     = sif 
         self.gmx_gpu = 'CUDA'
         
-        # mdrun private (GPU)
-        self._nb     = 'gpu'
+        # for gpu
+        self.nb     = 'gpu'
 
-        # experimental features 
+        # experimental
         if self.gpudirect: 
-            self.name    += '/GPUDIRECT'
             self.bin      = os.path.join(self.bindir, 'gmx')
 
             # only single node is currently supported 
             self.mpi.node = 1 
 
             self.pme      = 'gpu' 
+            self.bonded   = 'gpu'
             self.update   = 'gpu'
             
             # experimental halo exchange betweeb DD and PME rank
@@ -40,12 +40,13 @@ class GromacsGpu(Gromacs):
         # single rank for PME kernel offloading to GPU
         if self.pme == 'gpu': 
             if self.mpi.node * self.mpi.task == 1: 
-                self._npme = -1
+                self._pme = -1
             else:
-                self._npme = 1
+                self.npme = 1
 
+        # singularity container
         if self.sif:
-            self.name += '/NGC'
+            self.name  = 'GROMACS (NGC)'
             self.sif   = os.path.abspath(sif)
             self.bin   = f'singularity run --nv {self.sif} gmx'
                 
@@ -57,17 +58,6 @@ class GromacsGpu(Gromacs):
         if not self.mpi.gpu: 
             self.mpi.gpu  = len(self.mpi.cuda_devs)
 
-        # cmdline options
-        self.option.description += (
-            '    --gpudirect      enable experimental GPUDirect\n' )
-
-    def info(self): 
-        super().info() 
-
-        for env in os.environ: 
-            if re.search('GMX', env): 
-                logging.info(f'export {env} = {os.environ[env]}')
-
     def build(self): 
         self.check_prerequisite('cuda', '10.0')
 
@@ -78,7 +68,8 @@ class GromacsGpu(Gromacs):
 
         return super().mdrun() + f' -gpu_id {gpu_id}'
 
-    def getopt(self):
-        self.option.add_argument('--gpudirect', action='store_true'  , help=argparse.SUPPRESS)
+    def add_argument(self):
+        super().add_argument() 
 
-        super().getopt()
+        self.parser.add_argument('--gpu', type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')
+        self.parser.add_argument('--gpudirect', action='store_true', help='enable experimental GPUDirect implementation (default: False)')

@@ -12,6 +12,7 @@ hpl = HplAiGpu(
         bind  = 'none',
         omp   = 4 )) 
 
+hpl.getopt() 
 hpl.info()
 hpl.run() 
 hpl.summary() 

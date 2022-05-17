@@ -4,37 +4,28 @@ import re
 import os
 import argparse
 
-from glob  import glob 
+from glob import glob 
 from utils import sync
-
 from bmt import Bmt
 
 class Iozone(Bmt):
     def __init__(self, size='64M', record='1M', node=0, thread=8, **kwargs): 
         super().__init__(**kwargs)
 
-        self.name     = 'IOZONE'
-        self.bin      = os.path.join(self.bindir,'iozone') 
+        self.name   = 'IOZONE'
+        self.bin    = os.path.join(self.bindir,'iozone') 
 
-        self.size     = size
-        self.record   = record
-        self.node     = node or len(self.nodelist)
-        self.thread   = thread
+        self.size   = size
+        self.record = record
+        self.node   = node or len(self.nodelist)
+        self.thread = thread
 
-        self.src      = ['http://www.iozone.org/src/current/iozone3_491.tgz']
+        self.src    = ['http://www.iozone.org/src/current/iozone3_491.tgz']
 
         self.header = ['node', 'thread', 'size', 'record', 'write(MB/s)', 'read(MB/s)', 'r_write(OPS)', 'r_read(OPS)']
  
-        # cmdline options
-        self.parser.usage        = '%(prog)s -s 1G -r 1M -t 8'
-        self.parser.description  = 'IOZONE Benchmark'
+        self.parser.description = 'IOZONE Benchmark'
 
-        self.option.description += ( 
-            '-s, --size           file size/threads\n'
-            '-r, --record         record size\n'
-            '-n, --node           number of node\n'
-            '-t, --thread         number of threads per node\n' )
-       
     def build(self): 
         if os.path.exists(self.bin):
             return 
@@ -132,10 +123,10 @@ class Iozone(Bmt):
         for io_file in sorted(glob(f'{self.outdir}/*DUMMY*')):
             os.remove(io_file)
         
-    def getopt(self): 
-        self.option.add_argument('-s', '--size'  , type=str, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('-r', '--record', type=str, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('-n', '--node'  , type=int, metavar='', help=argparse.SUPPRESS )
-        self.option.add_argument('-t', '--thread', type=int, metavar='', help=argparse.SUPPRESS )
+    def add_argument(self): 
+        super().add_argument()
 
-        super().getopt()
+        self.parser.add_argument('--size'  , type=str, help='file size per thread (default: 64M)')
+        self.parser.add_argument('--record', type=str, help='record size (default: 1M)')
+        self.parser.add_argument('--node'  , type=int, help='number of node (default: $SLURM_NNODES)')
+        self.parser.add_argument('--thread', type=int, help='number of threads (default: 8')

@@ -9,6 +9,7 @@ qe = QeGpu(
     sif    = '../image/qe-6.8.sif', 
     mpi    = OpenMPI() )
 
+qe.getopt()
 qe.info()
 qe.run()
 qe.summary()

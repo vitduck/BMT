@@ -8,6 +8,7 @@ ior = Ior(
     mpi   = OpenMPI( 
         task = 8 ))
 
+ior.getopt()
 ior.info()
 ior.download() 
 ior.build()

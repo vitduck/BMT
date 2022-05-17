@@ -5,6 +5,7 @@ from stream_cuda import StreamCuda
 stream = StreamCuda(
     prefix = '../run/STREAM/CUDA' )
 
+stream.getopt()
 stream.info()
 stream.download()
 stream.build()

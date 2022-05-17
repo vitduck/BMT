@@ -6,13 +6,14 @@ import argparse
 import shutil
 import logging 
 
-from math    import sqrt
-from cpu     import cpu_memory
-from bmt_mpi import BmtMpi
+from math import sqrt
+from cpu  import cpu_memory
+from bmt  import Bmt
 
-class Hpl(BmtMpi): 
+class Hpl(Bmt): 
     def __init__(
-        self, size=[], blocksize=[], pgrid=[], qgrid=[], pmap=0, bcast=[3],  
+        self, size=[], blocksize=[192], 
+        pgrid=[], qgrid=[], pmap=0, bcast=[1],  
         threshold=16.0, pfact=[0], nbmin=[2], ndiv=[2], rfact=[0], 
         memory=[], **kwargs ):
 
@@ -33,43 +34,26 @@ class Hpl(BmtMpi):
         self.rfact     = rfact 
         self.bcast     = bcast 
 
-        # use 90% memory by default 
-        # note that this may cause problem with cgroups 
-        self.memory    = memory or [0.9*self._total_memory()]
+        self.memory    = memory 
 
         self.input     = 'HPL.dat'
         self.output    = ''
 
         self.header    = [
             'node', 'task', 'omp', 'gpu', 
-            'n', 'nb', 'p', 'q', 'bcast', 
+            'n', 'nb', 
+            'p', 'q', 'bcast', 
             'rfact', 'ndiv', 'pfact', 'nbmin', 
-            'status', 'perf(TFLOPS)', 'time(s)' ]
+            'status', 'perf(TFLOPS)', 'time(s)']
         
-        # cpu-specific parameters 
         self.depth     = [1]  
         self.swap      = 1 
         self.swap_thr  = 64 
         self.l1        = 0 
         self.u         = 0 
         
-        # cmdline options 
-        self.parser.usage        = '%(prog)s -s 40000 -b 256 --omp 4'
         self.parser.description  = 'HPL Benchmark'
-        self.option.description += ( 
-            '-s, --size           list of problem size\n'
-            '-b, --blocksize      list of block size\n'
-            '-p, --pgrid          MPI pgrid\n'
-            '-q, --qgrid          MPI qgrid\n'
-            '    --pmap           MPI processes mapping\n'
-            '    --bcast          MPI broadcasting algorithms\n'
-            '    --threshold      Validation threshold\n'
-            '    --pfact          list of PFACT variants\n'
-            '    --nbmin          list of NBMIN\n'
-            '    --ndiv           list of NDIV\n'
-            '    --rfact          list of RFACT variants\n'
-            '    --memory         memory usage (GB)\n' )
-
+        
     def info(self): 
         super().info() 
         
@@ -158,10 +142,10 @@ class Hpl(BmtMpi):
         self.mpi.write_hostfile()
         
         self.runcmd = f'{self.mpi.run()} {self.bin}'
-        self.output = f'HPL-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}.out'
+        self.output = f'HPL-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}-g{self.mpi.gpu}.out'
         
-        if self.mpi.gpu:
-            self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
+        #  if self.mpi.gpu:
+            #  self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
         
         for i in range(1, self.count+1): 
             if self.count > 1: 
@@ -188,7 +172,11 @@ class Hpl(BmtMpi):
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [
+                        self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, 
+                        size, blocksize, 
+                        p, q, bcast, 
+                        rfact, ndiv, pfact, nbmin, status]))
                     
                     # hash initialization
                     if not self.result[key]['gflops']: 
@@ -225,40 +213,48 @@ class Hpl(BmtMpi):
     def opt_matrix_size(self):
         self.size = [] 
 
+        # use 90% memory by default 
+        if not self.memory:
+            self.memory = [0.9*self.total_memory()]
+
         for memory in self.memory: 
             gigabyte_regex = re.search('(\d+)GB', str(memory))
             percent_regex  = re.search('(\d+)%' , str(memory))
             
             # convert GB -> byte 
             if gigabyte_regex:  
-                memory = self._scale()*int(gigabyte_regex.group(1))*1000**3
+                memory = self.total_device()*int(gigabyte_regex.group(1))*1000**3
 
             # convert % total memory -> byte
             if percent_regex: 
-                memory = self._total_memory()*int(percent_regex.group(1))/100
+                memory = self.total_memory()*int(percent_regex.group(1))/100
             
             # round matrix size to nearest 10000 
             self.size.append(10000*int(sqrt(memory/8)/10000))
 
-    def getopt(self):
-        self.option.add_argument('-s', '--size'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('-b', '--blocksize', type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('-p', '--pgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument('-q', '--qgrid'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--pmap'     , type=int             , metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--bcast'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--threshold', type=float           , metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--pfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--nbmin'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--ndiv'     , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--rfact'    , type=int  , nargs='*', metavar='', help=argparse.SUPPRESS)
-        self.option.add_argument(      '--memory'   , type=float, nargs='*', metavar='', help=argparse.SUPPRESS)
+    def add_argument(self):
+        super().add_argument() 
 
-        super().getopt() 
+        self.parser.add_argument('--size'     , type=int  , nargs='*', help='list of problem sizes (default: 90%% of total memory)')
+        self.parser.add_argument('--blocksize', type=int  , nargs='*', help='list of block sizes (default: 192)')
+        self.parser.add_argument('--pgrid'    , type=int  , nargs='*', help='list of MPI pgrids (default: auto')
+        self.parser.add_argument('--qgrid'    , type=int  , nargs='*', help='list of MPI qgrids (default: auto)')
+        self.parser.add_argument('--bcast'    , type=int  , nargs='*', help='list of MPI broadcasting algorithims (default: 1rM)') 
+        self.parser.add_argument('--pfact'    , type=int  , nargs='*', help='list of panel factorization (default: left looking)') 
+        self.parser.add_argument('--nbmin'    , type=int  , nargs='*', help='list of recursinv stopping criterium (default: 2)')
+        self.parser.add_argument('--ndiv'     , type=int  , nargs='*', help='list of panel in recursion (default: 2)')
+        self.parser.add_argument('--rfact'    , type=int  , nargs='*', help='list of recursive panel factorization (default: left looking)')
+        self.parser.add_argument('--pmap'     , type=int             , help='MPI process mapping (default: row-major)')
+        self.parser.add_argument('--threshold', type=float           , help='swapping threshold (default: 16.0)')
+        self.parser.add_argument('--memory'   , type=str  , nargs='*', help='list of memory usages (default: none)')
+        self.parser.add_argument('--node'     , type=int             , help='number of nodes (default: $SLUM_NNODES)')
+        self.parser.add_argument('--task'     , type=int             , help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
+        self.parser.add_argument('--omp'      , type=int             , help='number of OpenMP threads (default: 1)')
 
-    def _scale(self): 
+    # total number of devices 
+    def total_device(self): 
         return self.mpi.node
 
     # total memory in Byte
-    def _total_memory(self): 
-        return self._scale()*cpu_memory()*1000
+    def total_memory(self): 
+        return self.total_device()*cpu_memory()*1000

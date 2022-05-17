@@ -17,7 +17,7 @@ def sync(nodelist=[]):
         for node in nodelist: 
             syscmd('sync; echo 1 > /proc/sys/vm/drop_caches')
     else:
-        logging.warning(f'{"Warning":7} : Cannot flush cache without root privileges!')
+        logging.warning('Cannot flush cache without root privileges!')
 
 # wrapper for system commands 
 def syscmd(cmd, output=None):

@@ -10,6 +10,7 @@ hpcg = HpcgGpu(
         bind = 'none', 
         omp  = 4 ))
 
+hpcg.getopt()
 hpcg.info()
 hpcg.run() 
 hpcg.summary()

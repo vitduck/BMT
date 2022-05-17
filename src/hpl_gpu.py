@@ -12,12 +12,12 @@ class HplGpu(Hpl):
     def __init__(self, sif=None, **kwargs):
         super().__init__(**kwargs)
 
-        self.name     = 'HPL/GPU' 
+        self.name     = 'HPL (GPU)' 
         self.device   = nvidia_smi()
         self.sif      = sif
 
         if self.sif:
-            self.name += '/NGC'
+            self.name  = 'HPL (NGC)'
             self.sif   = os.path.abspath(sif)
 
         # default cuda visible devices
@@ -29,9 +29,12 @@ class HplGpu(Hpl):
             self.mpi.gpu  = len(self.mpi.cuda_devs)
             self.mpi.task = self.mpi.gpu
 
-        # NVIDIA-HPL required parameters 
-        self.l1       = 1
+        # NVIDIA-HPL parameters 
+        self.blocksize = [288]
+        self.l1        = 1
         
+        self.parser.description  = 'HPL Benchmark (GPU)'
+
     def run(self):
         self.check_prerequisite('openmpi'    , '4'     )
         self.check_prerequisite('connectx'   , '4'     )
@@ -64,8 +67,13 @@ class HplGpu(Hpl):
 
         return opts 
 
-    def _scale(self): 
+    def add_argument(self): 
+        super().add_argument() 
+        
+        self.parser.add_argument('--gpu', type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')
+
+    def total_device(self): 
         return self.mpi.node*self.mpi.gpu
-    
-    def _total_memory(self): 
-        return self._scale()*gpu_memory()*1024**2
+
+    def total_memory(self): 
+        return self.total_device()*gpu_memory()*1024**2
