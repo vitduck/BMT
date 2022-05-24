@@ -7,6 +7,7 @@ import argparse
 
 from qe import Qe
 from gpu import nvidia_smi, device_query, gpu_affinity
+from utils import syscmd
 
 class QeGpu(Qe):
     def __init__(self, cuda_aware=False, sif='', **kwargs): 
@@ -22,11 +23,7 @@ class QeGpu(Qe):
         self.ntg      = 1 
         self.ndiag    = 1
 
-        # disable UCX and HCOLL together to avoid hang spinlock 
-        if cuda_aware:
-            self.mpi.ucx   = None
-            self.mpi.sharp = False
-
+        
         if sif: 
             self.name = 'QE (NGC)'
             self.sif  = os.path.abspath(sif)
@@ -63,21 +60,30 @@ class QeGpu(Qe):
           (f'cd {self.builddir}/q-e-qe-6.8/;' 
                f'./configure '
                f'--prefix={os.path.abspath(self.prefix)} '
-               f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda/{runtime} '
+               f'--with-cuda={os.environ["CUDA_HOME"]} '
                f'--with-cuda-cc={cuda_cc} '
                f'--with-cuda-runtime={runtime} '
-                '--enable-openmp '
                 '--with-scalapack=no; '
                f'{patch}'
             'make -j 16 pw; ' 
             'make -j 16 neb; '
             'make install' )]
-
-        super(BmtMpi, self).build() 
+        
+        super(Qe, self).build() 
 
     def run(self): 
         # Fortran 2003 standard regarding STOP
         self.mpi.env['NO_STOP_MESSAGE'] = 1
+
+        # This leads to segmentation fault !!
+        #  if self.mpi.ucx: 
+            #  self.mpi.env['UCX_MEMTYPE_CACHE'] = 'n'
+    
+        # bugs in HCOLL leads to hang at 1st SCF
+        if self.cuda_aware:
+            # NCCL backend leads to segmentation fault (non-critical)
+            #  self.mpi.env['HCOLL_CUDA_BCOL'] = 'nccl'
+            self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
 
         # gpu selection
         self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
