@@ -10,7 +10,7 @@ from utils import syscmd
 def nvidia_smi(): 
     device = {} 
 
-    nvidia_smi = syscmd(f'nvidia-smi -L')
+    nvidia_smi = syscmd(['nvidia-smi -L'])
 
     for line in nvidia_smi.splitlines():
         id, name, uuid = re.search('^GPU (\d+): (.+?) \(UUID: (.+?)\)', line).groups()
@@ -19,13 +19,17 @@ def nvidia_smi():
     return device
 
 def gpu_memory():
-    memory = syscmd('nvidia-smi -i 0 --query-gpu=memory.total --format=csv,noheader').split()[0]
+    memory = syscmd([[
+        'nvidia-smi', 
+            '-i 0',  
+            '--query-gpu=memory.total', 
+            '--format=csv,noheader']]).split()[0]
 
     return int(memory)
 
 def gpu_affinity(): 
     affinity = [] 
-    topology = syscmd('nvidia-smi topo -m')
+    topology = syscmd(['nvidia-smi topo -m'])
 
     for line in topology.splitlines():
         if re.search('^GPU\d+', line): 
@@ -52,14 +56,16 @@ def device_query(builddir='./'):
         file_path = os.path.join(builddir, file_name)
         
         if not os.path.exists(file_path):
-            syscmd(f'wget {url} -O {file_path}')
+            syscmd([['wget', url, f'-O {file_path}']])
     
     # build deviceQuerry 
-    syscmd(f'builtin cd {builddir}; nvcc -I. deviceQuery.cpp -o deviceQuery')
+    syscmd([
+       f'builtin cd {builddir}',
+        'nvcc -I. deviceQuery.cpp -o deviceQuery'])
 
     # execute deviceQuerry in remote host 
-    query = syscmd(f'cd {builddir}; ./deviceQuery') 
-
+    query = syscmd([f'cd {builddir}', './deviceQuery']) 
+    
     for line in query.splitlines():
         if re.search('\/ Runtime Version', line): 
             runtime = line.split()[-1]
@@ -67,9 +73,5 @@ def device_query(builddir='./'):
         if re.search('Minor version number', line): 
             cuda_cc = line.split()[-1].replace('.', '')
             break
-
-    # clean up 
-    #  for file in ['deviceQuery.cpp', 'helper_cuda.h', 'helper_string.h', 'deviceQuery']:
-        #  os.remove(f'{homedir}/{file}')
 
     return runtime, cuda_cc

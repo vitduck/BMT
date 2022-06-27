@@ -13,8 +13,9 @@ class Iozone(Bmt):
         super().__init__(**kwargs)
 
         self.name   = 'IOZONE'
-        self.bin    = os.path.join(self.bindir,'iozone') 
+        self.bin    = os.path.join(self.bindir,'iozone')
 
+        self.mode   = 0
         self.size   = size
         self.record = record
         self.node   = node or len(self.nodelist)
@@ -27,13 +28,13 @@ class Iozone(Bmt):
         self.parser.description = 'IOZONE Benchmark'
 
     def build(self): 
-        if os.path.exists(self.bin):
+        if os.path.exists(self.bin[0]):
             return 
 
         self.buildcmd = [
-           f'cd {self.builddir}; tar xf iozone3_491.tgz', 
-           f'cd {self.builddir}/iozone3_491/src/current; make linux', 
-           f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}' ]
+            [f'cd {self.builddir}', 'tar xf iozone3_491.tgz'], 
+            [f'cd {self.builddir}/iozone3_491/src/current', 'make linux'],
+            [f'cp {self.builddir}/iozone3_491/src/current/iozone {self.bindir}']] 
 
         super().build() 
 
@@ -51,16 +52,6 @@ class Iozone(Bmt):
         # cluster mode 
         os.environ['RSH'] = 'ssh -oStrictHostKeyChecking=no'
 
-        option = (
-           f'-s {self.size} '                    # file size per threads 
-           f'-r {self.record} '                  # record size 
-           f'-+m {self.hostfile} '               # hostfile: <hostname> <outdir> <iozone bin> 
-           f'-t {str(self.thread*self.node)} '   # total number of threads 
-            '-c '                                # includes close in timing calculation  
-            '-e '                                # incldues flush in timing calculation
-            '-w '                                # keep temporary files for read test
-            '-+n' )                              # skip retests
-        
         write_output  = f'iozone-i0-n{self.node}-t{self.thread}-s{self.size}-r{self.record}.out'
         read_output   = f'iozone-i1-n{self.node}-t{self.thread}-s{self.size}-r{self.record}.out'
         random_output = f'iozone-i2-n{self.node}-t{self.thread}-s{self.size}-r{self.record}.out'
@@ -72,29 +63,51 @@ class Iozone(Bmt):
                 random_output = re.sub('out(\.\d+)?', f'out.{i}', random_output)
 
             # write
+            self.mode   = 0 
             self.output = write_output
-            self.runcmd = f'{self.bin} -i 0 {option}'
 
             sync(self.nodelist)
             super().run(1) 
         
             # read 
+            self.mode   = 1 
             self.output = read_output
-            self.runcmd = f'{self.bin} -i 1 {option}'
 
             sync(self.nodelist)
             super().run(1) 
         
             # random read/write
-            #-I: Use direct IO 
-            #-O: Return result in OPS
+            self.mode   = 2 
             self.output = random_output
-            self.runcmd = f'{self.bin} -i 2 -I -O {option}'
 
             sync(self.nodelist)
             super().run(1) 
 
             self.clean()
+
+    def runcmd(self):
+        cmd = [
+            self.bin, 
+           f'-i {self.mode}'] 
+
+        # random read/write
+        #-I: Use direct IO 
+        #-O: Return result in OPS
+        if self.mode == 2:  
+            cmd += ['-I', '-O']
+
+        # generic options
+        cmd += [
+           f'-s {self.size}',                   # file size per threads 
+           f'-r {self.record}',                 # record size 
+           f'-+m {self.hostfile}',              # hostfile: <hostname> <outdir> <iozone bin> 
+           f'-t {str(self.thread*self.node)}',  # total number of threads 
+            '-c',                               # includes close in timing calculation  
+            '-e',                               # incldues flush in timing calculation
+            '-w',                               # keep temporary files for read test
+            '-+n' ]                             # skip retests
+
+        return [cmd]
 
     def parse(self):
         key = ",".join(map(str, [self.node, self.thread, self.size, self.record]))

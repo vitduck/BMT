@@ -8,17 +8,21 @@ import argparse
 from bmt import Bmt
 
 class Gromacs(Bmt):
-    def __init__(self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='auto', pme='auto', update='auto', tunepme=False, gpudirect=False, **kwargs):
+    def __init__(
+        self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='on', 
+        bonded='cpu', pme='cpu', update='cpu',
+        tunepme=False, gpudirect=False, **kwargs):
+
         super().__init__(**kwargs)
 
         if self.mpi.name == 'tMPI': 
-            self.bin     = os.path.join(self.bindir, 'gmx')
             self.gmx_mpi = 'OFF'
             self.gmx_tmpi= 'ON'
+            self.bin     = os.path.join(self.bindir, 'gmx')
         else:
-            self.bin = os.path.join(self.bindir, 'gmx_mpi')
             self.gmx_mpi = 'ON'
             self.gmx_tmpi= 'OFF'
+            self.bin     = os.path.join(self.bindir, 'gmx_mpi')
 
         self.name      = 'GROMACS'
         self.input     = os.path.abspath(input)
@@ -26,29 +30,27 @@ class Gromacs(Bmt):
         self.resetstep = resetstep
         self.pin       = pin
         self.nstlist   = nstlist
+        self.bonded    = bonded 
+        self.nb        = 'cpu'
         self.pme       = pme
         self.update    = update
         self.tunepme   = tunepme
         self.gpudirect = gpudirect
+        self.npme      = -1
         self.gmx_gpu   = 'OFF'
         
-        # for cpu
-        self.nb        = 'cpu'
-        self.bonded    = 'auto'
-        self.npme      = -1
-
-        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
+        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2022.1.tar.gz']
 
         self.header    = [
             'input', 'node', 'task', 'omp', 'gpu', 
-            'nstlist', 'pme', 'update', 
+            'nstlist', 'bonded', 'nb', 'pme', 'update', 
             'mpi', 'gpudirect', 
             'nsteps', 'resetsteps',
             'perf(ns/day)', 'time(s)']
 
         # reset step count if tunepme is turned on 
         if self.tunepme and not self.resetstep: 
-            self.resetstep = int(0.8*self.nsteps)
+            self.resetstep = int(0.9*self.nsteps)
 
         # default ntasks 
         if not self.mpi.task:
@@ -57,7 +59,7 @@ class Gromacs(Bmt):
         self.parser.description  = 'GROMACS Benchmark'
 
     def build(self): 
-        if os.path.exists(self.bin):
+        if os.path.exists(self.bin[0]):
             return
         
         self.check_prerequisite('cmake', '3.16.3')
@@ -68,46 +70,37 @@ class Gromacs(Bmt):
             self.check_prerequisite('openmpi', '3.0')
 
         self.buildcmd += [  
-            f'cd {self.builddir}; tar xf gromacs-2021.3.tar.gz', 
-           (f'cd {self.builddir}/gromacs-2021.3;'
-                'mkdir build;'
-                'cd build;'
-                'cmake .. '  
-                   f'-DCMAKE_INSTALL_PREFIX={self.prefix} '
-                   f'-DGMX_THREAD_MPI={self.gmx_tmpi} '
-                   f'-DGMX_MPI={self.gmx_mpi} '
-                   f'-DGMX_GPU={self.gmx_gpu} ' 
-                    '-DGMX_OPENMP=ON ' 
-                    '-DGMX_SIMD=AUTO '
-                    '-DGMX_DOUBLE=OFF '
-                    '-DGMX_FFT_LIBRARY=fftw3 '
-                    '-DGMX_BUILD_OWN_FFTW=ON; '
-                'make -j 16;'
-                'make install')]
+           [f'cd {self.builddir}', 'tar xf gromacs-2022.1.tar.gz'],
+           [f'cd {self.builddir}/gromacs-2022.1',
+            'mkdir build', 
+            'cd build', 
+           ['cmake ..', 
+               f'-DCMAKE_INSTALL_PREFIX={self.prefix}',
+               f'-DGMX_THREAD_MPI={self.gmx_tmpi}',
+               f'-DGMX_MPI={self.gmx_mpi}',
+               f'-DGMX_GPU={self.gmx_gpu}',
+               '-DGMX_OPENMP=ON',
+               '-DGMX_SIMD=AUTO',
+               '-DGMX_DOUBLE=OFF',
+               '-DGMX_FFT_LIBRARY=fftw3', 
+               '-DGMX_BUILD_OWN_FFTW=ON'], 
+            'make -j 16', 
+            'make install']]
         
         super().build() 
 
     def run(self): 
         os.chdir(self.outdir)
 
-        self.mpi.write_hostfile()
-
         # GROMACS print output to stderr 
-        self.runcmd = (
-           f'{self.mpi.run()} '
-               f'{self.bin} ' 
-               f'{self.mdrun()} ' ) 
-
         self.output = (
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
                f'n{self.mpi.node}-'
                f't{self.mpi.task}-' 
                f'o{self.mpi.omp}-'
+               f'g{self.mpi.gpu}-'
                f'l{self.nstlist}.log' )
-
-        if self.mpi.gpu:
-            self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
-
+        
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('log(\.\d+)?', f'log.{i}', self.output)
@@ -119,10 +112,19 @@ class Gromacs(Bmt):
             # clean redundant files
             if os.path.exists('ener.edr'): 
                 os.remove('ener.edr')
+
+    def runcmd(self): 
+        if self.mpi.name == 'OpenMPI': 
+            self.mpi.write_hostfile()
+
+            return [[self.mpi.runcmd(), self.execmd()]]
+        else: 
+            return [self.execmd()]
    
-    def mdrun(self): 
+    def execmd(self): 
         # gromacs MPI crashes unless thread is explicitly set to 1
         cmd = [
+            self.bin, 
             'mdrun', 
                 '-noconfout',  
                f'-s {self.input}', 
@@ -147,7 +149,7 @@ class Gromacs(Bmt):
         else: 
             self.check_prerequisite('openmpi', '3.0')
 
-        return " ".join(cmd)
+        return cmd
 
     def parse(self):
         perf = '-'
@@ -175,7 +177,7 @@ class Gromacs(Bmt):
         key = ",".join(map(str, [
             os.path.basename(self.input), 
             self.mpi.node, self.mpi.task, omp, self.mpi.gpu, 
-            nstlist, self.pme, self.update, 
+            nstlist, self.bonded, self.nb, self.pme, self.update, 
             self.mpi.name, self.gpudirect, 
             self.nsteps, self.resetstep ]))
 

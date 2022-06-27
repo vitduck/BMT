@@ -3,7 +3,7 @@
 from mpi import Mpi
 
 class OpenMPI(Mpi): 
-    def __init__(self, ucx=None, hca=[], hcoll=0, sharp=0, verbose=False, **kwargs): 
+    def __init__(self, ucx=None, hca=[], hcoll=0, sharp=0, verbose=False, debug=False, **kwargs): 
         super().__init__(**kwargs) 
 
         self.name    = 'OpenMPI'
@@ -12,6 +12,7 @@ class OpenMPI(Mpi):
         self.hcoll   = hcoll
         self.sharp   = sharp
         self.verbose = verbose
+        self.debug   = debug
         self.mca   = {} 
 
     def write_hostfile(self):
@@ -40,7 +41,7 @@ class OpenMPI(Mpi):
         # ucx is somewhat buggy and disabled by default
         if self.ucx is None:
             self.mca['pml']               = '^ucx'
-            self.mca['coll_hcoll_enable'] = 0
+            self.mca['coll_hcoll_enable'] = '0'
         else:
             #  self.mca['btl'] = '^uct'
             if len(self.ucx): 
@@ -53,23 +54,28 @@ class OpenMPI(Mpi):
 
         # hcoll 
         if self.hcoll: 
-            self.mca['coll_hcoll_enable'    ] = 1 
+            self.mca['coll_hcoll_enable'    ] = '1' 
 
         # sharp
         if self.sharp:
-            self.mca['coll_hcoll_enable'    ] = 1 
+            self.mca['coll_hcoll_enable'    ] = '1' 
 
-            self.env['HCOLL_ENABLE_SHARP'   ] = self.sharp 
-            self.env['SHARP_COLL_ENABLE_SAT'] = 1
-            self.env['SHARP_COLL_LOG_LEVEL' ] = 3
+            self.env['HCOLL_ENABLE_SHARP'   ] = str(self.sharp)
+            self.env['SHARP_COLL_ENABLE_SAT'] = '1'
+            self.env['SHARP_COLL_LOG_LEVEL' ] = '3'
 
         # show report to stderr
         if self.verbose: 
             if self.bind or self.map: 
                 cmd.append(f'--report-bindings')
 
-            #  if self.ucx is not None: 
-                #  self.env['UCX_LOG_LEVEL']='info' 
+        # show debug message 
+        if self.debug: 
+            if self.ucx is not None: 
+                self.env['UCX_LOG_LEVEL']='info' 
+
+            if self.sharp: 
+                self.env['SHARP_COLL_LOG_LEVEL' ] = '4'
 
         # iterate over mca hash  
         for key in self.mca: 

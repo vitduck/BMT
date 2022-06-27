@@ -50,11 +50,11 @@ class Bmt:
         if mpi:
             self.mpi.nodelist = self.nodelist
             
-            if not self.mpi.node: 
+            if not self.mpi.node:
                 self.mpi.node = len(self.nodelist) 
 
         # Build directory setup
-        self.bin       = ''
+        self.bin       = []
         self.prefix    = os.path.abspath(prefix)
         self.rootdir   = os.path.dirname(inspect.stack()[-1][1])
         self.bindir    = os.path.join(self.prefix, 'bin')
@@ -73,10 +73,6 @@ class Bmt:
 
         # Build instructions
         self.src      = []
-        self.buildcmd = []
-
-        # Run command
-        self.runcmd   = ''
 
         # Result summation
         self.header   = []
@@ -100,7 +96,7 @@ class Bmt:
     def check_prerequisite(self, module, min_ver):
         cmd     = prerequisite.cmd[module]
         regex   = prerequisite.regex[module]
-        version = re.search(regex, syscmd(cmd)).group(1)
+        version = re.search(regex, syscmd([cmd])).group(1)
 
         if packaging.version.parse(version) < packaging.version.parse(min_ver):
             logging.error(f'{module} >= {min_ver} is required by {self.name}')
@@ -113,7 +109,10 @@ class Bmt:
             file_path = os.path.join(self.builddir, file_name)
 
             if not os.path.exists(file_path):
-                syscmd(f'wget --no-check-certificate {url} -O {file_path}')
+                syscmd([
+                   [f'wget', 
+                       f'--no-check-certificate {url}', 
+                       f'-O {file_path}']])
 
     # build
     def build(self):
@@ -121,18 +120,20 @@ class Bmt:
             syscmd(cmd)
 
     def run(self, redirect=0):
-        #logging.info(f'{"Output":7} : {os.path.relpath(self.output, self.rootdir)}')
         logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
 
         # redirect output to file
         if redirect:
-            syscmd(self.runcmd, self.output)
+            syscmd(self.runcmd(), self.output)
 
             self.parse()
         else:
-            syscmd(self.runcmd)
+            syscmd(self.runcmd())
 
         time.sleep(3)
+
+    def runcmd(self): 
+        pass
 
     def parse(self):
         pass
@@ -152,7 +153,7 @@ class Bmt:
             ndevices  = len(self.device.keys())
             sys_info += ' / ' + f"{ndevices} x {self.device['0'][0]}"
 
-        print(f'\n>> {self.name}: {sys_info}')
+        print(f'\n<> {self.name}: {sys_info}')
 
         # unpact hash key
         for key in self.result:
@@ -188,7 +189,6 @@ class Bmt:
                 else: 
                     setattr(self, opt, args[opt]) 
     
-   
     def __cell_format(self, cell):
         for item in cell:
             if item == '-':

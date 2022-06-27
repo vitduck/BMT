@@ -36,16 +36,16 @@ class Qe(Bmt):
         if os.environ.get('FC') == 'ifort':  
             scalapack = 'intel'
         
-        self.buildcmd += [
-            f'cd {self.builddir}; tar xf q-e-qe-6.8.tar.gz',
-           (f'cd {self.builddir}/q-e-qe-6.8/;' 
-               f'./configure '
-                   f'--prefix={os.path.abspath(self.prefix)} '
-                   f'--with-scalapack={scalapack} '
-                    '--enable-openmp; '
-                'make -j 16 pw; ' 
-                'make -j 16 neb; '
-                'make install')]
+        self.buildcmd = [
+          [f'cd {self.builddir}', 'tar xf q-e-qe-6.8.tar.gz'], 
+          [f'cd {self.builddir}/q-e-qe-6.8/',  
+              [f'./configure ', 
+                   f'--prefix={os.path.abspath(self.prefix)}', 
+                   f'--with-scalapack={scalapack}', 
+                    '--enable-openmp'],  
+                'make -j 16 pw',
+                'make -j 16 neb',
+                'make install']]
         
         super().build() 
 
@@ -65,21 +65,6 @@ class Qe(Bmt):
             #  self.name = self.name + '/NEB'
             #  self.bin  = os.path.join(self.bindir, 'neb.x')
 
-        self.runcmd = (
-            f'{self.mpi.run()} '  
-               f'{self.bin} ' 
-                   f'-input  {self.input} ' 
-                   f'-nimage {self.nimage} '
-                   f'-npool  {self.npool} ' 
-                   f'-ndiag  {self.ndiag} ' )
-
-        # Pencil decomposition 
-        # This is an undocmmented option
-        if self.ntg > 1: 
-            self.runcmd += (
-                f'-pd true '
-                f'-ntg {self.ntg}' )
-        
         self.output = ( 
            f'{os.path.splitext(os.path.basename(self.input))[0]}-'
                 f'n{self.mpi.node}-'
@@ -98,6 +83,26 @@ class Qe(Bmt):
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
             super().run(1) 
+
+    def runcmd(self): 
+        return [[self.mpi.runcmd(), self.execmd()]]
+
+    def execmd(self): 
+        cmd = [
+            self.bin, 
+               f'-input  {self.input}', 
+               f'-nimage {self.nimage}', 
+               f'-npool  {self.npool}', 
+               f'-ndiag  {self.ndiag}' ]
+
+        # Pencil decomposition 
+        # This is an undocmmented option
+        if self.ntg > 1: 
+            cmd += [
+                '-pd true', 
+               f'-ntg {self.ntg}' ]
+        
+        return cmd
 
     def parse(self): 
         time = '-' 

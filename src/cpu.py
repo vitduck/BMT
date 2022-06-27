@@ -10,7 +10,7 @@ from utils import syscmd
 def lscpu(): 
     host  = {} 
     numa  = []
-    lscpu = syscmd(f'lscpu')
+    lscpu = syscmd(['lscpu'])
 
     for line in lscpu.splitlines(): 
         if re.search('^CPU\(s\)', line): 
@@ -47,6 +47,6 @@ def cpu_info(host):
     logging.info(f'{"AVXs":<7} : {host["AVXs"]}')
 
 def cpu_memory():
-    mem_kb = syscmd(f'grep MemTotal /proc/meminfo').split()[1]*1
+    mem_kb = syscmd(['grep MemTotal /proc/meminfo']).split()[1]*1
 
     return int(mem_kb)

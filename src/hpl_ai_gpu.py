@@ -24,8 +24,8 @@ class HplAiGpu(HplGpu):
         
         self.parser.description  = 'HPL-AI Benchmark (GPU)'
    
-    def hpl_opt(self): 
-        return super().hpl_opt() + '--xhpl-ai'
+    def execmd(self): 
+        return super().execmd() + ['--xhpl-ai']
 
     def parse(self): 
         with open(self.output, 'r') as output_fh:

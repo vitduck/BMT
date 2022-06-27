@@ -34,15 +34,15 @@ class Ior(Bmt):
         self.check_prerequisite('openmpi', '3')
 
         self.buildcmd = [
-           f'cd {self.builddir}; tar xf ior-3.3.0.tar.gz', 
-          (f'cd {self.builddir}/ior-3.3.0;' 
-            './configure '
-               f'--prefix={os.path.abspath(self.prefix)} '
-                'MPICC=mpicc ' 
-               f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include '
-               f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib;' 
-            'make -j 8;' 
-            'make install' )]
+            [f'cd {self.builddir}', 'tar xf ior-3.3.0.tar.gz'],  
+            [f'cd {self.builddir}/ior-3.3.0', 
+               ['./configure', 
+                   f'--prefix={os.path.abspath(self.prefix)}', 
+                    'MPICC=mpicc',  
+                    f'CPPFLAGS=-I{os.environ["MPI_ROOT"]}/include', 
+                    f'LDFLAGS=-L{os.environ["MPI_ROOT"]}/lib'],  
+                'make -j 8',  
+                'make install' ]]
 
         super().build()
 
@@ -51,44 +51,50 @@ class Ior(Bmt):
 
         self.mpi.write_hostfile() 
 
-        self.runcmd = (
-           f'{self.mpi.run()} '
-               f'{self.bin} '
-               f'-t {self.transfer} ' 
-               f'-b {self.block} ' 
-               f'-s {self.segment} '
-                '-w '                 # write benchmark
-                '-r '                 # read benchmark
-                '-k '                 # do not remove files
-                '-z '                 # random access to file 
-                '-e '                 # fsync upon write close
-                '-F '                 # N-to-N 
-                '-C ' )               # reorderTasks
-        
-        # lustre directives 
-        directive = [] 
-        if self.ltrsize: 
-            directive.append(f'lustreStripeSize={self.ltrsize}')
-        if self.ltrcount: 
-            directive.append(f'lustreStripeCount={self.ltrcount}')
-
-        if directive: 
-            self.runcmd += f'-O "{",".join(directive)}"'
-        
         # flush cache 
         sync(self.nodelist)
         
         self.output = (
             'ior-'
-           f'n{self.mpi.node}-'
-           f'p{self.mpi.task}-'
-           f't{self.transfer}-'
-           f'b{self.block}-'
-           f's{self.segment}.out' )
+                f'n{self.mpi.node}-'
+                f'p{self.mpi.task}-'
+                f't{self.transfer}-'
+                f'b{self.block}-'
+                f's{self.segment}.out' )
 
         super().run(1) 
             
         self.clean() 
+
+    def runcmd(self): 
+        return [[self.mpi.runcmd(), self.execmd()]]
+
+    def execmd(self): 
+        cmd = [
+            self.bin, 
+               f'-t {self.transfer}',  
+               f'-b {self.block}',  
+               f'-s {self.segment}', 
+                " ".join([
+                '-w',               # write benchmark
+                '-r',               # read benchmark
+                '-k',               # do not remove files
+                '-z',               # random access to file 
+                '-e',               # fsync upon write close
+                '-F',               # N-to-N 
+                '-C' ])]            # reorderTasks
+        
+        # lustre directives 
+        lustre = [] 
+        if self.ltrsize: 
+            lustre.append(f'lustreStripeSize={self.ltrsize}')
+        if self.ltrcount: 
+            lustre.append(f'lustreStripeCount={self.ltrcount}')
+
+        if lustre:
+            cmd += [f'-O "{",".join(lustre)}"']
+
+        return cmd
 
     def parse(self): 
         key   = ",".join(map(str, [self.mpi.node, self.mpi.task, self.transfer, self.block, self.segment]))

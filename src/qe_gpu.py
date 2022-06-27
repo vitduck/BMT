@@ -22,10 +22,10 @@ class QeGpu(Qe):
         # For GPU version  
         self.ntg      = 1 
         self.ndiag    = 1
-
         
         if sif: 
             self.name = 'QE (NGC)'
+            self.bin  = 'pw.x'
             self.sif  = os.path.abspath(sif)
 
         # default cuda visible devices
@@ -52,22 +52,22 @@ class QeGpu(Qe):
 
         # __GPU_MPI 
         if self.cuda_aware: 
-            patch += 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc;'
+            patch += 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc'
 
         # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
-        self.buildcmd += [
-           f'cd {self.builddir}; tar xf q-e-qe-6.8.tar.gz',
-          (f'cd {self.builddir}/q-e-qe-6.8/;' 
-               f'./configure '
-               f'--prefix={os.path.abspath(self.prefix)} '
-               f'--with-cuda={os.environ["CUDA_HOME"]} '
-               f'--with-cuda-cc={cuda_cc} '
-               f'--with-cuda-runtime={runtime} '
-                '--with-scalapack=no; '
-               f'{patch}'
-            'make -j 16 pw; ' 
-            'make -j 16 neb; '
-            'make install' )]
+        self.buildcmd = [
+          [f'cd {self.builddir}', 'tar xf q-e-qe-6.8.tar.gz'],
+          [f'cd {self.builddir}/q-e-qe-6.8/',  
+              [f'./configure', 
+                   f'--prefix={os.path.abspath(self.prefix)}', 
+                   f'--with-cuda={os.environ["CUDA_HOME"]}',
+                   f'--with-cuda-cc={cuda_cc}', 
+                   f'--with-cuda-runtime={runtime}',
+                   '--with-scalapack=no'], 
+               f'{patch}', 
+            'make -j 16 pw', 
+            'make -j 16 neb', 
+            'make install' ]]
         
         super(Qe, self).build() 
 
@@ -80,7 +80,7 @@ class QeGpu(Qe):
             #  self.mpi.env['UCX_MEMTYPE_CACHE'] = 'n'
     
         # bugs in HCOLL leads to hang at 1st SCF
-        if self.cuda_aware:
+        if self.mpi.sharp:
             # NCCL backend leads to segmentation fault (non-critical)
             #  self.mpi.env['HCOLL_CUDA_BCOL'] = 'nccl'
             self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
@@ -88,7 +88,14 @@ class QeGpu(Qe):
         # gpu selection
         self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
-        # singularity run 
+        super().run()
+
+    def runcmd(self): 
+        runcmd = super().runcmd()[0]
+        
+        if self.mpi.numa: 
+            runcmd.insert(1,self.mpi.numactl())
+        
         if self.sif: 
             self.check_prerequisite('nvidia'     , '450')
             self.check_prerequisite('openmpi'    , '3'  )
@@ -97,9 +104,11 @@ class QeGpu(Qe):
             # bug
             self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
 
-            self.bin = f'singularity run --env NO_STOP_MESSAGE=1 --nv {self.sif} pw.x '
-        
-        super().run()
+            singularity = ['singularity', 'run', f'--nv {self.sif}']
+
+            runcmd.insert(-1, singularity)
+            
+        return [runcmd]
 
     def add_argument(self): 
         super().add_argument() 

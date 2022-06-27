@@ -40,7 +40,7 @@ class Mpi:
     def write_hostfile(self):
         pass
 
-    def run(self): 
+    def runcmd(self): 
         cmd = [] 
 
         # srun
@@ -54,10 +54,10 @@ class Mpi:
             cmd += self.mpirun()
 
         # numaclt 
-        if self.numa and self.gpu:
-            cmd += self.numactl() 
+        #  if self.numa and self.gpu:
+            #  cmd += self.numactl() 
         
-        return " ".join(cmd) 
+        return cmd
 
     def numactl(self): 
         cmd      = [] 
@@ -68,9 +68,9 @@ class Mpi:
                 affinity.append(str(i))
 
         cmd += [
-            'numactl '
-               f'--cpunodebind={",".join(affinity)} '
-               f'--membind={",".join(affinity)} ' ]
+            'numactl', 
+               f'--cpunodebind={",".join(affinity)}', 
+               f'--membind={",".join(affinity)}' ]
 
         return cmd
 

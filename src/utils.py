@@ -8,22 +8,20 @@ import subprocess
 import collections 
 
 # emulate perl vivificaiton
-def autovivification(): 
+def autovivification():
     return collections.defaultdict(autovivification)
 
 # clear cache on client (root required)
-def sync(nodelist=[]): 
+def sync(nodelist=[]):
     if os.getuid() == 0:
-        for node in nodelist: 
+        for node in nodelist:
             syscmd('sync; echo 1 > /proc/sys/vm/drop_caches')
     else:
         logging.warning('Cannot flush cache without root privileges!')
 
 # wrapper for system commands 
 def syscmd(cmd, output=None):
-    logging.debug(cmd.lstrip())
-
-    pipe = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    pipe = subprocess.run(fmt_cmd(cmd), shell=True, text=True, capture_output=True)
 
     # redirect output to file
     if output:
@@ -53,3 +51,48 @@ def syscmd(cmd, output=None):
             sys.exit()
         else: 
             return pipe.stdout
+
+def fmt_cmd(cmds): 
+    level = 0 
+    final = [] 
+
+    for i in cmds:
+        # compound cmd 
+        if type(i) == str:
+            final.append(i)
+
+            logging.debug(f'<> {i}')
+        # cmd with options
+        else: 
+            # 1 level deep 
+            if type(i[0]) == str: 
+                for j in i: 
+                    if level == 0:
+                        level = level + 1 
+                        
+                        logging.debug(f'<> {j}')
+                    else: 
+                        logging.debug(f'{"":<{4*level}} {j}')
+
+                final.append(" ".join(i))
+            # 2 level deep
+            else: 
+                flatten = [] 
+                
+                for j in i:  
+                    for k in j: 
+                        flatten.append(k) 
+
+                        if level == 0:  
+                            level = level + 1 
+                        
+                            logging.debug(f'<> {k}')
+                        else: 
+                            logging.debug(f'{"":<{4*level}} {k}')
+                            
+                            if k == j[0]: 
+                                level = level + 1 
+
+                final.append(" ".join(flatten))
+    
+    return ';'.join(final)

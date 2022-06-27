@@ -25,7 +25,7 @@ class StreamOmp(Bmt):
             self.name   = 'STREAM (OMP/ICC)'
             self.cc     = 'icc'
             self.cflags = '-qopenmp'
-            self.bin    = os.path.join(self.bindir,'stream_icc') 
+            self.bin    = os.path.join(self.bindir,'stream_icc')
         else: 
             self.name   = 'STREAM (OMP)'
             self.cc     = 'gcc'
@@ -35,15 +35,15 @@ class StreamOmp(Bmt):
         self.parser.description = 'STREAM Benchmark'
 
     def build(self): 
-        self.buildcmd += [
-          (f'{self.cc} '
-                '-O3 '
-                '-ffreestanding '
-               f'{self.cflags} '
-               f'-DSTREAM_ARRAY_SIZE={str(self.size)} '
-               f'-DNTIMES={str(self.ntimes)} '
-               f'-o {self.bin} ' 
-               f'{self.builddir}/stream.c')]
+        self.buildcmd = [[
+          [f'{self.cc}', 
+                '-O3', 
+                '-ffreestanding', 
+               f'{self.cflags}', 
+               f'-DSTREAM_ARRAY_SIZE={str(self.size)}', 
+               f'-DNTIMES={str(self.ntimes)}', 
+               f'-o {self.bin}', 
+               f'{self.builddir}/stream.c' ]]]
         
         super().build() 
 
@@ -54,10 +54,12 @@ class StreamOmp(Bmt):
         os.environ['OMP_PROC_BIND']   = self.affinity
         os.environ['OMP_NUM_THREADS'] = str(self.omp)
 
-        self.runcmd = f'{self.bin}'
         self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
 
         super().run(1)
+
+    def runcmd(self): 
+        return [self.bin]
 
     def parse(self):
         key = ",".join(map(str, [self.size, self.ntimes, self.omp, self.affinity]))

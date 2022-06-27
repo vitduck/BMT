@@ -15,9 +15,11 @@ class HplGpu(Hpl):
         self.name     = 'HPL (GPU)' 
         self.device   = nvidia_smi()
         self.sif      = sif
+        self.bin      = os.path.join(self.bindir,'hpl.sh') 
 
         if self.sif:
             self.name  = 'HPL (NGC)'
+            self.bin   = 'hpl.sh'
             self.sif   = os.path.abspath(sif)
 
         # default cuda visible devices
@@ -40,32 +42,35 @@ class HplGpu(Hpl):
         self.check_prerequisite('connectx'   , '4'     )
         self.check_prerequisite('nvidia'     , '450.36')
 
+        super().run()
+
+    def runcmd(self): 
+        runcmd = super().runcmd()[0]
+
         if self.sif:
             self.check_prerequisite('singularity', '3.4.1' )
 
-            self.bin   = f'singularity run --nv {self.sif} hpl.sh '
-        else: 
-            self.bin   = os.path.join(self.bindir, 'hpl.sh ')
+            singularity = ['singularity', 'run', f'--nv {self.sif}']
 
-        # wrapper options
-        self.bin += self.hpl_opt()
+            runcmd.insert(-1, singularity)
 
-        super().run()
+        return [runcmd]
 
-    def hpl_opt(self): 
-        opts = (
-            f'--dat {self.input} '
-            f'--cpu-cores-per-rank {self.mpi.omp} '  
-            f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
-            f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
-            f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])} ' )
-
+    def execmd(self): 
+        cmd = [ 
+            self.bin, 
+               f'--dat {self.input}', 
+               f'--cpu-cores-per-rank {self.mpi.omp}',  
+               f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}', 
+               f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}', 
+               f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])}' ]
+        
         # ucx transport (2021.4) 
         if self.mpi.ucx: 
-            opts += ( 
-                f'--ucx-tls {",".join(self.mpi.ucx)} ' )
+            cmd += [
+                f'--ucx-tls {",".join(self.mpi.ucx)}' ]
 
-        return opts 
+        return cmd
 
     def add_argument(self): 
         super().add_argument() 

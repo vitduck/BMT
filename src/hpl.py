@@ -141,17 +141,21 @@ class Hpl(Bmt):
         self.write_input()
         self.mpi.write_hostfile()
         
-        self.runcmd = f'{self.mpi.run()} {self.bin}'
         self.output = f'HPL-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}-g{self.mpi.gpu}.out'
-        
-        #  if self.mpi.gpu:
-            #  self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
         
         for i in range(1, self.count+1): 
             if self.count > 1: 
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
             super().run(1)
+
+    def runcmd(self): 
+        return [[self.mpi.runcmd(), self.execmd()]]
+
+    def execmd(self): 
+        cmd = [self.bin] 
+
+        return cmd
 
     def parse(self): 
         with open(self.output, 'r') as output_fh:

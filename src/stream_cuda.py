@@ -13,7 +13,7 @@ class StreamCuda(Bmt):
         super().__init__(**kwargs)
         
         self.name   = 'STREAM (CUDA)'
-        self.bin    = os.path.join(self.bindir,'stream_cuda') 
+        self.bin    = os.path.join(self.bindir,'stream_cuda')
 
         self.device = nvidia_smi()
 
@@ -26,7 +26,7 @@ class StreamCuda(Bmt):
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/Stream.h', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/main.cpp', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.h',
-            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu']
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/CUDAStream.cu' ]
 
         self.header = ['arch', 'size', 'ntimes', 'copy(GB/s)', 'mul(GB/s)', 'add(GB/s)', 'triad(GB/s)', 'dot(GB/s)']
 
@@ -39,30 +39,33 @@ class StreamCuda(Bmt):
             runtime, cuda_cc = device_query(self.builddir)
             self.arch        = f'sm_{cuda_cc}'
 
-        self.buildcmd += [
-           ('nvcc '
-                '-O3 '
-                '-std=c++11 '
-                '-DCUDA '
-               f'-arch={self.arch} '
-               f'-D{self.mem} '
-               f'-o {self.bin} '
-               f'{self.builddir}/main.cpp '
-               f'{self.builddir}/CUDAStream.cu' )]
+        self.buildcmd = [[
+            ['nvcc', 
+                '-O3', 
+                '-std=c++11',
+                '-DCUDA', 
+               f'-arch={self.arch}', 
+               f'-D{self.mem}', 
+               f'-o {self.bin}', 
+               f'{self.builddir}/main.cpp', 
+               f'{self.builddir}/CUDAStream.cu' ]]]
         
         super().build() 
 
     def run(self): 
         os.chdir(self.outdir)
     
-        self.runcmd = ( 
-           f'{self.bin} ' 
-           f'-s {str(self.size)} '
-           f'-n {str(self.ntimes)}' )
-
         self.output = f'stream-cuda-{self.arch}.out'
 
         super().run(1) 
+
+    def runcmd(self): 
+        cmd = [
+            self.bin, 
+               f'-s {str(self.size)}', 
+               f'-n {str(self.ntimes)}' ]
+
+        return [cmd]
 
     def parse(self):
         key = ",".join(map(str, [self.arch, self.size, self.ntimes]))

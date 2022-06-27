@@ -20,9 +20,9 @@ class HpcgGpu(Bmt):
         self.sif    = sif
 
         if self.sif:
-            self.name  = 'HPCG (NGC)'
-            self.sif   = os.path.abspath(sif)
-            self.bin   = f'singularity run --nv {self.sif} hpcg.sh'
+            self.name = 'HPCG (NGC)'
+            self.bin  = 'hpcg.sh'
+            self.sif  = os.path.abspath(sif)
 
         # default cuda visible devices
         if not self.mpi.cuda_devs:
@@ -60,18 +60,27 @@ class HpcgGpu(Bmt):
         self.write_input()
         self.mpi.write_hostfile()
 
-        self.runcmd = ( 
-            f'{self.mpi.run()} '
-            f'{self.bin} '
-            f'--dat {self.input} '
-            f'--cpu-cores-per-rank {self.mpi.omp} '
-            f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
-            f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])} '
-            f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])} ' )
-
         self.output = f'HPCG-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}-g{self.mpi.gpu}-{"x".join([str(grid) for grid in self.grid])}.out'
 
         super().run(1)
+
+    def runcmd(self): 
+        self.check_prerequisite('singularity', '3.4.1' )
+
+        singularity = ['singularity', 'run', f'--nv {self.sif}']
+
+        return [[self.mpi.runcmd(), singularity, self.execmd()]]
+
+    def execmd(self): 
+        cmd = [ 
+            self.bin, 
+               f'--dat {self.input}',
+               f'--cpu-cores-per-rank {self.mpi.omp}', 
+               f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}', 
+               f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}',
+               f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])}' ]
+
+        return cmd 
 
     def parse(self): 
         with open(self.output, 'r') as output_fh: 
