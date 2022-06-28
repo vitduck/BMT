@@ -47,12 +47,11 @@ class QeGpu(Qe):
         runtime, cuda_cc = device_query(self.builddir)
 
         # make.inc patch 
-        patch = ( 
-            'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc;' ) 
+        patch = 'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc'
 
         # __GPU_MPI 
         if self.cuda_aware: 
-            patch += 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc'
+            patch += ';perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc'
 
         # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
         self.buildcmd = [
@@ -64,7 +63,7 @@ class QeGpu(Qe):
                    f'--with-cuda-cc={cuda_cc}', 
                    f'--with-cuda-runtime={runtime}',
                    '--with-scalapack=no'], 
-               f'{patch}', 
+            patch, 
             'make -j 16 pw', 
             'make -j 16 neb', 
             'make install' ]]
@@ -80,7 +79,7 @@ class QeGpu(Qe):
             #  self.mpi.env['UCX_MEMTYPE_CACHE'] = 'n'
     
         # bugs in HCOLL leads to hang at 1st SCF
-        if self.mpi.sharp:
+        if self.mpi.ucx:
             # NCCL backend leads to segmentation fault (non-critical)
             #  self.mpi.env['HCOLL_CUDA_BCOL'] = 'nccl'
             self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
