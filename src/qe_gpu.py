@@ -81,8 +81,10 @@ class QeGpu(Qe):
         # bugs in HCOLL leads to hang at 1st SCF
         if self.mpi.ucx:
             # NCCL backend leads to segmentation fault (non-critical)
-            #  self.mpi.env['HCOLL_CUDA_BCOL'] = 'nccl'
-            self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
+            if self.mpi.nccl:
+                self.mpi.env['HCOLL_CUDA_BCOL'] = 'nccl'
+            else:
+                self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
 
         # gpu selection
         self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])

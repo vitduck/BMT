@@ -3,7 +3,7 @@
 from mpi import Mpi
 
 class OpenMPI(Mpi): 
-    def __init__(self, ucx=None, hca=[], hcoll=0, sharp=0, verbose=False, debug=False, **kwargs): 
+    def __init__(self, ucx=None, hca=[], hcoll=0, sharp=0, nccl=False, verbose=False, debug=False, **kwargs): 
         super().__init__(**kwargs) 
 
         self.name    = 'OpenMPI'
@@ -11,6 +11,7 @@ class OpenMPI(Mpi):
         self.hca     = hca
         self.hcoll   = hcoll
         self.sharp   = sharp
+        self.nccl    = nccl
         self.verbose = verbose
         self.debug   = debug
         self.mca   = {} 
