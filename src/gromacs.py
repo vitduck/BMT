@@ -5,9 +5,9 @@ import re
 import logging
 import argparse
 
-from bmt import Bmt
+from bmt_mpi import BmtMpi
 
-class Gromacs(Bmt):
+class Gromacs(BmtMpi):
     def __init__(
         self, input='stmv.tpr', nsteps=10000, resetstep=0, nstlist=0, pin='on', 
         bonded='cpu', pme='cpu', update='cpu',
@@ -194,6 +194,3 @@ class Gromacs(Bmt):
         self.parser.add_argument('--input'    , type=str, help='input file (default: None)')
         self.parser.add_argument('--nsteps'   , type=int, help='number of MD steps (default: 10000)')
         self.parser.add_argument('--resetstep', type=int, help='number of MD step after which perf counter is reseted (default: 0)')
-        self.parser.add_argument('--node'     , type=int, help='number of nodes (default: $SLUM_NNODES)')
-        self.parser.add_argument('--task'     , type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
-        self.parser.add_argument('--omp'      , type=int, help='number of OpenMP threads (default: 1)')

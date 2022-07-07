@@ -110,8 +110,3 @@ class QeGpu(Qe):
             runcmd.insert(-1, singularity)
             
         return [runcmd]
-
-    def add_argument(self): 
-        super().add_argument() 
-        
-        self.parser.add_argument('--gpu', type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')

@@ -100,8 +100,8 @@ class Iozone(Bmt):
         cmd += [
            f'-s {self.size}',                   # file size per threads 
            f'-r {self.record}',                 # record size 
-           f'-+m {self.hostfile}',              # hostfile: <hostname> <outdir> <iozone bin> 
            f'-t {str(self.thread*self.node)}',  # total number of threads 
+           f'-+m {self.hostfile}',              # hostfile: <hostname> <outdir> <iozone bin> 
             '-c',                               # includes close in timing calculation  
             '-e',                               # incldues flush in timing calculation
             '-w',                               # keep temporary files for read test

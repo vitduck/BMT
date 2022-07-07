@@ -79,5 +79,4 @@ class GromacsGpu(Gromacs):
     def add_argument(self):
         super().add_argument() 
 
-        self.parser.add_argument('--gpu', type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')
         self.parser.add_argument('--gpudirect', action='store_true', help='enable experimental GPUDirect implementation (default: False)')

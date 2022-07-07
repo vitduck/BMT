@@ -4,11 +4,11 @@ import os
 import re
 import argparse
 
-from glob  import glob
-from utils import sync
-from bmt   import Bmt
+from glob    import glob
+from utils   import sync
+from bmt_mpi import BmtMpi
 
-class Ior(Bmt):
+class Ior(BmtMpi):
     def __init__(self, transfer='4M', block='64M', segment=16, ltrsize=0, ltrcount=0, **kwargs): 
         super().__init__(**kwargs)
         
@@ -144,5 +144,3 @@ class Ior(Bmt):
         self.parser.add_argument('--segment' , type=int, help='number of segement (default:16)')
         self.parser.add_argument('--ltrsize' , type=int, help='lustre stripe size (default: 0)')
         self.parser.add_argument('--ltrcount', type=int, help='lustre stripe count (default: 0)')
-        self.parser.add_argument('--node'    , type=int, help='number of nodes (default: $SLUM_NNODES)')
-        self.parser.add_argument('--task'    , type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)') 

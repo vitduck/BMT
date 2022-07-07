@@ -6,11 +6,11 @@ import argparse
 import shutil
 import logging 
 
-from math import sqrt
-from cpu  import cpu_memory
-from bmt  import Bmt
+from math    import sqrt
+from cpu     import cpu_memory
+from bmt_mpi import BmtMpi
 
-class Hpl(Bmt): 
+class Hpl(BmtMpi): 
     def __init__(
         self, size=[], blocksize=[192], 
         pgrid=[], qgrid=[], pmap=0, bcast=[1],  
@@ -251,9 +251,6 @@ class Hpl(Bmt):
         self.parser.add_argument('--pmap'     , type=int             , help='MPI process mapping (default: row-major)')
         self.parser.add_argument('--threshold', type=float           , help='swapping threshold (default: 16.0)')
         self.parser.add_argument('--memory'   , type=str  , nargs='*', help='list of memory usages (default: none)')
-        self.parser.add_argument('--node'     , type=int             , help='number of nodes (default: $SLUM_NNODES)')
-        self.parser.add_argument('--task'     , type=int             , help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
-        self.parser.add_argument('--omp'      , type=int             , help='number of OpenMP threads (default: 1)')
 
     # total number of devices 
     def total_device(self): 

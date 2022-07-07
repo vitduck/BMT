@@ -67,7 +67,7 @@ class OpenMPI(Mpi):
 
         # show report to stderr
         if self.verbose: 
-            if self.bind or self.map: 
+            if self.bind != 'none' or self.map: 
                 cmd.append(f'--report-bindings')
 
         # show debug message 

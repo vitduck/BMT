@@ -14,7 +14,7 @@ class StreamOmp(Bmt):
         self.size     = size 
         self.ntimes   = ntimes 
         self.affinity = affinity
-        self.omp      = omp or self.host['CPUs']
+        self.omp      = omp or os.environ['SLURM_NTASKS_PER_NODE']
 
         self.src      = ['https://www.cs.virginia.edu/stream/FTP/Code/stream.c']
 

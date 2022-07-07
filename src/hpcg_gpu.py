@@ -4,10 +4,10 @@ import os
 import re
 import argparse
 
-from bmt import Bmt
-from gpu import nvidia_smi, gpu_affinity
+from bmt_mpi import BmtMpi
+from gpu     import nvidia_smi, gpu_affinity
 
-class HpcgGpu(Bmt): 
+class HpcgGpu(BmtMpi): 
     def __init__(self, grid=[256, 256, 256], time=60, sif='', **kwargs):
 
         super().__init__(**kwargs)
@@ -65,7 +65,7 @@ class HpcgGpu(Bmt):
         super().run(1)
 
     def runcmd(self): 
-        self.check_prerequisite('singularity', '3.4.1' )
+        self.check_prerequisite('singularity', '3.4.1')
 
         singularity = ['singularity', 'run', f'--nv {self.sif}']
 
@@ -136,7 +136,3 @@ class HpcgGpu(Bmt):
 
         self.parser.add_argument('--grid', type=int, nargs=3, metavar=('NX','NY','NZ'), help='3d grid (default: 256x256x256)')
         self.parser.add_argument('--time', type=int, help='simulation time (default: 60s)')
-        self.parser.add_argument('--node', type=int, help='number of nodes (default: $SLUM_NNODES)')
-        self.parser.add_argument('--task', type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
-        self.parser.add_argument('--omp' , type=int, help='number of OpenMP threads (default: 1)')
-        self.parser.add_argument('--gpu' , type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')

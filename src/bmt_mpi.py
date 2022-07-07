@@ -15,11 +15,16 @@ class BmtMpi(Bmt):
         if not self.mpi.node: 
             self.mpi.node = len(self.nodelist)
 
-    def getopt(self): 
+    def add_argument(self): 
+        super().add_argument()
+
         self.parser.add_argument('--node', type=int, help='number of nodes (default: $SLUM_NNODES)')
         self.parser.add_argument('--task', type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)') 
         self.parser.add_argument('--omp' , type=int, help='number of OpenMP threads (default: 1)')
         self.parser.add_argument('--gpu' , type=int, help='number of GPU per node (default: $SLURM_GPUS_ON_NODE)')
+
+    def getopt(self): 
+        self.add_argument() 
 
         args = vars(self.parser.parse_args())
         

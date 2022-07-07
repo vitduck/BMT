@@ -31,7 +31,7 @@ class Bmt:
         format = '%(message)s')
         #format = '[%(levelname)-5s] %(message)s')
 
-    def __init__(self, count=1, mpi=None, prefix='./', outdir=None):
+    def __init__(self, count=1, prefix='./', outdir=None):
         self.name     = ''
 
         # parse $SLUM_NODELIST
@@ -43,15 +43,6 @@ class Bmt:
 
         # number of repeted measurements
         self.count    = count
-
-        # MPI 
-        self.mpi      = mpi
-
-        if mpi:
-            self.mpi.nodelist = self.nodelist
-            
-            if not self.mpi.node:
-                self.mpi.node = len(self.nodelist) 
 
         # Build directory setup
         self.bin       = []
@@ -183,11 +174,7 @@ class Bmt:
 
         for opt in args:
             if args[opt]:
-                # Pass attributes to MPI
-                if self.mpi and (opt == 'node' or opt == 'task' or opt == 'omp' or opt == 'gpu'): 
-                    setattr(self.mpi, opt, args[opt]) 
-                else: 
-                    setattr(self, opt, args[opt]) 
+                setattr(self, opt, args[opt]) 
     
     def __cell_format(self, cell):
         for item in cell:

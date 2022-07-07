@@ -5,9 +5,9 @@ import re
 import logging
 import argparse
 
-from bmt import Bmt
+from bmt_mpi import BmtMpi
 
-class Qe(Bmt):
+class Qe(BmtMpi):
     def __init__(self, input='Ausurf_512.in', npool=1, ntg=1, ndiag=1, nimage=1, neb=False, **kwargs): 
         super().__init__(**kwargs)
 
@@ -133,11 +133,8 @@ class Qe(Bmt):
     def add_argument(self): 
         super().add_argument() 
         
-        self.parser.add_argument('--neb'   , action='store_true' , help='NEB calculation (default: False)')
         self.parser.add_argument('--npool' , type=int, help='k-points parallelization (default: 1)')
         self.parser.add_argument('--ntg'   , type=int, help='planewave parallelization (default: 1)')
         self.parser.add_argument('--ndiag' , type=int, help='linear algebra parallelization (default: 1)')
         self.parser.add_argument('--nimage', type=int, help='NEB image parallelization (default: 1)')
-        self.parser.add_argument('--node'  , type=int, help='number of nodes (default: $SLUM_NNODES)')
-        self.parser.add_argument('--task'  , type=int, help='number of task per node (default: $SLURM_NTASK_PER_NODE)')
-        self.parser.add_argument('--omp'   , type=int, help='number of OpenMP threads (default: 1)')
+        self.parser.add_argument('--neb'   , action='store_true' , help='NEB calculation (default: False)')
