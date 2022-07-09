@@ -64,6 +64,7 @@ class Bmt:
 
         # Build instructions
         self.src      = []
+        self.buildcmd = []
 
         # Result summation
         self.header   = []
@@ -104,7 +105,6 @@ class Bmt:
                    [f'wget', 
                        f'--no-check-certificate {url}', 
                        f'-O {file_path}']])
-
     # build
     def build(self):
         for cmd in self.buildcmd:

@@ -12,7 +12,7 @@ class StreamCuda(Bmt):
     def __init__(self, arch='', mem='DEFAULT', size=eval('2**25'), ntimes=100, **kwargs): 
         super().__init__(**kwargs)
         
-        self.name   = 'STREAM (CUDA)'
+        self.name   = 'STREAM/CUDA'
         self.bin    = os.path.join(self.bindir,'stream_cuda')
 
         self.device = nvidia_smi()

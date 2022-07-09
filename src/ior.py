@@ -65,10 +65,7 @@ class Ior(BmtMpi):
         super().run(1) 
             
         self.clean() 
-
-    def runcmd(self): 
-        return [[self.mpi.runcmd(), self.execmd()]]
-
+   
     def execmd(self): 
         cmd = [
             self.bin, 

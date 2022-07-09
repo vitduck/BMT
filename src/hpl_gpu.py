@@ -9,18 +9,12 @@ from gpu  import nvidia_smi, gpu_affinity, gpu_memory
 from math import sqrt
 
 class HplGpu(Hpl): 
-    def __init__(self, sif=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.name     = 'HPL (GPU)' 
+        self.name     = 'HPL/GPU' 
         self.device   = nvidia_smi()
-        self.sif      = sif
         self.bin      = os.path.join(self.bindir,'hpl.sh') 
-
-        if self.sif:
-            self.name  = 'HPL (NGC)'
-            self.bin   = 'hpl.sh'
-            self.sif   = os.path.abspath(sif)
 
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
@@ -42,23 +36,17 @@ class HplGpu(Hpl):
         self.check_prerequisite('connectx'   , '4'     )
         self.check_prerequisite('nvidia'     , '450.36')
 
+        if self.sif: 
+            self.name += '/NGC'
+
         super().run()
 
-    def runcmd(self): 
-        runcmd = super().runcmd()[0]
-
-        if self.sif:
-            self.check_prerequisite('singularity', '3.4.1' )
-
-            singularity = ['singularity', 'run', f'--nv {self.sif}']
-
-            runcmd.insert(-1, singularity)
-
-        return [runcmd]
-
     def execmd(self): 
+        if self.sif:
+            self.bin   = 'hpl.sh'
+
         cmd = [ 
-            self.bin, 
+            self.bin,
                f'--dat {self.input}', 
                f'--cpu-cores-per-rank {self.mpi.omp}',  
                f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}', 

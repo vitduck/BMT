@@ -5,8 +5,7 @@ from openmpi import OpenMPI
 
 ior = Ior(
     prefix = '../run/IOR', 
-    mpi   = OpenMPI( 
-        task = 8 ))
+    mpi    = OpenMPI() )
 
 ior.getopt()
 ior.info()

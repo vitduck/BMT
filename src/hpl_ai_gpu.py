@@ -12,11 +12,11 @@ class HplAiGpu(HplGpu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.name   = 'HPL-AI (NGC)'
+        self.name   = 'HPL_AI/GPU/NGC'
     
         # NVIDIA-HPL-AI header
         self.header = [
-            'node', 'task', 'gpu', 'omp', 
+            'node', 'task', 'omp', 'gpu',
             'n', 'nb', 
             'p', 'q', 'bcast', 
             'rfact', 'ndiv', 'pfact', 'nbmin', 
@@ -46,7 +46,7 @@ class HplAiGpu(HplGpu):
                     mu, ordering, depth, bcast, rfact, ndiv, pfact, nbmin = list(config)
                     
                     # hash key 
-                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.gpu, self.mpi.omp, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
+                    key = ",".join(map(str, [self.mpi.node, self.mpi.task, self.mpi.omp, self.mpi.gpu, size, blocksize, p, q, bcast, rfact, ndiv, pfact, nbmin, status]))
                     
                     # hash initialization
                     if not self.result[key]['gflops_half']: 

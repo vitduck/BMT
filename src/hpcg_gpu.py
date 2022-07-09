@@ -8,21 +8,18 @@ from bmt_mpi import BmtMpi
 from gpu     import nvidia_smi, gpu_affinity
 
 class HpcgGpu(BmtMpi): 
-    def __init__(self, grid=[256, 256, 256], time=60, sif='', **kwargs):
+    def __init__(self, grid=[256, 256, 256], time=60, **kwargs):
 
         super().__init__(**kwargs)
 
-        self.name   = 'HPCG (GPU)'
+        self.name   = 'HPCG/GPU'
         self.device = nvidia_smi()
         
         self.grid   = grid 
         self.time   = time
-        self.sif    = sif
 
         if self.sif:
-            self.name = 'HPCG (NGC)'
-            self.bin  = 'hpcg.sh'
-            self.sif  = os.path.abspath(sif)
+            self.name += '/NGC'
 
         # default cuda visible devices
         if not self.mpi.cuda_devs:
@@ -37,7 +34,7 @@ class HpcgGpu(BmtMpi):
         self.output  = ''
 
         self.header  = [
-            'node', 'task', 'omp', 'mpi', 'grid', 
+            'node', 'task', 'omp', 'gpu', 'mpi', 'grid', 
             'SpMV(GFlops)', 'SymGS(GFlops)', 'total(GFlops)', 'final(GFlops)', 'time(s)' ]
 
         self.parser.description  = 'HPCG benchmark (GPU)'
@@ -64,14 +61,10 @@ class HpcgGpu(BmtMpi):
 
         super().run(1)
 
-    def runcmd(self): 
-        self.check_prerequisite('singularity', '3.4.1')
-
-        singularity = ['singularity', 'run', f'--nv {self.sif}']
-
-        return [[self.mpi.runcmd(), singularity, self.execmd()]]
-
     def execmd(self): 
+        if self.sif: 
+            self.bin  = 'hpcg.sh'
+
         cmd = [ 
             self.bin, 
                f'--dat {self.input}',

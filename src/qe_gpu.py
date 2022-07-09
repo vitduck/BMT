@@ -10,24 +10,18 @@ from gpu import nvidia_smi, device_query, gpu_affinity
 from utils import syscmd
 
 class QeGpu(Qe):
-    def __init__(self, cuda_aware=False, sif='', **kwargs): 
+    def __init__(self, cuda_aware=False, **kwargs): 
         super().__init__(**kwargs)
 
-        self.name     = 'QE (GPU)' 
+        self.name     = 'QE/GPU' 
         self.device   = nvidia_smi()
 
         self.cuda_aware = cuda_aware
-        self.sif        = sif
 
         # For GPU version  
         self.ntg      = 1 
         self.ndiag    = 1
         
-        if sif: 
-            self.name = 'QE (NGC)'
-            self.bin  = 'pw.x'
-            self.sif  = os.path.abspath(sif)
-
         # default cuda visible devices
         if not self.mpi.cuda_devs: 
             self.mpi.cuda_devs = list(range(0, len(self.device.keys())))
@@ -39,8 +33,8 @@ class QeGpu(Qe):
 
         self.parser.description = 'QE Benchmark (GPU)'
 
-    def build(self): 
-        if os.path.exists(self.bin):
+    def build(self):
+        if self.sif or os.path.exists(self.bin):
             return
         
         # determine cuda_cc and runtime 
@@ -59,7 +53,7 @@ class QeGpu(Qe):
           [f'cd {self.builddir}/q-e-qe-6.8/',  
               [f'./configure', 
                    f'--prefix={os.path.abspath(self.prefix)}', 
-                   f'--with-cuda={os.environ["CUDA_HOME"]}',
+                   f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda',
                    f'--with-cuda-cc={cuda_cc}', 
                    f'--with-cuda-runtime={runtime}',
                    '--with-scalapack=no'], 
@@ -86,27 +80,21 @@ class QeGpu(Qe):
             else:
                 self.mpi.env['HCOLL_BCOL_P2P_CUDA_ZCOPY_ALLREDUCE_ALG'] = '2'
 
+        # singularity 
+        if self.sif: 
+            self.name += '/NGC'
+
+            self.check_prerequisite('nvidia'     , '450')
+            self.check_prerequisite('openmpi'    , '3'  )
+            self.check_prerequisite('singularity', '3.1')
+            
         # gpu selection
         self.mpi.env['CUDA_VISIBLE_DEVICES'] = ",".join([str(i) for i in self.mpi.cuda_devs[0:self.mpi.gpu]])
 
         super().run()
 
-    def runcmd(self): 
-        runcmd = super().runcmd()[0]
-        
-        if self.mpi.numa: 
-            runcmd.insert(1,self.mpi.numactl())
-        
+    def execmd(self): 
         if self.sif: 
-            self.check_prerequisite('nvidia'     , '450')
-            self.check_prerequisite('openmpi'    , '3'  )
-            self.check_prerequisite('singularity', '3.1')
-            
-            # bug
-            self.mpi.env['SINGULARITYENV_NO_STOP_MESSAGE'] = 1
+            self.bin = 'pw.x' 
 
-            singularity = ['singularity', 'run', f'--nv {self.sif}']
-
-            runcmd.insert(-1, singularity)
-            
-        return [runcmd]
+        return super().execmd()

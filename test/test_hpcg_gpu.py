@@ -7,7 +7,6 @@ hpcg = HpcgGpu(
     prefix = '../run/HPCG',
     sif    = '../image/hpc-benchmarks:21.4-hpcg.sif', 
     mpi    = OpenMPI( 
-        bind = 'none', 
         omp  = 4 ))
 
 hpcg.getopt()

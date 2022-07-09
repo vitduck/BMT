@@ -149,9 +149,6 @@ class Hpl(BmtMpi):
 
             super().run(1)
 
-    def runcmd(self): 
-        return [[self.mpi.runcmd(), self.execmd()]]
-
     def execmd(self): 
         cmd = [self.bin] 
 

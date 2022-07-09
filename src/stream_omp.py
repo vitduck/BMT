@@ -22,12 +22,12 @@ class StreamOmp(Bmt):
 
         # intel icc
         if os.environ.get('CC') == 'icc':
-            self.name   = 'STREAM (OMP/ICC)'
+            self.name   = 'STREAM/OMP/ICC'
             self.cc     = 'icc'
             self.cflags = '-qopenmp'
             self.bin    = os.path.join(self.bindir,'stream_icc')
         else: 
-            self.name   = 'STREAM (OMP)'
+            self.name   = 'STREAM/OMP'
             self.cc     = 'gcc'
             self.cflags = '-fopenmp'
             self.bin    = os.path.join(self.bindir,'stream_gcc')

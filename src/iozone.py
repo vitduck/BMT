@@ -9,7 +9,7 @@ from utils import sync
 from bmt import Bmt
 
 class Iozone(Bmt):
-    def __init__(self, size='64M', record='1M', node=0, thread=8, **kwargs): 
+    def __init__(self, size='64M', record='1M', node=0, thread=0, **kwargs): 
         super().__init__(**kwargs)
 
         self.name   = 'IOZONE'
@@ -19,7 +19,7 @@ class Iozone(Bmt):
         self.size   = size
         self.record = record
         self.node   = node or len(self.nodelist)
-        self.thread = thread
+        self.thread = thread or os.environ['SLURM_NTASKS_PER_NODE']
 
         self.src    = ['http://www.iozone.org/src/current/iozone3_491.tgz']
 
@@ -28,7 +28,7 @@ class Iozone(Bmt):
         self.parser.description = 'IOZONE Benchmark'
 
     def build(self): 
-        if os.path.exists(self.bin[0]):
+        if os.path.exists(self.bin):
             return 
 
         self.buildcmd = [
@@ -41,7 +41,7 @@ class Iozone(Bmt):
     def write_hostfile(self): 
         with open(self.hostfile, 'w') as fh:
             for node in self.nodelist:
-                for threads in range(self.thread): 
+                for threads in range(int(self.thread)): 
                     fh.write(f'{node} {self.outdir} {self.bin}\n')
 
     def run(self): 

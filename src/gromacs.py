@@ -39,7 +39,7 @@ class Gromacs(BmtMpi):
         self.npme      = -1
         self.gmx_gpu   = 'OFF'
         
-        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2022.1.tar.gz']
+        self.src       = ['http://ftp.gromacs.org/pub/gromacs/gromacs-2021.3.tar.gz']
 
         self.header    = [
             'input', 'node', 'task', 'omp', 'gpu', 
@@ -52,14 +52,10 @@ class Gromacs(BmtMpi):
         if self.tunepme and not self.resetstep: 
             self.resetstep = int(0.9*self.nsteps)
 
-        # default ntasks 
-        if not self.mpi.task:
-            self.mpi.task = self.host['CPUs']
-
         self.parser.description  = 'GROMACS Benchmark'
 
     def build(self): 
-        if os.path.exists(self.bin[0]):
+        if os.path.exists(self.bin):
             return
         
         self.check_prerequisite('cmake', '3.16.3')
@@ -69,9 +65,9 @@ class Gromacs(BmtMpi):
         if self.mpi.name == 'OpenMPI': 
             self.check_prerequisite('openmpi', '3.0')
 
-        self.buildcmd += [  
-           [f'cd {self.builddir}', 'tar xf gromacs-2022.1.tar.gz'],
-           [f'cd {self.builddir}/gromacs-2022.1',
+        self.buildcmd = [  
+           [f'cd {self.builddir}', 'tar xf gromacs-2021.3.tar.gz'],
+           [f'cd {self.builddir}/gromacs-2021.3',
             'mkdir build', 
             'cd build', 
            ['cmake ..', 
@@ -87,7 +83,7 @@ class Gromacs(BmtMpi):
             'make -j 16', 
             'make install']]
         
-        super().build() 
+        super().build()
 
     def run(self): 
         os.chdir(self.outdir)
@@ -113,14 +109,6 @@ class Gromacs(BmtMpi):
             if os.path.exists('ener.edr'): 
                 os.remove('ener.edr')
 
-    def runcmd(self): 
-        if self.mpi.name == 'OpenMPI': 
-            self.mpi.write_hostfile()
-
-            return [[self.mpi.runcmd(), self.execmd()]]
-        else: 
-            return [self.execmd()]
-   
     def execmd(self): 
         # gromacs MPI crashes unless thread is explicitly set to 1
         cmd = [

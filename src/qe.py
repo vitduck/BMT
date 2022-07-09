@@ -28,7 +28,7 @@ class Qe(BmtMpi):
         self.parser.description = 'QE Benchmark'
 
     def build(self): 
-        if os.path.exists(self.bin):
+        if self.sif or os.path.exists(self.bin):
             return
         
         # intel-mkl
@@ -83,9 +83,6 @@ class Qe(BmtMpi):
                 self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
 
             super().run(1) 
-
-    def runcmd(self): 
-        return [[self.mpi.runcmd(), self.execmd()]]
 
     def execmd(self): 
         cmd = [

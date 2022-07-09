@@ -5,7 +5,7 @@ import os
 from gpu import gpu_affinity
 
 class Mpi: 
-    def __init__(self, nodelist=[], node=0, task=1, omp=0, gpu=0, bind=None, map=None, slurm=False, numa=False, verbose=0, hostfile='hostfile'):
+    def __init__(self, nodelist=[], node=0, task=0, omp=0, gpu=0, bind=None, map=None, slurm=False, numa=False, verbose=0, hostfile='hostfile'):
         self.nodelist  = nodelist
         self.node      = node
         self.task      = task 
