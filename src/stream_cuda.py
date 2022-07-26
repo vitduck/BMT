@@ -55,8 +55,8 @@ class StreamCuda(Bmt):
     def run(self): 
         os.chdir(self.outdir)
     
-        self.output = f'stream-cuda-{self.arch}.out'
-
+        self.output = f'stream-cuda-{self.arch}.log'
+        
         super().run(1) 
 
     def runcmd(self): 

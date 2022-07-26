@@ -3,9 +3,10 @@
 import re
 import os
 import argparse
+import logging
 
 from glob import glob 
-from utils import sync
+from utils import sync, syscmd
 from bmt import Bmt
 
 class Iozone(Bmt):
@@ -19,11 +20,11 @@ class Iozone(Bmt):
         self.size   = size
         self.record = record
         self.node   = node or len(self.nodelist)
-        self.thread = thread or os.environ['SLURM_NTASKS_PER_NODE']
+        self.thread = thread or int(os.environ['SLURM_NTASKS_PER_NODE'])
 
         self.src    = ['http://www.iozone.org/src/current/iozone3_491.tgz']
 
-        self.header = ['node', 'thread', 'size', 'record', 'write(MB/s)', 'read(MB/s)', 'r_write(OPS)', 'r_read(OPS)']
+        self.header = ['node', 'thread', 'size', 'record', 'write(MB/s)', 'read(MB/s)', 'random_write(OPS)', 'random_read(OPS)']
  
         self.parser.description = 'IOZONE Benchmark'
 
@@ -56,34 +57,29 @@ class Iozone(Bmt):
         read_output   = f'iozone-i1-n{self.node}-t{self.thread}-s{self.size}-r{self.record}.out'
         random_output = f'iozone-i2-n{self.node}-t{self.thread}-s{self.size}-r{self.record}.out'
 
-        for i in range(1, self.count+1): 
-            if self.count > 1: 
+        for i in range(1, self.repeat+1): 
+            if self.repeat > 1: 
                 write_output  = re.sub('out(\.\d+)?', f'out.{i}', write_output)
                 read_output   = re.sub('out(\.\d+)?', f'out.{i}', read_output)
                 random_output = re.sub('out(\.\d+)?', f'out.{i}', random_output)
 
-            # write
-            self.mode   = 0 
-            self.output = write_output
-
-            sync(self.nodelist)
-            super().run(1) 
-        
-            # read 
-            self.mode   = 1 
-            self.output = read_output
-
-            sync(self.nodelist)
-            super().run(1) 
-        
-            # random read/write
-            self.mode   = 2 
-            self.output = random_output
-
-            sync(self.nodelist)
-            super().run(1) 
-
+            self.run_mode(0, write_output) 
+            self.run_mode(1, read_output) 
+            self.run_mode(2, random_output) 
+            
             self.clean()
+
+    def run_mode(self, mode, output): 
+        self.mode   = mode 
+        self.output = output
+
+        sync(self.nodelist)
+            
+        logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
+
+        syscmd(self.runcmd(), output)
+
+        self.parse() 
 
     def runcmd(self):
         cmd = [
@@ -100,7 +96,7 @@ class Iozone(Bmt):
         cmd += [
            f'-s {self.size}',                   # file size per threads 
            f'-r {self.record}',                 # record size 
-           f'-t {str(self.thread*self.node)}',  # total number of threads 
+           f'-t {self.thread*self.node}',  # total number of threads 
            f'-+m {self.hostfile}',              # hostfile: <hostname> <outdir> <iozone bin> 
             '-c',                               # includes close in timing calculation  
             '-e',                               # incldues flush in timing calculation

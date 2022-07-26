@@ -25,7 +25,7 @@ class OpenMPI(Mpi):
         cmd = [
             'mpirun', 
                 '--allow-run-as-root', 
-               f'--np {self.node*self.task}', 
+               f'--np {int(self.node)*int(self.task)}', 
                f'--hostfile {self.hostfile}' ]
 
         # process binding

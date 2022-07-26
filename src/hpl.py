@@ -143,11 +143,7 @@ class Hpl(BmtMpi):
         
         self.output = f'HPL-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}-g{self.mpi.gpu}.out'
         
-        for i in range(1, self.count+1): 
-            if self.count > 1: 
-                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
-
-            super().run(1)
+        super().run(1)
 
     def execmd(self): 
         cmd = [self.bin] 

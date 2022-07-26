@@ -21,7 +21,7 @@ class Qe(BmtMpi):
         self.nimage = nimage
         self.neb    = neb
 
-        self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-6.8/q-e-qe-6.8.tar.gz'] 
+        self.src    = ['https://gitlab.com/QEF/q-e/-/archive/qe-7.0/q-e-qe-7.0.tar.gz'] 
 
         self.header = ['input', 'node', 'task', 'omp', 'gpu', 'nimage', 'npool', 'ntg', 'ndiag', 'time(s)']
         
@@ -37,8 +37,8 @@ class Qe(BmtMpi):
             scalapack = 'intel'
         
         self.buildcmd = [
-          [f'cd {self.builddir}', 'tar xf q-e-qe-6.8.tar.gz'], 
-          [f'cd {self.builddir}/q-e-qe-6.8/',  
+          [f'cd {self.builddir}', 'tar xf q-e-qe-7.0.tar.gz'], 
+          [f'cd {self.builddir}/q-e-qe-7.0/',  
               [f'./configure ', 
                    f'--prefix={os.path.abspath(self.prefix)}', 
                    f'--with-scalapack={scalapack}', 
@@ -73,16 +73,12 @@ class Qe(BmtMpi):
                 f'ni{self.nimage}-' 
                 f'nk{self.npool}-'
                 f'nt{self.ntg}-'
-                f'nd{self.ndiag}.out' )
+                f'nd{self.ndiag}.log' )
 
         if self.mpi.gpu: 
             self.output = re.sub(r'(-o\d+)', rf'\1-g{self.mpi.gpu}', self.output, 1)
 
-        for i in range(1, self.count+1): 
-            if self.count > 1: 
-                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
-
-            super().run(1) 
+        super().run(1) 
 
     def execmd(self): 
         cmd = [

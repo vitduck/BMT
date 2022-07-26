@@ -40,27 +40,29 @@ class QeGpu(Qe):
         # determine cuda_cc and runtime 
         runtime, cuda_cc = device_query(self.builddir)
 
-        # make.inc patch 
-        patch = 'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc'
-
-        # __GPU_MPI 
-        if self.cuda_aware: 
-            patch += ';perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc'
-
+        
         # system hangs: https://gitlab.com/QEF/q-e/-/issues/475
         self.buildcmd = [
-          [f'cd {self.builddir}', 'tar xf q-e-qe-6.8.tar.gz'],
-          [f'cd {self.builddir}/q-e-qe-6.8/',  
+          [f'cd {self.builddir}', 'tar xf q-e-qe-7.0.tar.gz'],
+          [f'cd {self.builddir}/q-e-qe-7.0/',  
               [f'./configure', 
                    f'--prefix={os.path.abspath(self.prefix)}', 
                    f'--with-cuda={os.environ["NVHPC_ROOT"]}/cuda',
                    f'--with-cuda-cc={cuda_cc}', 
                    f'--with-cuda-runtime={runtime}',
-                   '--with-scalapack=no'], 
-            patch, 
+                    '--with-scalapack=no']] ] 
+         
+        # make.inc patch (Q.E 6.8)
+        # self.buildcmd[-1] += [ 'perl -pi -e "s/(cusolver)/\$1,curand/" make.inc' ]
+
+        # __GPU_MPI 
+        if self.cuda_aware: 
+            self.buildcmd[-1] += [ 'perl -pi -e "s/^(DFLAGS.*)/\$1 -D__GPU_MPI/" make.inc' ]
+
+        self.buildcmd[-1] += [  
             'make -j 16 pw', 
             'make -j 16 neb', 
-            'make install' ]]
+            'make install' ]
         
         super(Qe, self).build() 
 

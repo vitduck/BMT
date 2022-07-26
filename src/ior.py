@@ -60,9 +60,9 @@ class Ior(BmtMpi):
                 f'p{self.mpi.task}-'
                 f't{self.transfer}-'
                 f'b{self.block}-'
-                f's{self.segment}.out' )
+                f's{self.segment}.log' )
 
-        super().run(1) 
+        super().run(1)
             
         self.clean() 
    

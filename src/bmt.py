@@ -31,7 +31,7 @@ class Bmt:
         format = '%(message)s')
         #format = '[%(levelname)-5s] %(message)s')
 
-    def __init__(self, count=1, prefix='./', outdir=None):
+    def __init__(self, repeat=1, prefix='./', outdir=None):
         self.name     = ''
 
         # parse $SLUM_NODELIST
@@ -42,7 +42,7 @@ class Bmt:
         self.device   = {}
 
         # number of repeted measurements
-        self.count    = count
+        self.repeat   = repeat
 
         # Build directory setup
         self.bin       = []
@@ -111,17 +111,21 @@ class Bmt:
             syscmd(cmd)
 
     def run(self, redirect=0):
-        logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
-
-        # redirect output to file
-        if redirect:
-            syscmd(self.runcmd(), self.output)
+        for i in range(1, self.repeat+1): 
+            if self.repeat > 1: 
+                self.output = re.sub('log(\.\d+)?', f'log.{i}', self.output)
+        
+            logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
+                
+            # redirect output to file
+            if redirect:
+                syscmd(self.runcmd(), self.output)
+            else:
+                syscmd(self.runcmd())
 
             self.parse()
-        else:
-            syscmd(self.runcmd())
 
-        time.sleep(3)
+            time.sleep(5)
 
     def runcmd(self): 
         pass
@@ -166,6 +170,7 @@ class Bmt:
 
     def add_argument(self): 
         self.parser.add_argument('-v', '--version' , action='version', version='%(prog)s ' + self.version)
+        self.parser.add_argument('--repeat' , type=int, help='number of repeated measurements')
 
     def getopt(self):
         self.add_argument()
@@ -183,7 +188,7 @@ class Bmt:
 
         average = mean(cell)
 
-        if self.count > 1:
+        if self.repeat > 1:
             formatted = "\n".join(list(map("{:.2f}".format, cell)) + [f'-<{average:.2f}>-'])
         else:
             formatted = f'{cell[0]:.2f}'

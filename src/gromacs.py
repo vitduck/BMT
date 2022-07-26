@@ -5,6 +5,7 @@ import re
 import logging
 import argparse
 
+from utils   import syscmd
 from bmt_mpi import BmtMpi
 
 class Gromacs(BmtMpi):
@@ -97,24 +98,27 @@ class Gromacs(BmtMpi):
                f'g{self.mpi.gpu}-'
                f'l{self.nstlist}.log' )
         
-        for i in range(1, self.count+1): 
-            if self.count > 1: 
+        for i in range(1, self.repeat+1): 
+            if self.repeat > 1: 
                 self.output = re.sub('log(\.\d+)?', f'log.{i}', self.output)
-                
-            super().run(1) 
+            
+            logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
+
+            syscmd(self.runcmd())
+
+            self.parse()
 
             os.rename('md.log', self.output)
 
             # clean redundant files
-            if os.path.exists('ener.edr'): 
-                os.remove('ener.edr')
+            #  if os.path.exists('ener.edr'): 
+                #  os.remove('ener.edr')
 
     def execmd(self): 
         # gromacs MPI crashes unless thread is explicitly set to 1
         cmd = [
             self.bin, 
             'mdrun', 
-                '-noconfout',  
                f'-s {self.input}', 
                f'-nsteps {str(self.nsteps)}', 
                f'-resetstep {self.resetstep}', 
@@ -125,7 +129,8 @@ class Gromacs(BmtMpi):
                f'-npme {self.npme}', 
                f'-ntomp {self.mpi.omp}',
                f'-nstlist {self.nstlist}', 
-               f'-pin {self.pin}' ]
+               f'-pin {self.pin}',
+                '-noconfout']
         
         if self.tunepme == False: 
             cmd.append('-notunepme')

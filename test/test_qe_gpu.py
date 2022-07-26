@@ -8,7 +8,7 @@ qe = QeGpu(
     input      = '../input/QE/Ausurf_112.in', 
     npool      = 2, 
     cuda_aware = True, 
-    mpi        = OpenMPI(
+    mpi        = OpenMPI( 
         bind = 'none', 
         numa = True )) 
 
