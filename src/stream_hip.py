@@ -15,12 +15,12 @@ class StreamHip(BabelStream):
         self.bin    = os.path.join(self.bindir,'babelstream_hip')
 
         self.model  = 'HIP'
-        self.stream = 'HIPStream.cu'
+        self.stream = 'HIPStream.cpp'
         self.src    = [ 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/Stream.h', 
             'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/main.cpp', 
-            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/HIPStream.h',
-            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/cuda/HIPStream.cu' ]
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/hip/HIPStream.h',
+            'https://raw.githubusercontent.com/UoB-HPC/BabelStream/main/src/hip/HIPStream.cpp' ]
         
         self.cc     = 'hipcc'
         self.cflags = '-O3'
@@ -32,7 +32,7 @@ class StreamHip(BabelStream):
     def run(self): 
         os.chdir(self.outdir)
     
-        self.output = f'stream-cuda-{self.arch}.log'
+        self.output = f'stream-hip.log'
         
         super().run(1) 
 
