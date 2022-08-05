@@ -46,7 +46,7 @@ class StreamCuda(BabelStream):
     def run(self): 
         os.chdir(self.outdir)
     
-        self.output = f'stream-cuda-{self.arch}.log'
+        self.output = f'stream-cuda-{self.arch}.out'
         
         super().run(1) 
 

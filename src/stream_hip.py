@@ -32,7 +32,7 @@ class StreamHip(BabelStream):
     def run(self): 
         os.chdir(self.outdir)
     
-        self.output = f'stream-hip.log'
+        self.output = f'stream-hip.out'
         
         super().run(1) 
 

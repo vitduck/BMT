@@ -41,8 +41,7 @@ class Hpl(BmtMpi):
 
         self.header    = [
             'node', 'task', 'omp', 'gpu', 
-            'n', 'nb', 
-            'p', 'q', 'bcast', 
+            'n', 'nb', 'p', 'q', 'bcast', 
             'rfact', 'ndiv', 'pfact', 'nbmin', 
             'status', 'perf(TFLOPS)', 'time(s)']
         

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from qe_gpu  import QeGpu
+from qe_cuda import QeCuda
 from openmpi import OpenMPI
 
-qe = QeGpu(
+qe = QeCuda(
     prefix     = '../run/QE', 
     input      = '../input/QE/Ausurf_112.in', 
     npool      = 2, 

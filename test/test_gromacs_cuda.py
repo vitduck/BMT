@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from gromacs_gpu import GromacsGpu
-from tmpi        import tMPI 
+from gromacs_cuda import GromacsCuda
+from tmpi         import tMPI 
 
-gmx = GromacsGpu(
+gmx = GromacsCuda(
     prefix    = '../run/GROMACS', 
     input     = '../input/GROMACS/stmv.tpr',
     gpudirect = True, 

@@ -9,11 +9,11 @@ from qe import Qe
 from gpu import nvidia_smi, device_query, gpu_affinity
 from utils import syscmd
 
-class QeGpu(Qe):
+class QeCuda(Qe):
     def __init__(self, cuda_aware=False, **kwargs): 
         super().__init__(**kwargs)
 
-        self.name     = 'QE/GPU' 
+        self.name     = 'QE/CUDA' 
         self.device   = nvidia_smi()
 
         self.cuda_aware = cuda_aware

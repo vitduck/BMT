@@ -113,7 +113,7 @@ class Bmt:
     def run(self, redirect=0):
         for i in range(1, self.repeat+1): 
             if self.repeat > 1: 
-                self.output = re.sub('log(\.\d+)?', f'log.{i}', self.output)
+                self.output = re.sub('out(\.\d+)?', f'out.{i}', self.output)
         
             logging.info(f'{"Output":7} : {os.path.join(self.outdir, self.output)}')
                 

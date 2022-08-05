@@ -54,7 +54,7 @@ class Stream(Bmt):
         os.environ['OMP_PROC_BIND']   = self.affinity
         os.environ['OMP_NUM_THREADS'] = str(self.omp)
 
-        self.output = f'stream-{self.affinity}-omp_{self.omp}.log'
+        self.output = f'stream-{self.affinity}-omp_{self.omp}.out'
 
         super().run(1) 
 

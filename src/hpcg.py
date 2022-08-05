@@ -7,28 +7,15 @@ import argparse
 from bmt_mpi import BmtMpi
 from gpu     import nvidia_smi, gpu_affinity
 
-class HpcgGpu(BmtMpi): 
+class Hpcg(BmtMpi):
     def __init__(self, grid=[256, 256, 256], time=60, **kwargs):
 
         super().__init__(**kwargs)
 
-        self.name   = 'HPCG/GPU'
-        self.device = nvidia_smi()
+        self.name   = 'HPCG'
         
         self.grid   = grid 
         self.time   = time
-
-        if self.sif:
-            self.name += '/NGC'
-
-        # default cuda visible devices
-        if not self.mpi.cuda_devs:
-            self.mpi.cuda_devs = list(range(0, len(self.device.keys())))
-
-        # default number of GPUs
-        if not self.mpi.gpu:
-            self.mpi.gpu  = len(self.mpi.cuda_devs)
-            self.mpi.task = self.mpi.gpu
 
         self.input   = 'HCPG.in'
         self.output  = ''
@@ -37,7 +24,7 @@ class HpcgGpu(BmtMpi):
             'node', 'task', 'omp', 'gpu', 'mpi', 'grid', 
             'SpMV(GFlops)', 'SymGS(GFlops)', 'total(GFlops)', 'final(GFlops)', 'time(s)' ]
 
-        self.parser.description  = 'HPCG benchmark (GPU)'
+        self.parser.description  = 'HPCG benchmark'
 
     def write_input(self):
         input_file = os.path.join(self.outdir, self.input)
@@ -47,33 +34,6 @@ class HpcgGpu(BmtMpi):
             input_fh.write( 'KISTI\n')
             input_fh.write(f'{" ".join(str(grid) for grid in self.grid)}\n')
             input_fh.write(f'{self.time}')
-
-    def run(self): 
-        # bug in 21.4
-        os.environ['SINGULARITYENV_LD_LIBRARY_PATH'] = '/usr/local/cuda-11.2/targets/x86_64-linux/lib'
-
-        os.chdir(self.outdir)
-
-        self.write_input()
-        self.mpi.write_hostfile()
-
-        self.output = f'HPCG-n{self.mpi.node}-t{self.mpi.task}-o{self.mpi.omp}-g{self.mpi.gpu}-{"x".join([str(grid) for grid in self.grid])}.out'
-
-        super().run(1)
-
-    def execmd(self): 
-        if self.sif: 
-            self.bin  = 'hpcg.sh'
-
-        cmd = [ 
-            self.bin, 
-               f'--dat {self.input}',
-               f'--cpu-cores-per-rank {self.mpi.omp}', 
-               f'--cpu-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}', 
-               f'--mem-affinity {":".join(gpu_affinity()[0:self.mpi.gpu])}',
-               f'--gpu-affinity {":".join([str(i) for i in range(0, self.mpi.gpu)])}' ]
-
-        return cmd 
 
     def parse(self): 
         with open(self.output, 'r') as output_fh: 
@@ -115,14 +75,6 @@ class HpcgGpu(BmtMpi):
         self.result[key]['total'].append(total)
         self.result[key]['final'].append(final)
         self.result[key]['time'].append(time)
-
-    def summary(self):
-        super().summary()
-
-        print('SpMV:  sparse matrix-vector multiplication')
-        print('SymGS: symmetric Gauss-Seidel method')
-        print('Total: GPU performance')
-        print('Final: GPU + CPU initialization overhead')
 
     def add_argument(self): 
         super().add_argument()

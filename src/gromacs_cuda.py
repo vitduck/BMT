@@ -9,11 +9,11 @@ from gromacs import Gromacs
 from gpu import nvidia_smi, gpu_affinity
 from env import get_module
 
-class GromacsGpu(Gromacs):
+class GromacsCuda(Gromacs):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.name    = 'GROMACS/GPU'
+        self.name    = 'GROMACS/CUDA'
         self.device  = nvidia_smi()
         self.gmx_gpu = 'CUDA'
 

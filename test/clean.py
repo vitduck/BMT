@@ -5,8 +5,8 @@ import glob
 import shutil 
 
 for rundir in [
-        '../run/STREAM/OMP', 
-        '../run/STREAM/CUDA', 
+        '../run/STREAM/ORG',
+        '../run/STREAM/CUDA',
         '../run/IOZONE', 
         '../run/IOR', 
         '../run/HPL', 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from stream_omp import StreamOmp
+from stream import Stream
 
-stream = StreamOmp(
-    prefix = '../run/STREAM/OMP' )
+stream = Stream(
+    prefix = '../run/STREAM/ORG' )
 
 stream.getopt() 
 stream.info() 

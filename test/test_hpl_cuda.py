@@ -1,9 +1,9 @@
 #!/usr/bin/env python3 
 
-from hpl_gpu import HplGpu
-from openmpi import OpenMPI
+from hpl_cuda import HplCuda
+from openmpi  import OpenMPI
 
-hpl = HplGpu(
+hpl = HplCuda(
     prefix    = '../run/HPL',
     sif       = '../image/hpc-benchmarks:21.4-hpl.sif',
     blocksize = [288], 
